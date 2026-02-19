@@ -1,0 +1,51 @@
+# Generated artifacts
+outputs/
+data/
+fig/
+logs/
+cache/
+
+# Keep folder markers
+!outputs/.gitkeep
+!data/.gitkeep
+!fig/.gitkeep
+!logs/.gitkeep
+
+# Models: only keep baseline_fast for reproducibility
+models/**
+!models/baseline_fast/
+!models/baseline_fast/*.npz
+
+# Archive (legacy scripts)
+archive/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+.claude/
+
+# Logs
+*.log
+
+# Large data files
+*.csv
+!config/households_for_abm.csv
+*.parquet
+*.pkl
+*.h5
+*.feather
+
+# Misc
+_UL

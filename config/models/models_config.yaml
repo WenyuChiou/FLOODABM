@@ -1,0 +1,30 @@
+# Model Configurations for FLOODABM
+# ==================================
+# All models are stored in the 'models/' folder at project root.
+# Each version is a subfolder with its corresponding _fast cache.
+
+models:
+  # Baseline model (original version)
+  baseline:
+    name: "Baseline Model"
+    version: "1.0"
+    description: "Original model with moderate TP sensitivity (beta_tp ≈ 1.9)"
+    path: "models/baseline"
+    
+  # Optimized model (enhanced version)
+  optimized:
+    name: "Optimized Model"
+    version: "2.0"
+    description: "Enhanced model with higher TP sensitivity (beta_tp ≈ 2.9)"
+    path: "models/optimized"
+    meta:
+      average_beta_tp: 2.908
+      average_delta_mu: 0.586
+      improvements_vs_original: "+203% beta_tp, +177% Δμ"
+
+  # Optimized model 2 (enhanced version)
+  optimized_2:
+    name: "Optimized Model 2"
+    version: "2.0"
+    description: "Enhanced model with higher TP sensitivity (Prior with high TP mean (6.0))"
+    path: "models/optimized_2"

@@ -1,0 +1,271 @@
+action_dynamics:
+  apply_BP: true
+  apply_RL: true
+  bp_backfill: false
+  bp_sampler: lognorm_from_totals
+  eh_cap_ft: 8.0
+  eh_once_max_ft: 5.0
+  eh_once_min_ft: 5.0
+  eh_one_time: true
+  eh_step_ft: 1.0
+  rl_backfill: false
+beta_parameters:
+  CP_mean:
+    MG:
+      alpha: 4.077836529519028
+      beta: 3.329936380000254
+    NMG:
+      alpha: 5.2629400301778
+      beta: 4.17829004340104
+    original_range:
+    - 1.0
+    - 5.0
+  PA_mean:
+    MG:
+      alpha: 2.555001444046158
+      beta: 2.165027539428587
+    NMG:
+      alpha: 4.007076670114129
+      beta: 2.791090995772767
+    original_range:
+    - 1.0
+    - 5.0
+  SC_mean:
+    MG:
+      alpha: 5.36887449038927
+      beta: 3.105436678252142
+    NMG:
+      alpha: 4.562617998205591
+      beta: 2.3893049113539
+    original_range:
+    - 1.0
+    - 5.0
+  SP_mean:
+    MG:
+      alpha: 1.367221629699565
+      beta: 1.694308143981757
+    NMG:
+      alpha: 1.725292340053868
+      beta: 1.9332438172003
+    original_range:
+    - 1.0
+    - 5.0
+  TP_mean:
+    MG:
+      alpha: 4.441022482291345
+      beta: 2.886664613489374
+    NMG:
+      alpha: 5.345888856709265
+      beta: 3.615332455175986
+    original_range:
+    - 1.0
+    - 5.0
+files:
+  depths_overall: config/overall_md_mean_by_tract_2011_2023.json
+  flood_events: vulnerability/data/flood_events.csv
+  grid_depths_yaml: config/grid_depths_hist.yaml
+  households: config/households_for_abm.csv
+finance:
+  default_premium:
+    contents_share: 0.3
+    rate_bldg_1k: 3.6
+    rate_cont_1k: 5.0
+    reserve: 1.15
+    small_fee_usd: 100.0
+  owner_insurance_contents:
+    owner_contents_ratio: 0.57
+    owner_insures_both: true
+  premium_by_state:
+    NEW JERSEY:
+      rate_bldg_1k: 3.555
+      rate_cont_1k: 4.977
+    NEW YORK:
+      rate_bldg_1k: 3.665
+      rate_cont_1k: 5.131
+flood:
+  FFE_ft: 1.0
+  depth_threshold_m: null
+  events_mode: mask
+  min_trigger: 1.0e-06
+  ratio_threshold: 0.5
+  ratio_threshold_MG: 0.5
+  ratio_threshold_NMG: 0.5
+hazard:
+  depths_mode: grid_hist
+  grid_hist:
+    bin_method: uniform
+    fallback: exact
+insurance_init:
+  seed: 2025
+  take_rate_by_tract_group:
+    '34013021300':
+      owner: 0.03
+      renter: 0.01
+    '34013021601':
+      owner: 0.25
+      renter: 0.08
+    '34013021602':
+      owner: 0.25
+      renter: 0.08
+    '34013021802':
+      owner: 0.25
+      renter: 0.08
+    '34013021803':
+      owner: 0.03
+      renter: 0.01
+    '34027040101':
+      owner: 0.25
+      renter: 0.08
+    '34027040102':
+      owner: 0.25
+      renter: 0.08
+    '34027040200':
+      owner: 0.25
+      renter: 0.08
+    '34027040301':
+      owner: 0.03
+      renter: 0.01
+    '34027040302':
+      owner: 0.03
+      renter: 0.01
+    '34027040701':
+      owner: 0.03
+      renter: 0.01
+    '34027040801':
+      owner: 0.03
+      renter: 0.01
+    '34027040803':
+      owner: 0.25
+      renter: 0.08
+    '34027040805':
+      owner: 0.25
+      renter: 0.08
+    '34027041704':
+      owner: 0.03
+      renter: 0.01
+    '34031154005':
+      owner: 0.03
+      renter: 0.01
+    '34031154006':
+      owner: 0.25
+      renter: 0.08
+    '34031223802':
+      owner: 0.25
+      renter: 0.08
+    '34031246001':
+      owner: 0.03
+      renter: 0.01
+    '34031246003':
+      owner: 0.25
+      renter: 0.08
+    '34031246102':
+      owner: 0.03
+      renter: 0.01
+    '34031246103':
+      owner: 0.03
+      renter: 0.01
+    '34031246104':
+      owner: 0.03
+      renter: 0.01
+    '34031246201':
+      owner: 0.25
+      renter: 0.08
+    '34031246202':
+      owner: 0.03
+      renter: 0.01
+    '34031246203':
+      owner: 0.03
+      renter: 0.01
+    '34031246300':
+      owner: 0.25
+      renter: 0.08
+mg_share:
+  '34013021300': 0.073496
+  '34013021601': 0.096306
+  '34013021602': 0.009814
+  '34013021802': 0.083784
+  '34013021803': 0.058219
+  '34027040101': 0.060031
+  '34027040102': 0.083004
+  '34027040200': 0.065362
+  '34027040301': 0.135646
+  '34027040302': 0.113115
+  '34027040701': 0.042916
+  '34027040801': 0.04275
+  '34027040803': 0.039785
+  '34027040805': 0.04562
+  '34027041704': 0.074872
+  '34031154005': 0.049324
+  '34031154006': 0.125303
+  '34031223802': 0.103237
+  '34031246001': 0.097619
+  '34031246003': 0.031224
+  '34031246102': 0.097935
+  '34031246103': 0.05035
+  '34031246104': 0.159916
+  '34031246201': 0.016308
+  '34031246202': 0.01913
+  '34031246203': 0.008287
+  '34031246300': 0.160892
+output:
+  enable_plots: true
+paths:
+  outputs_root: ../../outputs
+policy:
+  coinsurance:
+    enabled: false
+    rate: 0.8
+  deductible_contents_kUSD: 1.0
+  deductible_structure_kUSD: 1.0
+  limit_contents_kUSD: 100.0
+  limit_structure_kUSD: 250.0
+  owner:
+    deductible_structure_kUSD: 1.0
+  renter:
+    deductible_contents_kUSD: 1.0
+seed: 2011
+# ==============================================================================
+# Threat Perception (TP) Configuration
+# ==============================================================================
+# TP represents how much a household perceives flood threats (range: 0-1).
+# Higher TP -> more likely to adopt protective actions (FI, EH, BP, RL).
+#
+# SHOCK MODEL (activated when flood ratio >= threshold):
+#   Formula: TP' = min(1.0, TP + shock_scale × damage_ratio)
+#   - Owner shock:  TP_nmg' = TP_nmg + shock_scale_owner × ratio
+#   - Renter shock: TP_mg'  = TP_mg  + shock_scale_renter × ratio
+#
+# DECAY MODEL (every year without flood):
+#   Formula: TP' = TP × exp(-λ × Δt)  where λ depends on PA, SC, τ(t)
+#   See tp_decay_params for MG/NMG decay parameters.
+#
+# TIMING MODES:
+#   - "start": Shock first, then decay (TP boost fades within same year)
+#   - "end":   Decay first, then shock (TP shock persists longer)
+# ==============================================================================
+tp_config:
+  clip_hi: 1.0                  # Maximum TP value (upper bound)
+  clip_lo: 0.0                  # Minimum TP value (lower bound)
+  shock_mode: additive          # Shock type: "additive" (TP + scale*ratio)
+  shock_scale_owner: 0.3        # Shock multiplier for owners (NMG)
+  shock_scale_renter: 0.3       # Shock multiplier for renters (MG)
+  shock_timing: end             # When to apply shock: "start" or "end"
+  skip_decay_on_shock: true     # If true, skip decay in years with flood shock
+tp_decay_params:
+  MG:
+    alpha: 0.5
+    beta: 0.216667
+    k: 0.03
+    tau0: 1.0
+    tau_inf: 32.18744
+  NMG:
+    alpha: 0.383333
+    beta: 0.1
+    k: 0.01
+    tau0: 1.0
+    tau_inf: 50.10013
+years:
+  end: 2023
+  mode: span
+  start: 2011
+years_step: 1.0

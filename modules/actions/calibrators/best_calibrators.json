@@ -1,0 +1,56 @@
+{
+  "MG": {
+    "BP": {
+      "method": "temp",
+      "evalset": "oof",
+      "delta_Brier": -0.00010497680745941151,
+      "delta_ECE": -0.0038007244859870927,
+      "param_tau": 1.030888888888889
+    },
+    "EH": {
+      "method": "temp",
+      "evalset": "oof",
+      "delta_Brier": -0.0006186805759927083,
+      "delta_ECE": -0.0019090915981091888,
+      "param_tau": 0.85
+    },
+    "FI": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.016089273286962885,
+      "delta_ECE": -0.09186987530800603
+    },
+    "RL": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.005757615571542085,
+      "delta_ECE": -0.015456991452796769
+    }
+  },
+  "NMG": {
+    "BP": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.025330001951258202,
+      "delta_ECE": -0.1250719225832394
+    },
+    "EH": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.010779178705096759,
+      "delta_ECE": -0.05765130910135454
+    },
+    "FI": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.024449184642169886,
+      "delta_ECE": -0.08782977493678998
+    },
+    "RL": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.007388223975683866,
+      "delta_ECE": 0.0002746593718435386
+    }
+  }
+}

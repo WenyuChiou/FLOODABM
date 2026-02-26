@@ -32,8 +32,8 @@ CLI ARGUMENTS
                       'minimal' = Essential only (~10MB)
     
     --out-root      : Custom output directory (default: outputs/)
-    --thr-mg        : Override MG flood ratio threshold (default: 0.5)
-    --thr-nmg       : Override NMG flood ratio threshold (default: 0.5)
+    --thr-owner     : Override owner flood ratio threshold (default: 0.5)
+    --thr-renter    : Override renter flood ratio threshold (default: 0.5)
     --no-plots      : Skip all visualization generation
     --deterministic : Use fixed RNG each year for reproducibility
 
@@ -58,8 +58,8 @@ insurance_init:
                       owner: 0.03 → Non-flood-prone tract
 
 flood:
-    ratio_threshold_MG  : Flood ratio trigger for MG group (default: 0.5)
-    ratio_threshold_NMG : Flood ratio trigger for NMG group (default: 0.5)
+    ratio_threshold_owner  : Flood ratio trigger for owner group (default: 0.5)
+    ratio_threshold_renter : Flood ratio trigger for renter group (default: 0.5)
 
 ARCHITECTURE
 ------------
@@ -166,8 +166,8 @@ def run_single_scenario(
 
     # ---------- CLI args (override YAML) ----------
     ap = argparse.ArgumentParser(description="FLOODABM main runner")
-    ap.add_argument("--thr-mg", type=float, help="Override flood.ratio_threshold_MG")
-    ap.add_argument("--thr-nmg", type=float, help="Override flood.ratio_threshold_NMG")
+    ap.add_argument("--thr-owner", type=float, help="Override flood.ratio_threshold_owner")
+    ap.add_argument("--thr-renter", type=float, help="Override flood.ratio_threshold_renter")
     ap.add_argument("--shock-owner", type=float, help="Override tp_config.shock_scale_owner")
     ap.add_argument("--shock-renter", type=float, help="Override tp_config.shock_scale_renter")
     ap.add_argument(
@@ -204,10 +204,10 @@ def run_single_scenario(
     if skip_comparison_plots:
         args.compare_flood_or = False
 
-    if args.thr_mg is not None:
-        CFG.setdefault("flood", {})["ratio_threshold_MG"] = float(args.thr_mg)
-    if args.thr_nmg is not None:
-        CFG.setdefault("flood", {})["ratio_threshold_NMG"] = float(args.thr_nmg)
+    if args.thr_owner is not None:
+        CFG.setdefault("flood", {})["ratio_threshold_owner"] = float(args.thr_owner)
+    if args.thr_renter is not None:
+        CFG.setdefault("flood", {})["ratio_threshold_renter"] = float(args.thr_renter)
     # Shock scale overrides for TP configuration
     if args.shock_owner is not None:
         CFG.setdefault("tp_config", {})["shock_scale_owner"] = float(args.shock_owner)
@@ -279,9 +279,9 @@ def run_single_scenario(
     FFE_FT = float(FLOOD_JSON.get("FFE_ft", 0.5))
     SHOCK_TIMING = TP_CFG_JSON.get("shock_timing", "start")
     SHOCK_MODE = TP_CFG_JSON.get("shock_mode", "additive")
-    # MG/NMG specific thresholds for TP shock triggering
-    _THR_MG = float(FLOOD_JSON.get("ratio_threshold_MG", FLOOD_RATIO_THRESHOLD))
-    _THR_NMG = float(FLOOD_JSON.get("ratio_threshold_NMG", FLOOD_RATIO_THRESHOLD))
+    # Owner/Renter specific thresholds for TP shock triggering
+    _THR_OWNER = float(FLOOD_JSON.get("ratio_threshold_owner", FLOOD_RATIO_THRESHOLD))
+    _THR_RENTER = float(FLOOD_JSON.get("ratio_threshold_renter", FLOOD_RATIO_THRESHOLD))
 
     # ---------------------------------------------------------------------------
     # Action Dynamics: Control how household actions are applied
@@ -302,7 +302,7 @@ def run_single_scenario(
 
     CV_NJ = {"rcv": 0.694, "contents": 1.8}
     print(
-        f"[cfg] ratio_threshold_MG={_THR_MG} | ratio_threshold_NMG={_THR_NMG} | "
+        f"[cfg] ratio_threshold_owner={_THR_OWNER} | ratio_threshold_renter={_THR_RENTER} | "
         f"depth_threshold_m={DEPTH_THRESHOLD_M} | FFE_ft={FFE_FT} | shock_timing={SHOCK_TIMING}"
     )
 
@@ -315,8 +315,8 @@ def run_single_scenario(
     OWNER_CONTENTS_RATIO = float(OWNER_INS.get("owner_contents_ratio", 0.57))
     OWNER_INSURES_BOTH = bool(OWNER_INS.get("owner_insures_both", True))
 
-    # Policy & group share
-    MG_SHARE, policy_dict = load_inline_mgshare_policy(CFG)
+    # Policy & owner share
+    OWNER_SHARE, policy_dict = load_inline_mgshare_policy(CFG)
 
     # =========================================================================
     # SECTION 5: DATA LOADING
@@ -345,20 +345,20 @@ def run_single_scenario(
     # SECTION 6: PSYCHOLOGY INITIALIZATION
     # =========================================================================
     # Initialize tract-level psychological factors (TP, CP, SP, SC, PA)
-    # for both MG (minority group) and NMG (non-minority group)
+    # for both owner (homeowner) and renter groups
     TRACTS = sorted(
         set(DEPTHS_LONG["tract_geoid"].astype(str)) | set(STATE["tract_geoid"].astype(str))
     )
-    PARAMS_MG = grp_params_from_yaml(CFG, "MG", TPGroupParams)
-    PARAMS_NMG = grp_params_from_yaml(CFG, "NMG", TPGroupParams)
+    PARAMS_OWNER = grp_params_from_yaml(CFG, "owner", TPGroupParams)
+    PARAMS_RENTER = grp_params_from_yaml(CFG, "renter", TPGroupParams)
     TP_CFG = TPConfig(
         shock_scale_owner=float(TP_CFG_JSON.get("shock_scale_owner", 1.0)),
         shock_scale_renter=float(TP_CFG_JSON.get("shock_scale_renter", 1.0)),
         shock_timing=SHOCK_TIMING,
     )
     setattr(TP_CFG, "shock_mode", SHOCK_MODE)
-    setattr(TP_CFG, "thr_mg", _THR_MG)
-    setattr(TP_CFG, "thr_nmg", _THR_NMG)
+    setattr(TP_CFG, "thr_owner", _THR_OWNER)
+    setattr(TP_CFG, "thr_renter", _THR_RENTER)
     setattr(TP_CFG, "flood_ratio_threshold", FLOOD_RATIO_THRESHOLD)
     setattr(TP_CFG, "clip_lo", float(TP_CFG_JSON.get("clip_lo", 0.0)))
     setattr(TP_CFG, "clip_hi", float(TP_CFG_JSON.get("clip_hi", 1.0)))
@@ -368,9 +368,9 @@ def run_single_scenario(
     MODEL_PATH = registry.get_path(args.model_dir)  # models/baseline/ or models/optimized/
     if MODEL_PATH is None:
         MODEL_PATH = ROOT / "models" / args.model_dir  # fallback
-    predictor_MG, predictor_NMG = load_predictors(MODEL_PATH)
+    predictor_owner, predictor_renter = load_predictors(MODEL_PATH)
     idxer = build_state_indexer(STATE, TRACT_PSY)
-    w_vec = STATE["tract_geoid"].map(MG_SHARE).astype(float).to_numpy()
+    w_vec = STATE["tract_geoid"].map(OWNER_SHARE).astype(float).to_numpy()
 
     # =========================================================================
     # SECTION 7: ANNUAL SIMULATION LOOP
@@ -424,8 +424,8 @@ def run_single_scenario(
             modules_root=ROOT / "modules", FFE_ft=FFE_FT,
             owner_contents_ratio=float(OWNER_CONTENTS_RATIO),
         )
-        # Filter by minimum of MG/NMG thresholds; actual group-specific filtering in TP update
-        _min_thr = min(_THR_MG, _THR_NMG)
+        # Filter by minimum of owner/renter thresholds; actual group-specific filtering in TP update
+        _min_thr = min(_THR_OWNER, _THR_RENTER)
         ratio_used = {str(t): (float(r) if float(r) >= _min_thr else 0.0) for t, r in ratio_raw.items()}
         print(f"ratio_used: {sum(v>0.0 for v in ratio_used.values()):,} tracts with ratio >= {_min_thr}")
 
@@ -460,11 +460,11 @@ def run_single_scenario(
         STATE = STATE.sort_values(["i"]).reset_index(drop=True)
         STATE["tract_geoid"] = STATE["tract_geoid"].astype(str)
         idxer = build_state_indexer(STATE, TRACT_PSY)
-        w_vec = STATE["tract_geoid"].map(MG_SHARE).astype(float).to_numpy()
+        w_vec = STATE["tract_geoid"].map(OWNER_SHARE).astype(float).to_numpy()
 
         # Flood bookkeeping
         flood_rows.extend(build_flood_bookkeeping_rows(
-            y, TRACTS, ratio_raw, ratio_used, dmap, _THR_MG, _THR_NMG, DEPTH_THRESHOLD_M
+            y, TRACTS, ratio_raw, ratio_used, dmap, _THR_OWNER, _THR_RENTER, DEPTH_THRESHOLD_M
         ))
 
         if not NO_ACTION:
@@ -477,8 +477,8 @@ def run_single_scenario(
             _year_seed = SEED if getattr(args, "deterministic", False) else (SEED + y)
             dec, psy_new, STATE_NEXT_NO_EH, CHG = run_one_year_mgmix_fast(
                 year=y, state=STATE, tract_psy=TRACT_PSY, idxer=idxer, w_vec=w_vec,
-                predictor_MG=predictor_MG, predictor_NMG=predictor_NMG,
-                params_MG=PARAMS_MG, params_NMG=PARAMS_NMG, tp_cfg=TP_CFG,
+                predictor_owner=predictor_owner, predictor_renter=predictor_renter,
+                params_owner=PARAMS_OWNER, params_renter=PARAMS_RENTER, tp_cfg=TP_CFG,
                 ratio_by_tract=ratio_used,
                 overlay_policy_names={"owner": "owner_standard", "renter": "renter_contents"},
                 rng=np.random.RandomState(_year_seed), years_step=YEARS_STEP,
@@ -515,7 +515,7 @@ def run_single_scenario(
             append_tp_trajectory(psy_new, y, tp_rows)
 
             # Advance to next-year state
-            STATE, w_vec = advance_state_for_next_year(STATE, STATE_NEXT_NO_EH, y, MG_SHARE)
+            STATE, w_vec = advance_state_for_next_year(STATE, STATE_NEXT_NO_EH, y, OWNER_SHARE)
             TRACT_PSY = psy_new.copy()
             idxer = build_state_indexer(STATE, TRACT_PSY)
 

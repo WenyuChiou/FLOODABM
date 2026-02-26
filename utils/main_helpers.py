@@ -14,7 +14,7 @@ from utils._helpers import (
 
 def build_flood_bookkeeping_rows(
     year: int, TRACTS: list[str], ratio_raw: dict, ratio_used: dict, dmap: dict,
-    THR_MG: float, THR_NMG: float, DEPTH_THRESHOLD_M: float | None
+    THR_OWNER: float, THR_RENTER: float, DEPTH_THRESHOLD_M: float | None
 ) -> list[dict]:
     """Build flood status rows for each tract in this year."""
     rows = []
@@ -23,17 +23,17 @@ def build_flood_bookkeeping_rows(
         ru = float(ratio_used.get(t, 0.0))
         dep = float(dmap.get(t, np.nan))
         is_shock = (ru > 0.0)
-        is_flood_mg = (ru >= THR_MG)
-        is_flood_nmg = (ru >= THR_NMG)
-        is_flood_any = is_flood_mg or is_flood_nmg
+        is_flood_owner = (ru >= THR_OWNER)
+        is_flood_renter = (ru >= THR_RENTER)
+        is_flood_any = is_flood_owner or is_flood_renter
         if DEPTH_THRESHOLD_M is not None and np.isfinite(dep):
-            is_flood_mg = is_flood_mg and (dep >= float(DEPTH_THRESHOLD_M))
-            is_flood_nmg = is_flood_nmg and (dep >= float(DEPTH_THRESHOLD_M))
-            is_flood_any = is_flood_mg or is_flood_nmg
+            is_flood_owner = is_flood_owner and (dep >= float(DEPTH_THRESHOLD_M))
+            is_flood_renter = is_flood_renter and (dep >= float(DEPTH_THRESHOLD_M))
+            is_flood_any = is_flood_owner or is_flood_renter
         rows.append({
             "year": year, "tract_geoid": t, "ratio": r, "ratio_used": ru,
             "depth_m": dep, "is_shock": is_shock,
-            "is_flood_MG": is_flood_mg, "is_flood_NMG": is_flood_nmg, "is_flood_any": is_flood_any,
+            "is_flood_owner": is_flood_owner, "is_flood_renter": is_flood_renter, "is_flood_any": is_flood_any,
         })
     return rows
 
@@ -72,10 +72,10 @@ def append_tp_trajectory(
     psy_df: pd.DataFrame, year: int, tp_rows: list[dict]
 ) -> None:
     """Append TP trajectory records for this year."""
-    tprec = psy_df[["tract_geoid","TP_MG","TP_NMG"]].copy()
+    tprec = psy_df[["tract_geoid","TP_owner","TP_renter"]].copy()
     tprec["year"] = year
     tprec["phase"] = "after"
-    tp_rows.extend(tprec[["year","tract_geoid","TP_MG","TP_NMG","phase"]].to_dict("records"))
+    tp_rows.extend(tprec[["year","tract_geoid","TP_owner","TP_renter","phase"]].to_dict("records"))
 
 
 def advance_state_for_next_year(

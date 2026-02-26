@@ -71,8 +71,8 @@ def load_yaml(path: Path) -> dict:
 class FloodConfig:
     """Flood event thresholds and parameters."""
     ratio_threshold: float = 0.001
-    ratio_threshold_MG: float = 0.5
-    ratio_threshold_NMG: float = 0.5
+    ratio_threshold_owner: float = 0.5
+    ratio_threshold_renter: float = 0.5
     depth_threshold_m: Optional[float] = None
     FFE_ft: float = 0.5
 
@@ -168,8 +168,8 @@ def _parse_flood_config(raw: dict) -> FloodConfig:
     
     return FloodConfig(
         ratio_threshold=float(flood.get("ratio_threshold", 0.001)),
-        ratio_threshold_MG=float(flood.get("ratio_threshold_MG", single_thr)),
-        ratio_threshold_NMG=float(flood.get("ratio_threshold_NMG", single_thr)),
+        ratio_threshold_owner=float(flood.get("ratio_threshold_owner", single_thr)),
+        ratio_threshold_renter=float(flood.get("ratio_threshold_renter", single_thr)),
         depth_threshold_m=flood.get("depth_threshold_m"),
         FFE_ft=float(flood.get("FFE_ft", 0.5)),
     )
@@ -258,7 +258,7 @@ def load_config(
     if cli_overrides:
         for key, value in cli_overrides.items():
             if value is not None:
-                # Handle nested keys like "flood.ratio_threshold_MG"
+                # Handle nested keys like "flood.ratio_threshold_owner"
                 if "." in key:
                     section, param = key.split(".", 1)
                     raw.setdefault(section, {})[param] = value

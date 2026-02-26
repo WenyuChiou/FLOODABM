@@ -184,35 +184,35 @@ def init_tract_psychology(
     rng: Optional[np.random.RandomState] = None,
 ) -> pd.DataFrame:
     """Initialize tract-level psychology (TP, CP, SP) values.
-    
+
     Creates initial psychological state for each census tract with
-    MG (minority group) and NMG (non-minority group) values.
-    
+    owner (homeowner) and renter values.
+
     Args:
         tracts: List of tract geoid strings
         seed: Random seed
         rng: Optional pre-existing RandomState
-        
+
     Returns:
         DataFrame with columns:
-        - tract_geoid, TP_MG, CP_MG, SP_MG, TP_NMG, CP_NMG, SP_NMG
+        - tract_geoid, TP_owner, CP_owner, SP_owner, TP_renter, CP_renter, SP_renter
     """
     if rng is None:
         rng = np.random.RandomState(seed)
-    
+
     n = len(tracts)
-    
+
     # Initialize with uniform(0.3, 0.7) for moderate starting values
     data = {
         "tract_geoid": [str(t) for t in tracts],
-        "TP_MG": rng.uniform(0.3, 0.7, n),
-        "CP_MG": rng.uniform(0.3, 0.7, n),
-        "SP_MG": rng.uniform(0.3, 0.7, n),
-        "TP_NMG": rng.uniform(0.3, 0.7, n),
-        "CP_NMG": rng.uniform(0.3, 0.7, n),
-        "SP_NMG": rng.uniform(0.3, 0.7, n),
+        "TP_owner": rng.uniform(0.3, 0.7, n),
+        "CP_owner": rng.uniform(0.3, 0.7, n),
+        "SP_owner": rng.uniform(0.3, 0.7, n),
+        "TP_renter": rng.uniform(0.3, 0.7, n),
+        "CP_renter": rng.uniform(0.3, 0.7, n),
+        "SP_renter": rng.uniform(0.3, 0.7, n),
     }
-    
+
     return pd.DataFrame(data)
 
 
@@ -220,37 +220,42 @@ def init_tract_psychology(
 # MG Share and Policy Loading
 # =============================================================================
 
-def load_mg_share(config: dict) -> dict[str, float]:
-    """Load minority group share by tract from config.
-    
+def load_owner_share(config: dict) -> dict[str, float]:
+    """Load owner (homeowner) share by tract from config.
+
     Args:
         config: YAML config dict
-        
+
     Returns:
-        Dict mapping tract_geoid -> MG share (0-1)
+        Dict mapping tract_geoid -> owner share (0-1)
     """
-    mg_section = config.get("mg_share", {}) or {}
-    
+    section = config.get("owner_share", {}) or {}
+
     # Default share if not specified
-    default_share = float(mg_section.get("default", 0.3))
-    
+    default_share = float(section.get("default", 0.7))
+
     # Load per-tract overrides
-    by_tract = mg_section.get("by_tract", {}) or {}
-    
+    by_tract = section.get("by_tract", {}) or {}
+
     shares = {str(t): float(v) for t, v in by_tract.items()}
     shares["_default"] = default_share
-    
+
     return shares
 
 
-def get_mg_share_for_tract(shares: dict, tract_geoid: str) -> float:
-    """Get MG share for a specific tract.
-    
+def get_owner_share_for_tract(shares: dict, tract_geoid: str) -> float:
+    """Get owner share for a specific tract.
+
     Args:
-        shares: MG share dict from load_mg_share()
+        shares: Owner share dict from load_owner_share()
         tract_geoid: Tract geoid string
-        
+
     Returns:
-        MG share value (0-1)
+        Owner share value (0-1)
     """
-    return shares.get(str(tract_geoid), shares.get("_default", 0.3))
+    return shares.get(str(tract_geoid), shares.get("_default", 0.7))
+
+
+# Backward-compatible aliases
+load_mg_share = load_owner_share
+get_mg_share_for_tract = get_owner_share_for_tract

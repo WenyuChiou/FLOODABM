@@ -47,5 +47,10 @@ Thumbs.db
 *.h5
 *.feather
 
+# Calibration pipeline: allow data, CSVs, and outputs
+!calibration/
+!calibration/**
+calibration/data/data_ori.xlsx
+
 # Misc
 _UL

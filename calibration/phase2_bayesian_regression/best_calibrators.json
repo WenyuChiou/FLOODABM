@@ -1,0 +1,54 @@
+{
+  "owner": {
+    "BP": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.019507884979248047,
+      "delta_ECE": -0.11190809395121434
+    },
+    "EH": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.010858207941055298,
+      "delta_ECE": -0.04545276055390806
+    },
+    "FI": {
+      "method": "beta",
+      "evalset": "test",
+      "delta_Brier": -0.026026204228401184,
+      "delta_ECE": -0.07773240017039434
+    },
+    "RL": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": 0.0080118328332901,
+      "delta_ECE": -0.018676218937854386
+    }
+  },
+  "renter": {
+    "BP": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": 0.00990191102027893,
+      "delta_ECE": 0.009123346805572502
+    },
+    "EH": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -1.722574234008789e-05,
+      "delta_ECE": 0.0787393717467785
+    },
+    "FI": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.008225515484809875,
+      "delta_ECE": -0.012753305435180634
+    },
+    "RL": {
+      "method": "temp",
+      "evalset": "test",
+      "delta_Brier": -0.005841687321662903,
+      "delta_ECE": 0.03954234654488764
+    }
+  }
+}

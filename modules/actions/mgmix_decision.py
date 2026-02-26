@@ -17,7 +17,7 @@ Decision Flow:
 
 Example:
     >>> from modules.actions.mgmix_decision import load_predictors, build_state_indexer
-    >>> pred_MG, pred_NMG = load_predictors(Path("modules/actions"))
+    >>> pred_owner, pred_renter = load_predictors(Path("modules/actions"))
     >>> idxer = build_state_indexer(state_df, tract_psy_df)
 """
 from __future__ import annotations
@@ -41,16 +41,16 @@ except Exception:
 # =============================================================================
 
 def load_predictors(actions_dir: Path) -> tuple:
-    """Load Bayesian action predictors for MG and NMG groups.
-    
+    """Load Bayesian action predictors for owner and renter groups.
+
     Tries the fast .npz cache loader first, falls back to compat loader if needed.
-    
+
     Args:
         actions_dir: Path to actions module directory containing models/
-        
+
     Returns:
-        (predictor_MG, predictor_NMG): Two predictor functions
-        
+        (predictor_owner, predictor_renter): Two predictor functions
+
     Raises:
         RuntimeError: If both fast and compat loaders fail
     """
@@ -98,14 +98,14 @@ def features_take_by_indexer(
     suffix: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Extract TP, CP, SP features using pre-built indexer.
-    
+
     Uses np.take for vectorized O(1) lookups instead of pandas.map.
-    
+
     Args:
         tract_psy: Tract psychology DataFrame
         idxer: Index array from build_state_indexer()
-        suffix: Group suffix ("MG" or "NMG")
-        
+        suffix: Group suffix ("owner" or "renter")
+
     Returns:
         (TP, CP, SP): Tuple of numpy arrays for each psychological feature
     """
@@ -116,27 +116,27 @@ def features_take_by_indexer(
 
 
 def mix_probs_by_weight(
-    p_MG: dict[str, np.ndarray],
-    p_NMG: dict[str, np.ndarray],
-    w_MG_vec: np.ndarray,
+    p_owner: dict[str, np.ndarray],
+    p_renter: dict[str, np.ndarray],
+    w_owner_vec: np.ndarray,
 ) -> dict[str, np.ndarray]:
-    """Mix MG and NMG probabilities by household-level weights.
-    
-    Computes: p = w * p_MG + (1-w) * p_NMG
-    
+    """Mix owner and renter probabilities by household-level weights.
+
+    Computes: p = w * p_owner + (1-w) * p_renter
+
     Args:
-        p_MG: Dict mapping action names to MG probability arrays
-        p_NMG: Dict mapping action names to NMG probability arrays
-        w_MG_vec: Weight array (0-1) indicating MG share per household
-        
+        p_owner: Dict mapping action names to owner probability arrays
+        p_renter: Dict mapping action names to renter probability arrays
+        w_owner_vec: Weight array (0-1) indicating owner share per household
+
     Returns:
         Dict mapping action names to mixed probability arrays
     """
     mix = {}
-    w = w_MG_vec.astype(float)
-    for act in p_MG.keys():
-        a = np.asarray(p_MG[act], float)
-        b = np.asarray(p_NMG[act], float)
+    w = w_owner_vec.astype(float)
+    for act in p_owner.keys():
+        a = np.asarray(p_owner[act], float)
+        b = np.asarray(p_renter[act], float)
         mix[act] = np.clip(w * a + (1.0 - w) * b, 0.0, 1.0)
     return mix
 

@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 # Models to export
-MODELS = ["MG_FI", "MG_EH", "MG_BP", "MG_RL", "NMG_FI", "NMG_EH", "NMG_BP", "NMG_RL"]
+MODELS = ["owner_FI", "owner_EH", "owner_BP", "owner_RL", "renter_FI", "renter_EH", "renter_BP", "renter_RL"]
 
 
 def export_model_weights(

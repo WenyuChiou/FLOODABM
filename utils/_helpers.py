@@ -25,28 +25,31 @@ def resolve_path(base: Path, rel_or_abs: str | None, modules_root: Path) -> Path
             return cand
     return Path(rel_or_abs)
 
-# ---------- inline mg_share / policy ----------
+# ---------- inline owner_share / policy ----------
 def load_inline_mgshare_policy(cfg: dict) -> Tuple[Dict[str,float], Dict[str,Any]]:
+    """Load owner share by tract and policy config from YAML.
+
+    Supports both 'owner_share' (new) and 'mg_share' (legacy) keys.
+    """
     policy = cfg.get("policy") or {}
-    mg_raw = cfg.get("mg_share")
-    if not mg_raw:
-        raise FileNotFoundError("Inline 'mg_share' not found in YAML. Add mg_share: {tract_geoid: share}.")
-    if isinstance(mg_raw, dict):
-        mg = {str(k): float(v) for k, v in mg_raw.items()}
-    elif isinstance(mg_raw, list):
+    raw = cfg.get("owner_share") or cfg.get("mg_share")
+    if not raw:
+        raise FileNotFoundError("Inline 'owner_share' not found in YAML. Add owner_share: {tract_geoid: share}.")
+    if isinstance(raw, dict):
+        shares = {str(k): float(v) for k, v in raw.items()}
+    elif isinstance(raw, list):
         tmp = {}
-        for row in mg_raw:
-            if not isinstance(row, dict): 
+        for row in raw:
+            if not isinstance(row, dict):
                 continue
             t = row.get("tract_geoid") or row.get("tract") or row.get("geoid")
-            s = row.get("share") or row.get("mg_share")
+            s = row.get("share") or row.get("owner_share") or row.get("mg_share")
             if t is not None and s is not None:
                 tmp[str(t)] = float(s)
-        mg = tmp
+        shares = tmp
     else:
-        raise ValueError("Unsupported mg_share format in YAML.")
+        raise ValueError("Unsupported owner_share format in YAML.")
     if not policy:
-        # allow empty policy, but provide safe minimal defaults
         policy = {
             "limit_structure_kUSD": 250.0,
             "deductible_structure_kUSD": 1.0,
@@ -56,7 +59,7 @@ def load_inline_mgshare_policy(cfg: dict) -> Tuple[Dict[str,float], Dict[str,Any
             "renter": {"deductible_contents_kUSD": 1.0},
             "coinsurance": {"enabled": False, "rate": 0.8},
         }
-    return mg, policy
+    return shares, policy
 
 # ---------- finance (read-only; all from YAML) ----------
 def read_finance_from_yaml(cfg: dict) -> tuple[dict, dict, dict]:
@@ -133,14 +136,10 @@ def depths_for_year(depths_long: pd.DataFrame, year: int) -> pd.DataFrame:
 
 # ---------- tract psychology ----------
 def init_tract_psych_safe(tracts, seed: int, rng) -> pd.DataFrame:
-    from  modules.actions.mgmix_tp import init_tract_psych_mg_nmg
+    from modules.actions.mgmix_tp import init_tract_psych_owner_renter
     attempts = [
-        lambda: init_tract_psych_mg_nmg(tracts=tracts, seed=seed),
-        lambda: init_tract_psych_mg_nmg(tracts=tracts, rng=rng),
-        lambda: init_tract_psych_mg_nmg(tracts=tracts),
-        lambda: init_tract_psych_mg_nmg(tracts, seed),
-        lambda: init_tract_psych_mg_nmg(tracts, rng),
-        lambda: init_tract_psych_mg_nmg(tracts),
+        lambda: init_tract_psych_owner_renter(tracts=tracts, rng=rng),
+        lambda: init_tract_psych_owner_renter(tracts=tracts),
     ]
     last_err = None
     for fn in attempts:
@@ -148,13 +147,14 @@ def init_tract_psych_safe(tracts, seed: int, rng) -> pd.DataFrame:
             df = fn()
             if "tract_geoid" not in df.columns and "tract" in df.columns:
                 df = df.rename(columns={"tract": "tract_geoid"})
-            for c in ("t_clock_MG","t_clock_NMG"):
-                if c not in df.columns: df[c] = 0.0
+            for c in ("t_clock_owner", "t_clock_renter"):
+                if c not in df.columns:
+                    df[c] = 0.0
             df["tract_geoid"] = df["tract_geoid"].astype(str)
             return df
         except TypeError as e:
             last_err = e
-    raise TypeError(f"init_tract_psych_mg_nmg signature mismatch: {last_err}")
+    raise TypeError(f"init_tract_psych_owner_renter signature mismatch: {last_err}")
 
 # ---------- households loader ----------
 def load_households_csv(path: Path) -> pd.DataFrame:
@@ -176,10 +176,15 @@ def load_households_csv(path: Path) -> pd.DataFrame:
 
 # ---------- TP group params from YAML ----------
 def grp_params_from_yaml(cfg: dict, grp: str, TPGroupParams) -> Any:
-    tp_decay = (cfg.get("tp_decay_params", {}) or {}).get(grp.upper(), {}) or {}
-    # Updated defaults after (1-PA) formula change (2024-12 calibration)
-    defaults = {"alpha":0.50, "beta":0.216667, "tau0":1.00, "tau_inf":32.18744, "k":0.03} if grp.upper()=="MG" else \
-               {"alpha":0.383333, "beta":0.10, "tau0":1.00, "tau_inf":50.10013, "k":0.01}
+    """Load TP decay parameters for a group ('owner' or 'renter') from YAML config."""
+    tp_decay_section = cfg.get("tp_decay_params", {}) or {}
+    # Try exact key first, then uppercase (legacy)
+    tp_decay = tp_decay_section.get(grp, {}) or tp_decay_section.get(grp.upper(), {}) or {}
+    # Defaults per group
+    if grp.lower() == "renter":
+        defaults = {"alpha": 0.50, "beta": 0.216667, "tau0": 1.00, "tau_inf": 32.18744, "k": 0.03}
+    else:  # owner
+        defaults = {"alpha": 0.383333, "beta": 0.10, "tau0": 1.00, "tau_inf": 50.10013, "k": 0.01}
     j = {**defaults, **{k: tp_decay.get(k, defaults[k]) for k in defaults}}
     return TPGroupParams(
         alpha=float(j["alpha"]),

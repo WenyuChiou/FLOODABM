@@ -14,13 +14,13 @@ Key Features:
 - Optional probability calibration (Platt scaling, isotonic regression)
 
 Public API:
-    build_fast_predictors(actions_root) -> (predictor_MG, predictor_NMG)
-    bayes_fast_predictor(actions_root)  -> (predictor_MG, predictor_NMG)  # alias
+    build_fast_predictors(actions_root) -> (predictor_owner, predictor_renter)
+    bayes_fast_predictor(actions_root)  -> (predictor_owner, predictor_renter)  # alias
 
 Example:
     >>> from pathlib import Path
-    >>> pred_MG, pred_NMG = build_fast_predictors(Path("modules/actions/models_optimized"))
-    >>> result = pred_MG(TP=tp_array, CP=cp_array, SP=sp_array)
+    >>> pred_owner, pred_renter = build_fast_predictors(Path("modules/actions/models_optimized"))
+    >>> result = pred_owner(TP=tp_array, CP=cp_array, SP=sp_array)
     >>> print(result["FI"])  # Flood Insurance adoption probabilities
 """
 from __future__ import annotations
@@ -521,18 +521,18 @@ def _load_or_cache_weights(pkl_path: Path, npz_path: Path) -> tuple[np.ndarray, 
 # =============================================================================
 
 def _load_group_models(models_root: Path, group_tag: str, calib_path: Path | None):
-    """Load all action models for a demographic group (MG or NMG).
-    
+    """Load all action models for a demographic group (owner or renter).
+
     Args:
         models_root: Path to directory containing .pkl model files
-        group_tag: "MG" (minority group) or "NMG" (non-minority group)
+        group_tag: "owner" (homeowner) or "renter"
         calib_path: Optional path to calibrators JSON
         
     Returns:
         (W, b, calibrators): Weight matrix (4x3), bias vector (4,), calibrator list
     """
     # Detect model directory structure
-    if (models_root / "MG_FI.pkl").exists() or (models_root / "NMG_FI.pkl").exists():
+    if (models_root / "owner_FI.pkl").exists() or (models_root / "renter_FI.pkl").exists():
         # Direct model directory (e.g., models_optimized/)
         models_dir = models_root
         cache_dir = Path(str(models_root) + "_fast")
@@ -572,23 +572,23 @@ def build_fast_predictors(
     actions_root: Path,
     calibrators_json: Path | None = None
 ) -> tuple[Callable, Callable]:
-    """Build vectorized Bayesian predictors for both demographic groups.
-    
+    """Build vectorized Bayesian predictors for both tenure groups.
+
     Args:
         actions_root: Path to model directory. Can be:
             - "modules/actions" (uses models/ subdirectory)
             - "modules/actions/models_optimized" (uses that directory directly)
         calibrators_json: Optional path to calibration config JSON
-        
+
     Returns:
-        (predictor_MG, predictor_NMG): Two predictor functions
-        
+        (predictor_owner, predictor_renter): Two predictor functions
+
         Each predictor takes keyword arguments TP, CP, SP (arrays of equal length)
         and returns a dict mapping action names to probability arrays.
-        
+
     Example:
-        >>> pred_MG, pred_NMG = build_fast_predictors(Path("modules/actions"))
-        >>> probs = pred_MG(TP=np.array([0.5]), CP=np.array([0.5]), SP=np.array([0.5]))
+        >>> pred_owner, pred_renter = build_fast_predictors(Path("modules/actions"))
+        >>> probs = pred_owner(TP=np.array([0.5]), CP=np.array([0.5]), SP=np.array([0.5]))
         >>> print(probs["FI"])  # [0.423...]
     """
     actions_root = Path(actions_root)
@@ -606,8 +606,8 @@ def build_fast_predictors(
             break
     
     # Load models for both groups
-    W_MG, b_MG, cal_MG = _load_group_models(actions_root, "MG", calib_path)
-    W_NMG, b_NMG, cal_NMG = _load_group_models(actions_root, "NMG", calib_path)
+    W_owner, b_owner, cal_owner = _load_group_models(actions_root, "owner", calib_path)
+    W_renter, b_renter, cal_renter = _load_group_models(actions_root, "renter", calib_path)
     
     def _create_predictor(W: np.ndarray, b: np.ndarray, calibrators: list) -> Callable:
         """Create a predictor closure with captured weights and calibrators."""
@@ -637,10 +637,10 @@ def build_fast_predictors(
         
         return predict
     
-    predictor_MG = _create_predictor(W_MG, b_MG, cal_MG)
-    predictor_NMG = _create_predictor(W_NMG, b_NMG, cal_NMG)
-    
-    return predictor_MG, predictor_NMG
+    predictor_owner = _create_predictor(W_owner, b_owner, cal_owner)
+    predictor_renter = _create_predictor(W_renter, b_renter, cal_renter)
+
+    return predictor_owner, predictor_renter
 
 
 # Alias for backward compatibility

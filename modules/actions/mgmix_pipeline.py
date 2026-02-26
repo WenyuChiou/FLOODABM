@@ -12,8 +12,7 @@ from .mgmix_decision import (  # type: ignore
         build_state_indexer, features_take_by_indexer,
         mix_probs_by_weight, sequential_decision_fast
     )
-from .mgmix_tp import (TPConfig, TPGroupParams, update_tract_tp_mg_nmg)  # type: ignore
-from .mgmix_tp import update_tract_tp_mg_nmg
+from .mgmix_tp import (TPConfig, TPGroupParams, update_tract_tp_owner_renter)  # type: ignore
 
 
 
@@ -74,10 +73,10 @@ def run_one_year_mgmix_fast(
     tract_psy: pd.DataFrame,
     idxer,
     w_vec: np.ndarray,
-    predictor_MG,
-    predictor_NMG,
-    params_MG,
-    params_NMG,
+    predictor_owner,
+    predictor_renter,
+    params_owner,
+    params_renter,
     tp_cfg,
     ratio_by_tract: dict[str, float],
     overlay_policy_names: dict[str, str],
@@ -91,29 +90,29 @@ def run_one_year_mgmix_fast(
     """
     Return (decisions_df, updated_tract_psy, state_next, changes) using fast indexer path.
     """
-    # 0) Update tract psychology based on this year's flood (Note: ratio_by_tract is already filtered by effective threshold in main)
-    psy_for_dec = update_tract_tp_mg_nmg(
+    # 0) Update tract psychology based on this year's flood
+    psy_for_dec = update_tract_tp_owner_renter(
         tract_psych=tract_psy,
-        params_MG=params_MG,
-        params_NMG=params_NMG,
+        params_owner=params_owner,
+        params_renter=params_renter,
         cfg=tp_cfg,
         ratio_by_tract=ratio_by_tract,
-        shock_if_ratio_gt0=True,            # ratio > 0 is treated as flood shock (avoid secondary threshold)
+        shock_if_ratio_gt0=True,
         years_step=years_step,
         reset_clock_on_flood=reset_clock_on_flood,
-        flood_ratio_threshold=0.0,          # Threshold not used here; already handled in main.py
+        flood_ratio_threshold=0.0,
     )
 
     # 1) Extract features
-    TP_MG, CP_MG, SP_MG    = features_take_by_indexer(psy_for_dec, idxer, "MG")
-    TP_NMG, CP_NMG, SP_NMG = features_take_by_indexer(psy_for_dec, idxer, "NMG")
+    TP_own, CP_own, SP_own = features_take_by_indexer(psy_for_dec, idxer, "owner")
+    TP_ren, CP_ren, SP_ren = features_take_by_indexer(psy_for_dec, idxer, "renter")
 
     # 2) Model prediction (mu-only)
-    pMG = predictor_MG(TP=TP_MG, CP=CP_MG, SP=SP_MG)
-    pN  = predictor_NMG(TP=TP_NMG, CP=CP_NMG, SP=SP_NMG)
+    p_own = predictor_owner(TP=TP_own, CP=CP_own, SP=SP_own)
+    p_ren = predictor_renter(TP=TP_ren, CP=CP_ren, SP=SP_ren)
 
-    # 3) Mix household probabilities weighted by tract MG share
-    probs = mix_probs_by_weight(pMG, pN, w_vec)
+    # 3) Mix household probabilities weighted by tract owner share
+    probs = mix_probs_by_weight(p_own, p_ren, w_vec)
 
     # 4) Hierarchical decision (owner: FI->EH->BP; renter: FI->RL)
     dec = sequential_decision_fast(
@@ -173,22 +172,22 @@ def run_loop_mgmix_fast(
     years: List[int],
     state: pd.DataFrame,
     tract_psy: pd.DataFrame,
-    mg_share_by_tract: Dict[str,float],
-    predictor_MG: Callable[..., Dict[str, np.ndarray]],
-    predictor_NMG: Callable[..., Dict[str, np.ndarray]],
-    params_MG: TPGroupParams,
-    params_NMG: TPGroupParams,
+    owner_share_by_tract: Dict[str, float],
+    predictor_owner: Callable[..., Dict[str, np.ndarray]],
+    predictor_renter: Callable[..., Dict[str, np.ndarray]],
+    params_owner: TPGroupParams,
+    params_renter: TPGroupParams,
     tp_cfg: TPConfig,
-    ratio_provider: Callable[[int], Dict[str,float]],
-    overlay_policy_names={"owner":"owner_standard","renter":"renter_contents"},
+    ratio_provider: Callable[[int], Dict[str, float]],
+    overlay_policy_names={"owner": "owner_standard", "renter": "renter_contents"},
     seed: int = 2025,
 ) -> Dict[int, pd.DataFrame]:
-    """Multi-year loop using precomputed indexer and MG share vector for speed."""
+    """Multi-year loop using precomputed indexer and owner share vector for speed."""
     rng = np.random.RandomState(seed)
     decisions_by_year: Dict[int, pd.DataFrame] = {}
 
     idxer = build_state_indexer(state, tract_psy)
-    w_vec = state["tract_geoid"].astype(str).map(mg_share_by_tract).to_numpy(float)
+    w_vec = state["tract_geoid"].astype(str).map(owner_share_by_tract).to_numpy(float)
 
     psy = tract_psy.copy()
     for y in years:
@@ -199,8 +198,8 @@ def run_loop_mgmix_fast(
             tract_psy=psy,
             idxer=idxer,
             w_vec=w_vec,
-            predictor_MG=predictor_MG, predictor_NMG=predictor_NMG,
-            params_MG=params_MG, params_NMG=params_NMG,
+            predictor_owner=predictor_owner, predictor_renter=predictor_renter,
+            params_owner=params_owner, params_renter=params_renter,
             tp_cfg=tp_cfg,
             ratio_by_tract=ratio_y,
             overlay_policy_names=overlay_policy_names,

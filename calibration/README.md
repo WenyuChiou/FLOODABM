@@ -36,16 +36,34 @@ calibration/
 │   ├── Phase1_Owner_Renter_Report.docx          # Comprehensive Word report
 │   └── generate_report.py                       # Script to regenerate report
 │
-└── phase2_bayesian_regression/     # Phase 2 outputs
-    ├── all_results_summary_v2.xlsx # All 8 models: coefficients, convergence, metrics
-    ├── best_calibrators.json       # Selected calibration method per (group, action)
-    ├── best_calibrators_v2.json    # Updated calibrator selection
-    ├── Validation.docx             # Validation report
-    ├── SUPPLEMENT_bundle.xlsx      # Supplementary data for paper
-    ├── owner_group/                # Per-action results for owners
-    │   └── {BP,EH,FI,RL}/         # prob_metrics.xlsx per action
-    └── renter_group/               # Per-action results for renters
-        └── {BP,EH,FI,RL}/         # prob_metrics.xlsx per action
+├── phase2_bayesian_regression/     # Phase 2 outputs
+│   ├── all_results_summary_v2.xlsx # All 8 models: coefficients, convergence, metrics
+│   ├── coefficient_comparison.png/pdf  # β coefficients by group × action
+│   ├── convergence_diagnostics.png/pdf # R-hat and ESS for all parameters
+│   ├── calibration_improvement.png/pdf # ECE before vs after calibration
+│   ├── prior_vs_posterior.png/pdf      # Prior→Posterior shrinkage
+│   ├── brier_skill_score.png/pdf       # BSS by model
+│   ├── phase2_metrics_table.csv        # Summary metrics table
+│   ├── best_calibrators_v2.json    # Calibrator selection
+│   ├── Validation.docx             # Validation report
+│   ├── SUPPLEMENT_bundle.xlsx      # Supplementary data
+│   ├── generate_phase2_plots.py    # Script to regenerate plots
+│   ├── owner_group/{BP,EH,FI,RL}/ # prob_metrics.xlsx per action
+│   └── renter_group/{BP,EH,FI,RL}/
+│
+└── phase3_tp_decay/                # Phase 3: TP Decay Calibration
+    ├── run_calibration.py          # Entry point
+    ├── config.py                   # Grid search settings (owner/renter)
+    ├── core/                       # model.py, data.py, optimizer.py, visualizer.py
+    └── outputs/
+        ├── tp_decay_curves.png/pdf             # Calibrated decay curves
+        ├── tp_decay_confidence_intervals.png/pdf # 95% CI ribbons
+        ├── tp_decay_residuals.png/pdf          # Observed vs predicted
+        ├── rmse_heatmap_owner.png/pdf          # RMSE landscape
+        ├── rmse_heatmap_renter.png/pdf
+        ├── calibration_summary.xlsx            # Full results
+        ├── tp_decay_params_for_abm.json        # Parameters for ABM config
+        └── phase3_metrics_table.csv            # Summary metrics
 ```
 
 ## Pipeline Overview
@@ -78,9 +96,30 @@ calibration/
 
 **Models are saved to:** `../models/baseline/` and `../models/baseline_fast/`
 
-### Phase 3: TP Decay Calibration (pending)
+### Phase 3: TP Decay Calibration
+**Script:** `phase3_tp_decay/run_calibration.py`
+
 Uses `cal_data.xlsx` (owner_cal: n=170, renter_cal: n=43) to calibrate
-the TP exponential decay parameters (α, β, τ₀, τ∞, k) per tenure group.
+the TP exponential decay parameters per tenure group.
+
+Model: `TP(t) = TP0 * exp(-ln2 * w_eff * Eff(t))`
+where `w_eff = α*(1-PA) + β*SC`, `τ(t) = τ∞ - (τ∞-τ₀)*exp(-k*t)`
+
+Pipeline:
+1. Grid search over (α, β) × 25×25 grid per group
+2. Joint selection with cross-group constraints (gap ≥ 0.1)
+3. Fine-tuning via L-BFGS-B
+4. Bootstrap CIs (N=100)
+
+**Outputs in `phase3_tp_decay/outputs/`:**
+- `tp_decay_curves.png/pdf` — Calibrated decay curves
+- `tp_decay_confidence_intervals.png/pdf` — 95% CI ribbons
+- `tp_decay_residuals.png/pdf` — Observed vs predicted scatter
+- `rmse_heatmap_owner.png/pdf` — RMSE landscape
+- `rmse_heatmap_renter.png/pdf` — RMSE landscape
+- `calibration_summary.xlsx` — Full grid search + best parameters
+- `tp_decay_params_for_abm.json` — Parameters for `config/abm_params.yaml`
+- `phase3_metrics_table.csv` — Summary metrics
 
 ## Key Results
 
@@ -106,3 +145,12 @@ the TP exponential decay parameters (α, β, τ₀, τ∞, k) per tenure group.
 | renter_RL  | 3.10  | 0.94  | -0.69 | -3.29 |
 
 All 8 models: 0 divergences, R-hat = 1.00, ESS > 400.
+
+### TP Decay Parameters (Phase 3, calibrated)
+| Group  | α      | β      | τ₀   | τ∞     | k      | RMSE   |
+|--------|--------|--------|------|--------|--------|--------|
+| Owner  | 0.4976 | 0.2285 | 1.00 | 31.08  | 0.0300 | 0.1537 |
+| Renter | 0.3966 | 0.0289 | 1.00 | 48.37  | 0.0100 | 0.1363 |
+
+Owner: stronger PA effect (α=0.50), moderate SC effect (β=0.23), faster adaptation (k=0.03).
+Renter: moderate PA effect (α=0.40), minimal SC effect (β=0.03), slower adaptation (k=0.01).

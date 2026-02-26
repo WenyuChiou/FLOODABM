@@ -253,17 +253,17 @@ tp_config:
   skip_decay_on_shock: true     # If true, skip decay in years with flood shock
 tp_decay_params:
   owner:
-    alpha: 0.383333
-    beta: 0.1
-    k: 0.01
-    tau0: 1.0
-    tau_inf: 50.10013
-  renter:
-    alpha: 0.5
-    beta: 0.216667
+    alpha: 0.4976
+    beta: 0.2285
     k: 0.03
     tau0: 1.0
-    tau_inf: 32.18744
+    tau_inf: 31.0774
+  renter:
+    alpha: 0.3966
+    beta: 0.0289
+    k: 0.01
+    tau0: 1.0
+    tau_inf: 48.37
 years:
   end: 2023
   mode: span

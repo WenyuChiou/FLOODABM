@@ -26,7 +26,7 @@ def resolve_path(base: Path, rel_or_abs: str | None, modules_root: Path) -> Path
     return Path(rel_or_abs)
 
 # ---------- inline owner_share / policy ----------
-def load_inline_mgshare_policy(cfg: dict) -> Tuple[Dict[str,float], Dict[str,Any]]:
+def load_inline_owner_share_policy(cfg: dict) -> Tuple[Dict[str,float], Dict[str,Any]]:
     """Load owner share by tract and policy config from YAML.
 
     Supports both 'owner_share' (new) and 'mg_share' (legacy) keys.
@@ -60,6 +60,7 @@ def load_inline_mgshare_policy(cfg: dict) -> Tuple[Dict[str,float], Dict[str,Any
             "coinsurance": {"enabled": False, "rate": 0.8},
         }
     return shares, policy
+
 
 # ---------- finance (read-only; all from YAML) ----------
 def read_finance_from_yaml(cfg: dict) -> tuple[dict, dict, dict]:
@@ -136,7 +137,7 @@ def depths_for_year(depths_long: pd.DataFrame, year: int) -> pd.DataFrame:
 
 # ---------- tract psychology ----------
 def init_tract_psych_safe(tracts, seed: int, rng) -> pd.DataFrame:
-    from modules.actions.mgmix_tp import init_tract_psych_owner_renter
+    from modules.actions.tp import init_tract_psych_owner_renter
     attempts = [
         lambda: init_tract_psych_owner_renter(tracts=tracts, rng=rng),
         lambda: init_tract_psych_owner_renter(tracts=tracts),
@@ -172,7 +173,11 @@ def load_households_csv(path: Path) -> pd.DataFrame:
         HH["hh_idx_within_group"] = HH.groupby(["tract_geoid","group"]).cumcount() + 1
     if "policy_name" not in HH.columns: HH["policy_name"] = ""
     HH["tract_geoid"] = HH["tract_geoid"].astype(str)
-    return HH[["i","group","tract_geoid","rcv_kUSD","contents_kUSD","elev_ft_total","policy_name","i_orig","hh_idx_within_group"]]
+    # Keep psych columns and has_FI if present (household-level initial conditions)
+    keep = ["i","group","tract_geoid","rcv_kUSD","contents_kUSD","elev_ft_total","policy_name","i_orig","hh_idx_within_group"]
+    extra_cols = [c for c in ("TP_init","CP_init","SP_init","SC_init","PA_init","has_FI") if c in HH.columns]
+    keep.extend(extra_cols)
+    return HH[keep]
 
 # ---------- TP group params from YAML ----------
 def grp_params_from_yaml(cfg: dict, grp: str, TPGroupParams) -> Any:
@@ -182,9 +187,9 @@ def grp_params_from_yaml(cfg: dict, grp: str, TPGroupParams) -> Any:
     tp_decay = tp_decay_section.get(grp, {}) or tp_decay_section.get(grp.upper(), {}) or {}
     # Defaults per group
     if grp.lower() == "renter":
-        defaults = {"alpha": 0.50, "beta": 0.216667, "tau0": 1.00, "tau_inf": 32.18744, "k": 0.03}
+        defaults = {"alpha": 0.3500, "beta": 0.1000, "tau0": 1.00, "tau_inf": 46.0431, "k": 0.01}
     else:  # owner
-        defaults = {"alpha": 0.383333, "beta": 0.10, "tau0": 1.00, "tau_inf": 50.10013, "k": 0.01}
+        defaults = {"alpha": 0.5000, "beta": 0.2167, "tau0": 1.00, "tau_inf": 33.2589, "k": 0.03}
     j = {**defaults, **{k: tp_decay.get(k, defaults[k]) for k in defaults}}
     return TPGroupParams(
         alpha=float(j["alpha"]),

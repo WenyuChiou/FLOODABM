@@ -71,19 +71,19 @@ calibration/
 ### Phase 1: Survey Data Extraction & Distribution Fitting
 **Script:** `extract_tenure_data.py`
 
-1. Reads raw survey data from `data_ori.xlsx` (NMG + MG sheets)
-2. Splits respondents by Q3 (housing tenure): Q3=2 → renter, else → owner
+1. Reads raw survey data from `999_value.xlsx` (original Qualtrics export)
+2. Splits respondents by Q5 (housing status): Q5=1 → renter, Q5∈{2,3} → owner
 3. Computes 5 psychological variables:
-   - TP (Threat Perception) = mean(Q22_1:Q22_11) / 5
-   - CP (Coping Perception) = mean(Q24_1,Q24_2,Q25_1,Q25_2,Q25_4,Q25_5,Q25_7,Q25_8) / 5
-   - SP (Social Perception) = mean(Q25_3,Q25_6,Q25_9) / 5
-   - SC (Social Capital) = mean(Q21_1:Q21_6) / 5
-   - PA (Place Attachment) = mean(Q21_7:Q21_15) / 5
-4. Extracts action columns: FI=Q27, EH=Q29, BP=Q31, RL=Q33
+   - TP (Threat Perception) = mean(Q19_1:Q19_11) / 5
+   - CP (Coping Perception) = mean(Q21_1,Q21_2,Q22_1,Q22_2,Q22_4,Q22_5,Q22_7,Q22_8) / 5
+   - SP (Social Perception) = mean(Q22_3,Q22_6,Q22_9) / 5
+   - SC (Social Capital) = mean(Q18_1:Q18_6) / 5
+   - PA (Place Attachment) = mean(Q18_7:Q18_15) / 5
+4. Extracts action columns: FI=Q24, EH=Q26 (owner only), BP=Q28 (owner only), RL=Q30 (renter only)
 5. Fits Beta(α,β) distributions via MLE
 6. Generates plots and summary statistics
 
-**Sample sizes:** Owner=694, Renter=243
+**Sample sizes:** Owner=557, Renter=379 (total n=936)
 
 ### Phase 2: Bayesian Beta Regression
 **Script:** `bayesian_engine/main.py`
@@ -99,7 +99,7 @@ calibration/
 ### Phase 3: TP Decay Calibration
 **Script:** `phase3_tp_decay/run_calibration.py`
 
-Uses `cal_data.xlsx` (owner_cal: n=170, renter_cal: n=43) to calibrate
+Uses `cal_data.xlsx` (owner_cal: n=135, renter_cal: n=73) to calibrate
 the TP exponential decay parameters per tenure group.
 
 Model: `TP(t) = TP0 * exp(-ln2 * w_eff * Eff(t))`
@@ -126,11 +126,11 @@ Pipeline:
 ### Beta Distribution Parameters (Phase 1)
 | Variable | Owner α | Owner β | Renter α | Renter β |
 |----------|---------|---------|----------|----------|
-| TP       | 6.123   | 4.480   | 4.765    | 3.364    |
-| CP       | 5.430   | 3.333   | 5.236    | 3.155    |
-| SP       | 2.666   | 2.014   | 2.142    | 1.474    |
-| SC       | 3.368   | 1.155   | 3.996    | 1.576    |
-| PA       | 3.575   | 1.850   | 2.762    | 1.428    |
+| TP       | 6.270   | 4.635   | 3.713    | 2.668    |
+| CP       | 7.857   | 5.052   | 3.824    | 2.164    |
+| SP       | 3.398   | 2.752   | 1.759    | 1.103    |
+| SC       | 4.774   | 1.690   | 2.794    | 1.036    |
+| PA       | 5.539   | 2.942   | 2.513    | 1.322    |
 
 ### Bayesian Regression Coefficients (Phase 2, posterior means)
 | Model      | β_TP  | β_CP  | β_SP  | β₀    |

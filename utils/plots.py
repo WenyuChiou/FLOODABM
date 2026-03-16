@@ -185,10 +185,10 @@ def _plot_area_change(tp_traj: pd.DataFrame, col: str, title: str, out_path: Pat
 
 def plot_tp_outputs(tp_traj: pd.DataFrame, fig_root: Path) -> None:
     sub = _ensure_fig_dirs(fig_root)
-    _plot_median_iqr(tp_traj, "TP_MG",  "TP (MG) — Median ± IQR (after-update)",  sub["action"] / "mg_tp_median_iqr.png")
-    _plot_median_iqr(tp_traj, "TP_NMG", "TP (NMG) — Median ± IQR (after-update)", sub["action"] / "nmg_tp_median_iqr.png")
-    _plot_area_change(tp_traj, "TP_MG",  "ΔTP (MG) — Mean with central 80% band",  sub["action"] / "mg_tp_change_area.png")
-    _plot_area_change(tp_traj, "TP_NMG", "ΔTP (NMG) — Mean with central 80% band", sub["action"] / "nmg_tp_change_area.png")
+    _plot_median_iqr(tp_traj, "TP_owner",  "TP (Owner) — Median ± IQR (after-update)",  sub["action"] / "owner_tp_median_iqr.png")
+    _plot_median_iqr(tp_traj, "TP_renter", "TP (Renter) — Median ± IQR (after-update)", sub["action"] / "renter_tp_median_iqr.png")
+    _plot_area_change(tp_traj, "TP_owner",  "ΔTP (Owner) — Mean with central 80% band",  sub["action"] / "owner_tp_change_area.png")
+    _plot_area_change(tp_traj, "TP_renter", "ΔTP (Renter) — Mean with central 80% band", sub["action"] / "renter_tp_change_area.png")
     # New tract-level TP plots
     _plot_tp_heatmap(tp_traj, sub["action"] / "tp_tract_heatmap.png")
     _plot_tp_boxplot_by_year(tp_traj, sub["action"] / "tp_boxplot_by_year.png")
@@ -201,9 +201,9 @@ def _plot_tp_heatmap(tp_traj: pd.DataFrame, out_path: Path) -> None:
     _set_style()
     import matplotlib.pyplot as plt
     
-    # Average MG and NMG
+    # Average owner and renter
     tp_traj = tp_traj.copy()
-    tp_traj["TP_avg"] = (tp_traj["TP_MG"] + tp_traj["TP_NMG"]) / 2
+    tp_traj["TP_avg"] = (tp_traj["TP_owner"] + tp_traj["TP_renter"]) / 2
     pivot = tp_traj.pivot_table(index="tract_geoid", columns="year", values="TP_avg", aggfunc="mean")
     
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -233,45 +233,45 @@ def _plot_tp_heatmap(tp_traj: pd.DataFrame, out_path: Path) -> None:
 
 
 def _plot_tp_boxplot_by_year(tp_traj: pd.DataFrame, out_path: Path) -> None:
-    """Plot TP (Threat Perception) distribution boxplot by year with MG/NMG comparison."""
+    """Plot TP (Threat Perception) distribution boxplot by year with owner/renter comparison."""
     if tp_traj is None or tp_traj.empty:
         return
     _set_style()
     import matplotlib.pyplot as plt
-    
+
     years = sorted(tp_traj["year"].unique())
-    tp_mg_data = [tp_traj[tp_traj["year"] == y]["TP_MG"].dropna().values for y in years]
-    tp_nmg_data = [tp_traj[tp_traj["year"] == y]["TP_NMG"].dropna().values for y in years]
-    
+    tp_owner_data = [tp_traj[tp_traj["year"] == y]["TP_owner"].dropna().values for y in years]
+    tp_renter_data = [tp_traj[tp_traj["year"] == y]["TP_renter"].dropna().values for y in years]
+
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle("TP Distribution by Year (Tract-level)", fontsize=14, fontweight="bold")
-    
-    # MG
+
+    # Owner
     ax = axes[0]
-    bp1 = ax.boxplot(tp_mg_data, labels=years, patch_artist=True)
+    bp1 = ax.boxplot(tp_owner_data, labels=years, patch_artist=True)
     for patch in bp1["boxes"]:
         patch.set_facecolor("#3b82f6")
         patch.set_alpha(0.7)
     ax.set_xlabel("Simulation Year", fontsize=15, fontweight="bold", labelpad=12)
-    ax.set_ylabel("TP_MG")
-    ax.set_title("Marginalized Group (MG)")
+    ax.set_ylabel("TP_owner")
+    ax.set_title("Owner (Homeowner)")
     ax.set_ylim(0, 1)
     ax.tick_params(axis="x", rotation=45)
-    
+
     # Mark severe years
     severe_idx = [years.index(y) + 1 for y in [2011, 2014, 2021] if y in years]
     for idx in severe_idx:
         ax.axvline(idx, color="red", alpha=0.2, linewidth=8)
-    
-    # NMG
+
+    # Renter
     ax = axes[1]
-    bp2 = ax.boxplot(tp_nmg_data, labels=years, patch_artist=True)
+    bp2 = ax.boxplot(tp_renter_data, labels=years, patch_artist=True)
     for patch in bp2["boxes"]:
         patch.set_facecolor("#22c55e")
         patch.set_alpha(0.7)
     ax.set_xlabel("Simulation Year", fontsize=15, fontweight="bold", labelpad=12)
-    ax.set_ylabel("TP_NMG")
-    ax.set_title("Non-Marginalized Group (NMG)")
+    ax.set_ylabel("TP_renter")
+    ax.set_title("Renter")
     ax.set_ylim(0, 1)
     ax.tick_params(axis="x", rotation=45)
     for idx in severe_idx:
@@ -654,7 +654,7 @@ def _owner_from_both_minus_renter(owner_df, renter_df, both_df):
 
 def plot_flood_damage_by_year_box_from_all(fig_root: Path,
                                            drop_years=(),
-                                           severe_years=(2011, 2014, 2021, 2022, 2023),
+                                           severe_years=(2011, 2014, 2021),
                                            show_rate: bool = False,
                                            poster: bool = False) -> None:
     owner_all, renter_all, both_all = _read_damage_all_tables(fig_root)
@@ -918,7 +918,7 @@ def _avg_damage_per_household(dmg_df: pd.DataFrame, n_df: pd.DataFrame, who: str
 
 def plot_flood_damage_per_household(fig_root: Path, fin_dir: Path,
                                     drop_years=(),
-                                    severe_years=(2011, 2014, 2021, 2022, 2023),
+                                    severe_years=(2011, 2014, 2021),
                                     include_both: bool = False,
                                     poster: bool = False) -> None:
     """
@@ -1179,7 +1179,7 @@ def plot_fin_stacked_owner_renter_separate(
     fin_dir: Path,
     fig_root: Path,
     drop_years=(),                   # ✅ 不排除 2011
-    severe_years=(2014, 2021, 2022, 2023),
+    severe_years=(2011, 2014, 2021),
     *,
     normalize: bool = False,         # True → 以比例堆疊（每年合計=1）
     panel_labels: tuple[str, str] = ("(a)", "(b)"),       # True→圖外右側；False→下方置中
@@ -1339,7 +1339,7 @@ def plot_fin_cost_owner_renter(
     fin_dir: Path,
     fig_root: Path,
     drop_years=(),
-    severe_years=(2011, 2014, 2021, 2022, 2023),
+    severe_years=(2011, 2014, 2021),
     poster: bool = False,
 ) -> None:
     """
@@ -1559,7 +1559,7 @@ def plot_payout_owner_renter(
     fin_dir: Path,
     fig_root: Path,
     drop_years=(),
-    severe_years=(2011, 2014, 2021, 2022, 2023),
+    severe_years=(2011, 2014, 2021),
     *,
     show_rate: bool = False,           # ← 開關：是否加右軸 payout rate 折線
     rate_ylim: Optional[Tuple[float,float]] = (0, 0.4),  # 例如 (0,1.0)
@@ -1767,7 +1767,7 @@ def plot_loss_attribution_stacked_percent(
     deductible_usd: float = 1_000.0,
     owner_limit_usd: float = 250_000.0,
     renter_limit_usd: float = 100_000.0,
-    severe_years: tuple[int, ...] = (2011, 2014, 2021, 2022, 2023),
+    severe_years: tuple[int, ...] = (2011, 2014, 2021),
     poster: bool = False,
     drop_years: tuple[int, ...] = (),
 ) -> None:
@@ -2224,7 +2224,7 @@ def plot_action_shares_owner_renter_separate_panels(
     renter_dn_line = _totals_line_from_all("renter_DN", rent_dn_arrays)
 
     # ========== 繪圖：箱型圖 + 折線（折線預設關閉；要開把註解取消） ==========
-    def _draw_boxline(ax, arrays, box_color, title, totals):
+    def _draw_boxline(ax, arrays, box_color, title, totals, ylim=None):
         _shade(ax)
         bp = ax.boxplot(arrays, positions=x, widths=0.55, patch_artist=True,
                         showfliers=False, whis=[10, 90], zorder=1)
@@ -2240,7 +2240,7 @@ def plot_action_shares_owner_renter_separate_panels(
         # m = np.isfinite(totals)
         # if m.any(): ax.plot(x[m], totals[m], **LINE_KW)
 
-        ax.set_ylim(*_tight_ylim(arrays))
+        ax.set_ylim(*(ylim if ylim else _tight_ylim(arrays)))
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0, decimals=0))
         ax.set_xlim(-0.6, len(x) - 0.4)
         # Only show even years
@@ -2251,18 +2251,22 @@ def plot_action_shares_owner_renter_separate_panels(
         ax.set_title(title, loc="center")
         ax.grid(True, axis="y", linestyle="--", alpha=0.25)
 
+    # Shared Y-axes: compute unified range from both owner and renter for comparable panels
+    _dn_shared_ylim = _tight_ylim(own_dn_arrays + rent_dn_arrays)
+    _fi_shared_ylim = _tight_ylim(own_fi_arrays + rent_fi_arrays)
+
     # ===== RENTER =====
     fig_r, axs_r = plt.subplots(3, 1, figsize=(10, 8.5), sharex=True, constrained_layout=True)
-    _draw_boxline(axs_r[0], rent_fi_arrays, C_FI_BOX, "", renter_fi_line)
+    _draw_boxline(axs_r[0], rent_fi_arrays, C_FI_BOX, "", renter_fi_line, ylim=_fi_shared_ylim)
     axs_r[0].set_title('Renter', fontweight='bold', fontsize=16, loc='center')
     axs_r[0].set_ylabel("FI share")
-    axs_r[0].text(-0.08, 1.05, '(a)', transform=axs_r[0].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
+    axs_r[0].text(-0.08, 1.05, '(e)', transform=axs_r[0].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
     _draw_boxline(axs_r[1], rent_rl_arrays, C_RL_BOX, "", renter_rl_line)
     axs_r[1].set_ylabel("RL share")
-    axs_r[1].text(-0.08, 1.05, '(b)', transform=axs_r[1].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
-    _draw_boxline(axs_r[2], rent_dn_arrays, C_DN_BOX, "", renter_dn_line)
+    axs_r[1].text(-0.08, 1.05, '(f)', transform=axs_r[1].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
+    _draw_boxline(axs_r[2], rent_dn_arrays, C_DN_BOX, "", renter_dn_line, ylim=_dn_shared_ylim)
     axs_r[2].set_ylabel("DN share")
-    axs_r[2].text(-0.08, 1.05, '(c)', transform=axs_r[2].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
+    axs_r[2].text(-0.08, 1.05, '(g)', transform=axs_r[2].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
     axs_r[-1].set_xlabel("Simulation Year", fontsize=15, fontweight="bold", labelpad=12)
 
     # Renter legend in upper right
@@ -2277,14 +2281,14 @@ def plot_action_shares_owner_renter_separate_panels(
 
     # ===== OWNER =====
     fig_o, axs_o = plt.subplots(4, 1, figsize=(10, 11), sharex=True, constrained_layout=True)
-    _draw_boxline(axs_o[0], own_fi_arrays, C_FI_BOX, "", owner_fi_line)
+    _draw_boxline(axs_o[0], own_fi_arrays, C_FI_BOX, "", owner_fi_line, ylim=_fi_shared_ylim)
     axs_o[0].set_title('Homeowner', fontweight='bold', fontsize=16, loc='center')
     axs_o[0].set_ylabel("FI share")
     axs_o[0].text(-0.08, 1.05, '(a)', transform=axs_o[0].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
     _draw_boxline(axs_o[1], own_bp_arrays, C_BP_BOX, "", owner_bp_line)
     axs_o[1].set_ylabel("BP share")
     axs_o[1].text(-0.08, 1.05, '(b)', transform=axs_o[1].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
-    _draw_boxline(axs_o[2], own_dn_arrays, C_DN_BOX, "", owner_dn_line)
+    _draw_boxline(axs_o[2], own_dn_arrays, C_DN_BOX, "", owner_dn_line, ylim=_dn_shared_ylim)
     axs_o[2].set_ylabel("DN share")
     axs_o[2].text(-0.08, 1.05, '(c)', transform=axs_o[2].transAxes, fontweight='bold', fontsize=14, va='bottom', ha='left')
 
@@ -3130,7 +3134,7 @@ def plot_fi_by_flood_prone(decisions_dir: Path, fig_root: Path,
     high_flood_tracts = []
     if config_file.exists():
         import yaml
-        with open(config_file) as f:
+        with open(config_file, encoding='utf-8') as f:
             cfg = yaml.safe_load(f)
         take_rate = cfg.get('insurance_init', {}).get('take_rate_by_tract_group', {})
         high_flood_tracts = [str(t) for t, v in take_rate.items() if v.get('owner') == 0.25]
@@ -3732,7 +3736,7 @@ def output_flood_impact_csv(decisions_dir: Path, output_dir: Path,
     config_file = Path("config/abm_params.yaml")
     fp_tracts = []
     if config_file.exists():
-        with open(config_file) as f:
+        with open(config_file, encoding='utf-8') as f:
             cfg = yaml.safe_load(f)
         take_rate = cfg.get('insurance_init', {}).get('take_rate_by_tract_group', {})
         fp_tracts = [str(t) for t, v in take_rate.items() if v.get('owner') == 0.25]

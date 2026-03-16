@@ -31,10 +31,11 @@ venv/
 .DS_Store
 Thumbs.db
 
-# IDE / editor
+# IDE / editor / AI session
 .vscode/
 .idea/
 .claude/
+.ai/
 
 # Logs
 *.log
@@ -55,3 +56,6 @@ calibration/data/data_ori.xlsx
 # Misc
 _UL
 *.pdf
+
+# Temporary figures
+fig4_FRESH.png

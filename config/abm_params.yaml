@@ -12,51 +12,51 @@ action_dynamics:
 beta_parameters:
   CP_mean:
     owner:
-      alpha: 5.430291
-      beta: 3.333322
+      alpha: 7.857
+      beta: 5.052
     renter:
-      alpha: 5.236203
-      beta: 3.154798
+      alpha: 3.824
+      beta: 2.164
     original_range:
     - 0.0
     - 1.0
   PA_mean:
     owner:
-      alpha: 3.574675
-      beta: 1.850491
+      alpha: 5.539
+      beta: 2.942
     renter:
-      alpha: 2.761719
-      beta: 1.42806
+      alpha: 2.513
+      beta: 1.322
     original_range:
     - 0.0
     - 1.0
   SC_mean:
     owner:
-      alpha: 3.367934
-      beta: 1.154551
+      alpha: 4.774
+      beta: 1.690
     renter:
-      alpha: 3.996214
-      beta: 1.576349
+      alpha: 2.794
+      beta: 1.036
     original_range:
     - 0.0
     - 1.0
   SP_mean:
     owner:
-      alpha: 2.666478
-      beta: 2.014197
+      alpha: 3.398
+      beta: 2.752
     renter:
-      alpha: 2.142183
-      beta: 1.474363
+      alpha: 1.759
+      beta: 1.103
     original_range:
     - 0.0
     - 1.0
   TP_mean:
     owner:
-      alpha: 6.12264
-      beta: 4.480251
+      alpha: 6.270
+      beta: 4.635
     renter:
-      alpha: 4.765219
-      beta: 3.36416
+      alpha: 3.713
+      beta: 2.668
     original_range:
     - 0.0
     - 1.0
@@ -87,9 +87,9 @@ flood:
   depth_threshold_m: null
   events_mode: mask
   min_trigger: 1.0e-06
-  ratio_threshold: 0.5
-  ratio_threshold_owner: 0.5
-  ratio_threshold_renter: 0.5
+  ratio_threshold: 0.10
+  ratio_threshold_owner: 0.10
+  ratio_threshold_renter: 0.10
 hazard:
   depths_mode: grid_hist
   grid_hist:
@@ -223,6 +223,18 @@ policy:
     deductible_structure_kUSD: 1.0
   renter:
     deductible_contents_kUSD: 1.0
+# Decision mechanism: Bernoulli trial (u < p).
+# decision_threshold=0.0 → pure stochastic; set to 0.5 for hybrid threshold+stochastic.
+decision_threshold: 0.0
+# Bounded random draw ranges per action.
+# Each action's uniform draw u ~ U(low, high) instead of U(0,1).
+# If p > high: deterministic adopt; if p < low: deterministic reject.
+# Set to null for default U(0,1) behavior.
+draw_bounds:
+  FI: [0.35, 0.55]
+  EH: [0.30, 0.60]
+  BP: [0.25, 0.65]
+  RL: [0.25, 0.50]
 seed: 2011
 # ==============================================================================
 # Threat Perception (TP) Configuration
@@ -253,17 +265,17 @@ tp_config:
   skip_decay_on_shock: true     # If true, skip decay in years with flood shock
 tp_decay_params:
   owner:
-    alpha: 0.4976
-    beta: 0.2285
+    alpha: 0.5000
+    beta: 0.2167
     k: 0.03
     tau0: 1.0
-    tau_inf: 31.0774
+    tau_inf: 33.2589
   renter:
-    alpha: 0.3966
-    beta: 0.0289
+    alpha: 0.3500
+    beta: 0.1000
     k: 0.01
     tau0: 1.0
-    tau_inf: 48.37
+    tau_inf: 46.0431
 years:
   end: 2023
   mode: span

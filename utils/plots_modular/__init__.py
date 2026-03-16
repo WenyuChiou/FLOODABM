@@ -38,7 +38,7 @@ def plot_all_outputs(
     This is the main plotting entry point that creates all figures.
     
     Args:
-        tp_traj: Trust trajectory DataFrame with year, tract_geoid, TP_MG, TP_NMG
+        tp_traj: Trust trajectory DataFrame with year, tract_geoid, TP_owner, TP_renter
         fin_dir: Directory containing finance CSVs
         vis_dir: Output directory for visualizations
         severe_years: Optional list of severe flood years to highlight

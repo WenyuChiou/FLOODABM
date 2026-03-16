@@ -217,7 +217,7 @@ def init_tract_psychology(
 
 
 # =============================================================================
-# MG Share and Policy Loading
+# Owner Share and Policy Loading
 # =============================================================================
 
 def load_owner_share(config: dict) -> dict[str, float]:
@@ -255,7 +255,3 @@ def get_owner_share_for_tract(shares: dict, tract_geoid: str) -> float:
     """
     return shares.get(str(tract_geoid), shares.get("_default", 0.7))
 
-
-# Backward-compatible aliases
-load_mg_share = load_owner_share
-get_mg_share_for_tract = get_owner_share_for_tract

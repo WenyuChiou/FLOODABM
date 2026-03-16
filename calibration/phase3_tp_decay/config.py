@@ -16,7 +16,7 @@ COLS = dict(
     T_LO=["t_lo", "time", "years_since", "q15_year", "tmin"],
     T_HI=["t_hi", "time_max", "tmax"]
 )
-COL_Q15_RAW = "q15"
+COL_Q15_RAW = "q15"  # Excel column Q15 = original survey Q12 (flood experience timing)
 
 # --- Core Logic Settings ---
 IMPUTE_MEAN = 5.0

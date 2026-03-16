@@ -257,6 +257,33 @@ def _make_platt_calibrator(A: float, B: float) -> Callable:
     return lambda p: _sigmoid(A * _logit(p) + B)
 
 
+def _make_beta_calibrator(a: float, b: float, c: float) -> Callable:
+    """Create beta calibrator (Kull et al., 2017).
+
+    Formula: p_cal = sigmoid(a * log(p) + b * log(1-p) + c)
+
+    Parameters a, b, c are fitted by minimizing log-loss during calibration.
+    """
+    a, b, c = float(a), float(b), float(c)
+    _EPS = 1e-6  # Must be >= float32 epsilon (~1.2e-7) to prevent log(0)
+    def _cal(p: np.ndarray) -> np.ndarray:
+        p_clip = np.clip(np.asarray(p, dtype=np.float32), _EPS, 1.0 - _EPS)
+        lp = np.log(p_clip)
+        lq = np.log(1.0 - p_clip)
+        return _sigmoid(a * lp + b * lq + c)
+    return _cal
+
+
+def _make_temp_calibrator(tau: float) -> Callable:
+    """Create temperature scaling calibrator: sigmoid(logit(p) / tau)."""
+    tau = float(tau)
+    if tau <= 0:
+        import warnings
+        warnings.warn(f"Temperature tau={tau} is non-positive; defaulting to 1.0 (no scaling).")
+        tau = 1.0
+    return lambda p: _sigmoid(_logit(p) / tau)
+
+
 def _make_isotonic_calibrator(x: np.ndarray, y: np.ndarray) -> Callable:
     """Create isotonic regression calibrator using linear interpolation."""
     x = np.asarray(x, dtype=np.float32)
@@ -264,34 +291,105 @@ def _make_isotonic_calibrator(x: np.ndarray, y: np.ndarray) -> Callable:
     return lambda p: np.interp(np.asarray(p, dtype=np.float32), x, y)
 
 
+def _load_calibrator_from_npz(npz_path: Path) -> Callable | None:
+    """Load a calibrator function from an .npz file's embedded parameters.
+
+    Returns None if the npz file doesn't exist or has no calibrator data.
+    """
+    if not npz_path.exists():
+        return None
+
+    try:
+        data = np.load(npz_path, allow_pickle=True)
+    except Exception as e:
+        print(f"[warn] Could not load calibrator from {npz_path.name}: {e}", file=sys.stderr)
+        return None
+
+    if "calibrator_method" not in data:
+        return None
+
+    method = str(data["calibrator_method"]).strip().lower()
+
+    if method in ("beta",):
+        # Kull et al. (2017) beta calibration: sigmoid(a*log(p) + b*log(1-p) + c)
+        if not all(k in data for k in ("calibrator_param_a", "calibrator_param_b", "calibrator_param_c")):
+            print(f"[warn] Incomplete beta calibrator params in {npz_path.name}", file=sys.stderr)
+            return None
+        a = float(data["calibrator_param_a"])
+        b = float(data["calibrator_param_b"])
+        c = float(data["calibrator_param_c"])
+        return _make_beta_calibrator(a, b, c)
+
+    if method in ("platt", "platt_scaling", "logistic"):
+        if "calibrator_param_coef" not in data or "calibrator_param_intercept" not in data:
+            print(f"[warn] Incomplete platt calibrator params in {npz_path.name}", file=sys.stderr)
+            return None
+        coef = float(data["calibrator_param_coef"])
+        intercept = float(data["calibrator_param_intercept"])
+        return _make_platt_calibrator(coef, intercept)
+
+    if method in ("temp", "temperature", "temperature_scaling"):
+        if "calibrator_param_tau" not in data:
+            print(f"[warn] Missing temp calibrator tau in {npz_path.name}", file=sys.stderr)
+            return None
+        tau = float(data["calibrator_param_tau"])
+        return _make_temp_calibrator(tau)
+
+    return None
+
+
 def _load_calibrators(calib_path: Path | None, group_tag: str) -> dict:
-    """Load calibration functions from JSON config file."""
+    """Load calibration functions from JSON config file (legacy fallback).
+
+    Note: The primary calibrator loading path is now _load_calibrator_from_npz(),
+    called in _load_group_models(). This function serves as a fallback for
+    JSON-based configs using flat keys like 'OWNER_FI'.
+    """
     calibrators = {action: _identity_calibrator for action in ACTIONS}
-    
+
     if calib_path is None or not calib_path.exists():
         return calibrators
-    
+
     config = json.loads(calib_path.read_text(encoding="utf-8"))
+
+    # Support both flat keys ("OWNER_FI") and nested keys ({"owner": {"FI": ...}})
     prefix = group_tag.upper() + "_"
-    
+    group_lower = group_tag.lower()
+
     for action in ACTIONS:
+        entry = None
+        # Try flat key first
         key = prefix + action
-        if key not in config:
+        if key in config:
+            entry = config[key]
+        # Try nested key
+        elif group_lower in config and isinstance(config[group_lower], dict):
+            if action in config[group_lower]:
+                entry = config[group_lower][action]
+
+        if entry is None:
             continue
-        
-        entry = config[key]
-        cal_type = str(entry.get("type", "platt")).lower()
-        
-        if cal_type in ("platt", "platt_scaling", "logistic"):
-            A = entry.get("A", entry.get("a", 1.0))
-            B = entry.get("B", entry.get("b", 0.0))
+
+        cal_type = str(entry.get("type", entry.get("method", "platt"))).lower()
+
+        if cal_type in ("beta",):
+            a = entry.get("A", entry.get("a", 0.0))
+            b = entry.get("B", entry.get("b", 1.0))
+            c = entry.get("C", entry.get("c", 0.0))
+            calibrators[action] = _make_beta_calibrator(a, b, c)
+        elif cal_type in ("platt", "platt_scaling", "logistic"):
+            A = entry.get("A", entry.get("a", entry.get("coef", 1.0)))
+            B = entry.get("B", entry.get("b", entry.get("intercept", 0.0)))
             calibrators[action] = _make_platt_calibrator(A, B)
+        elif cal_type in ("temp", "temperature", "temperature_scaling"):
+            tau = entry.get("tau", 1.0)
+            calibrators[action] = _make_temp_calibrator(tau)
         elif cal_type in ("iso", "isotonic"):
             x = entry.get("x") or entry.get("bins") or []
             y = entry.get("y") or entry.get("values") or []
             if len(x) >= 2 and len(y) == len(x):
                 calibrators[action] = _make_isotonic_calibrator(np.array(x), np.array(y))
-    
+
     return calibrators
 
 
@@ -436,14 +534,24 @@ def _load_or_cache_weights(pkl_path: Path, npz_path: Path) -> tuple[np.ndarray, 
         if "w" in data and "b" in data:
             return data["w"].astype(np.float32), float(data["b"])
     
+    # Helper: extract calibrator keys from an npz for cache preservation
+    def _cal_extras_from_npz(data) -> dict:
+        """Extract calibrator_* keys from npz data for cache preservation."""
+        extras = {}
+        for k in data.keys():
+            if k.startswith("calibrator_"):
+                extras[k] = data[k]
+        return extras
+
     # Helper function to extract weights from training project npz format
-    def _extract_from_training_npz(npz_file: Path) -> tuple[np.ndarray, float] | None:
+    def _extract_from_training_npz(npz_file: Path):
+        """Returns (weights, bias, cal_extras) or None."""
         if not npz_file.exists():
             return None
         try:
             data = np.load(npz_file, allow_pickle=True)
             keys = list(data.keys())
-            
+
             # Training project format uses 'posterior_xxx' keys
             if any(k.startswith("posterior_") for k in keys):
                 weights = []
@@ -454,38 +562,39 @@ def _load_or_cache_weights(pkl_path: Path, npz_path: Path) -> tuple[np.ndarray, 
                         weights.append(float(arr.mean()))
                     else:
                         weights.append(0.0)
-                
+
                 b0_key = "posterior_beta_0"
                 bias = float(np.asarray(data[b0_key]).mean()) if b0_key in data else 0.0
-                
-                return np.array(weights, dtype=np.float32), bias
+                cal_extras = _cal_extras_from_npz(data)
+
+                return np.array(weights, dtype=np.float32), bias, cal_extras
         except Exception:
             pass
         return None
-    
+
     # Priority 1.5: Check _fast sibling directory for training project npz
     models_parent = pkl_path.parent.parent  # e.g., models/
     model_name = pkl_path.parent.name       # e.g., optimized
     fast_dir = models_parent / f"{model_name}_fast"
     fast_npz = fast_dir / pkl_path.with_suffix(".npz").name
-    
+
     result = _extract_from_training_npz(fast_npz)
     if result is not None:
-        weights, bias = result
-        # Cache in FLOODABM format for future fast loading
+        weights, bias, cal_extras = result
+        # Cache in FLOODABM format with calibrator params preserved
         npz_path.parent.mkdir(parents=True, exist_ok=True)
-        np.savez(npz_path, w=weights, b=np.float32(bias))
+        np.savez(npz_path, w=weights, b=np.float32(bias), **cal_extras)
         print(f"[cache] Converted training npz to fast cache: {npz_path.name}")
         return weights, bias
-    
+
     # Priority 2: Check if training project generated npz alongside pkl
     same_dir_npz = pkl_path.with_suffix(".npz")
     result = _extract_from_training_npz(same_dir_npz)
     if result is not None:
-        weights, bias = result
-        # Cache in FLOODABM format for future fast loading
+        weights, bias, cal_extras = result
+        # Cache in FLOODABM format with calibrator params preserved
         npz_path.parent.mkdir(parents=True, exist_ok=True)
-        np.savez(npz_path, w=weights, b=np.float32(bias))
+        np.savez(npz_path, w=weights, b=np.float32(bias), **cal_extras)
         print(f"[cache] Converted training npz to fast cache: {npz_path.name}")
         return weights, bias
 
@@ -547,20 +656,30 @@ def _load_group_models(models_root: Path, group_tag: str, calib_path: Path | Non
     W = np.zeros((len(ACTIONS), len(FEATURES)), dtype=np.float32)
     b = np.zeros(len(ACTIONS), dtype=np.float32)
     
-    # Load calibrators
+    # Load calibrators from JSON as fallback
     calibrator_map = _load_calibrators(calib_path, group_tag)
     calibrators = [_identity_calibrator] * len(ACTIONS)
-    
+
     # Load each action model
     for j, action in enumerate(ACTIONS):
         pkl_file = models_dir / f"{group_tag}_{action}.pkl"
         if not pkl_file.exists():
             continue  # Missing model -> use zero weights
-        
+
         npz_file = cache_dir / f"{group_tag}_{action}.npz"
         W[j, :], b[j] = _load_or_cache_weights(pkl_file, npz_file)
-        calibrators[j] = calibrator_map.get(action, _identity_calibrator)
-    
+
+        # Priority 1: load calibrator from npz (cache or training)
+        cal = _load_calibrator_from_npz(npz_file)
+        if cal is None:
+            # Try training npz in models_dir
+            cal = _load_calibrator_from_npz(models_dir / f"{group_tag}_{action}.npz")
+        if cal is not None:
+            calibrators[j] = cal
+        else:
+            # Priority 2: JSON-based calibrator
+            calibrators[j] = calibrator_map.get(action, _identity_calibrator)
+
     return W, b, calibrators
 
 

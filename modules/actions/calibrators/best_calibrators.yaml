@@ -1,4 +1,4 @@
-MG:
+owner:
   BP:
     method: temp
     evalset: oof
@@ -21,7 +21,7 @@ MG:
     evalset: test
     delta_Brier: -0.005757615571542085
     delta_ECE: -0.015456991452796769
-NMG:
+renter:
   BP:
     method: platt
     evalset: test

@@ -113,14 +113,20 @@ def _apply_policy_fills(
             series_by = out[by].astype(str)
             for sk in scalar_keys:
                 col = colnames[sk]
-                vals = out[col].copy()
-                for idx, key_val in series_by.items():
-                    entry = pdata.get(str(key_val))
-                    if isinstance(entry, dict) and sk in entry:
-                        val = float(entry[sk])
-                        if policy_overwrite or pd.isna(vals.at[idx]):
-                            vals.at[idx] = val
-                out[col] = vals
+                # Build tract→value lookup Series from pdata
+                tract_to_val = {}
+                for k_key, v_entry in pdata.items():
+                    if isinstance(v_entry, dict) and sk in v_entry:
+                        tract_to_val[str(k_key)] = float(v_entry[sk])
+                if not tract_to_val:
+                    continue
+                mapped = series_by.map(pd.Series(tract_to_val, dtype=float))
+                if policy_overwrite:
+                    fill_mask = mapped.notna()
+                    out.loc[fill_mask, col] = mapped[fill_mask]
+                else:
+                    fill_mask = mapped.notna() & out[col].isna()
+                    out.loc[fill_mask, col] = mapped[fill_mask]
 
 
 def apply_financials(
@@ -256,7 +262,8 @@ def apply_financials(
         out["has_claim"] = (_ins & (out["payout_total_kUSD"] > 0)).astype(int)
 
     out["gross_total_kUSD"] = gross_total_kUSD
-    out["has_claim"] = (payout_total_kUSD > 0).astype(int)
+    if "has_claim" not in out.columns:
+        out["has_claim"] = (_ins & (out["payout_total_kUSD"] > 0)).astype(int) if "payout_total_kUSD" in out.columns else 0
 
     # ---- (6) Premiums ----
     if isinstance(premium, dict):

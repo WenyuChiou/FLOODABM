@@ -646,36 +646,11 @@ def plot_cum_payoutrate_and_damage_by_group(
     rateW_R, cumDamW_R = _build(fW, dW, "renter", debug=False)
 
 
-    years_to_scale = {2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2022, 2023}
-    viz_factor = 0.8
-
-    # Owner - Baseline
-    _annual = np.diff(np.r_[0.0, np.asarray(cumDamB_O, dtype=float)])
-    for i, y in enumerate(years):
-        if int(y) in years_to_scale:
-            _annual[i] *= viz_factor
-    cumDamB_O_viz = np.cumsum(_annual)
-
-    # Owner - Worst
-    _annual = np.diff(np.r_[0.0, np.asarray(cumDamW_O, dtype=float)])
-    for i, y in enumerate(years):
-        if int(y) in years_to_scale:
-            _annual[i] *= viz_factor
-    cumDamW_O_viz = np.cumsum(_annual)
-
-    # Renter - Baseline
-    _annual = np.diff(np.r_[0.0, np.asarray(cumDamB_R, dtype=float)])
-    for i, y in enumerate(years):
-        if int(y) in years_to_scale:
-            _annual[i] *= viz_factor
-    cumDamB_R_viz = np.cumsum(_annual)
-
-    # Renter - Worst
-    _annual = np.diff(np.r_[0.0, np.asarray(cumDamW_R, dtype=float)])
-    for i, y in enumerate(years):
-        if int(y) in years_to_scale:
-            _annual[i] *= 0.7  # specific for Renter-Worst in GitHub
-    cumDamW_R_viz = np.cumsum(_annual)
+    # Use raw cumulative values (no visual scaling) so figure matches text numbers
+    cumDamB_O_viz = cumDamB_O
+    cumDamW_O_viz = cumDamW_O
+    cumDamB_R_viz = cumDamB_R
+    cumDamW_R_viz = cumDamW_R
 
 
     # ========= 視覺化專用縮放（結束）=========
@@ -686,7 +661,7 @@ def plot_cum_payoutrate_and_damage_by_group(
                             constrained_layout=True, sharex=True)
     
     # Enhanced colors for print
-    C1, C2 = "#0077b6", "#d62828"  # Blue for Baseline, Red for Worst
+    C1, C2 = "#0077b6", "#d62828"  # Blue for Baseline, Red for No-adaptation
     x = np.arange(len(years))
     
     def _shade(ax):
@@ -700,7 +675,7 @@ def plot_cum_payoutrate_and_damage_by_group(
     ax.fill_between(x, cumDamB_O_viz, cumDamW_O_viz, alpha=0.20, color="#ef4444",
                     label="Difference")
     ax.plot(x, cumDamB_O_viz, marker="o", linewidth=2.2, color=C1, label="Baseline")
-    ax.plot(x, cumDamW_O_viz, marker="s", linewidth=2.2, color=C2, label="Worst")
+    ax.plot(x, cumDamW_O_viz, marker="s", linewidth=2.2, color=C2, label="No-adaptation")
     _panel_label(ax, "(a)")
     ax.set_title("Homeowner", pad=12)
     ax.set_ylabel("Cumulative flood damage\nper HH ($)")
@@ -715,13 +690,8 @@ def plot_cum_payoutrate_and_damage_by_group(
     hh_O_B = np.maximum(fB["owner_hh"].to_numpy(), 1)
     hh_O_W = np.maximum(fW["owner_hh"].to_numpy(), 1)
     
-    # viz_factor applied per GitHub logic
     _actual_B_O = (damage_O_B - payout_O_B) / hh_O_B
     _actual_W_O = (damage_O_W - payout_O_W) / hh_O_W
-    for i, y in enumerate(years):
-        if int(y) in years_to_scale:
-            _actual_B_O[i] *= viz_factor
-            _actual_W_O[i] *= viz_factor
     real_loss_B_O = np.cumsum(_actual_B_O)
     real_loss_W_O = np.cumsum(_actual_W_O)
 
@@ -752,13 +722,8 @@ def plot_cum_payoutrate_and_damage_by_group(
     hh_R_B = np.maximum(fB["renter_hh"].to_numpy(), 1)
     hh_R_W = np.maximum(fW["renter_hh"].to_numpy(), 1)
     
-    # viz_factor applied per GitHub logic
     _actual_B_R = (damage_R_B - payout_R_B) / hh_R_B
     _actual_W_R = (damage_R_W - payout_R_W) / hh_R_W
-    for i, y in enumerate(years):
-        if int(y) in years_to_scale:
-            _actual_B_R[i] *= viz_factor
-            _actual_W_R[i] *= 0.7  # per GitHub logic
     real_loss_B_R = np.cumsum(_actual_B_R)
     real_loss_W_R = np.cumsum(_actual_W_R)
     
@@ -795,7 +760,7 @@ def plot_cum_payoutrate_and_damage_by_group(
 
     handles = [
         plt.Line2D([], [], color=C1, marker="o", linewidth=2.2, label="Baseline"),
-        plt.Line2D([], [], color=C2, marker="s", linewidth=2.2, label="Worst scenario"),
+        plt.Line2D([], [], color=C2, marker="s", linewidth=2.2, label="No-adaptation"),
         Patch(facecolor=SEV_SHADE, alpha=0.20, edgecolor="none", label="Severe flood year"),
     ]
     # Place legend inside panel (b) upper-left

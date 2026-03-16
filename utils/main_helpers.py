@@ -79,9 +79,14 @@ def append_tp_trajectory(
 
 
 def advance_state_for_next_year(
-    STATE: pd.DataFrame, STATE_NEXT: pd.DataFrame, year: int, MG_SHARE: dict
-) -> tuple[pd.DataFrame, np.ndarray]:
-    """Mark backfill households and prepare state/psy/indexer for next year."""
+    STATE: pd.DataFrame, STATE_NEXT: pd.DataFrame, year: int,
+    OWNER_SHARE: dict | None = None,
+) -> pd.DataFrame:
+    """Mark backfill households and prepare state for next year.
+
+    Backfill households (from RL/BP dynamics) get default psych values
+    sampled from their group's Beta distributions.
+    """
     prev_ids = set(STATE["i"].astype(int))
     STATE = STATE_NEXT.copy()
     STATE["tract_geoid"] = STATE["tract_geoid"].astype(str)
@@ -96,10 +101,35 @@ def advance_state_for_next_year(
     STATE.loc[new_mask, "is_backfill"] = True
     STATE.loc[new_mask, "year_created"] = year
     STATE.loc[new_mask, "elev_ft_total"] = 0.0
-    
-    # Return also w_vec placeholders (caller will reassign)
-    w_vec = STATE["tract_geoid"].map(MG_SHARE).astype(float).to_numpy()
-    return STATE, w_vec
+
+    # Initialize psych columns for backfill households
+    if new_mask.any():
+        from modules.actions.tp import (
+            BETA_PARAMS_OWNER_DEFAULT, BETA_PARAMS_RENTER_DEFAULT,
+        )
+        rng_bf = np.random.RandomState(int(year) * 1000 + new_mask.sum())
+        new_idx = STATE.index[new_mask]
+        new_grp = STATE.loc[new_idx, "group"].astype(str).str.lower()
+        for var in ["TP", "CP", "SP", "SC", "PA"]:
+            init_col = f"{var}_init"
+            if init_col not in STATE.columns:
+                continue
+            for grp_name, beta_dict in [("owner", BETA_PARAMS_OWNER_DEFAULT),
+                                         ("renter", BETA_PARAMS_RENTER_DEFAULT)]:
+                grp_mask = new_grp.eq(grp_name)
+                n_grp = grp_mask.sum()
+                if n_grp > 0:
+                    a, b = beta_dict.get(var, (2.0, 2.0))
+                    STATE.loc[new_idx[grp_mask], init_col] = rng_bf.beta(
+                        max(a, 1e-6), max(b, 1e-6), size=n_grp
+                    )
+        # Set live TP = TP_init for backfill; t_clock = 0
+        if "TP" in STATE.columns and "TP_init" in STATE.columns:
+            STATE.loc[new_idx, "TP"] = STATE.loc[new_idx, "TP_init"].astype(float)
+        if "t_clock" in STATE.columns:
+            STATE.loc[new_idx, "t_clock"] = 0.0
+
+    return STATE
 
 
 def save_next_year_state(
@@ -109,7 +139,7 @@ def save_next_year_state(
     STATE_OUT = STATE.copy()
     STATE_OUT["tract_geoid"] = STATE_OUT["tract_geoid"].astype(str)
     STATE_OUT.insert(1, "year", year + 1)
-    STATE_OUT = finalize_has_fi(STATE_OUT, dec_prev=dec_prev, sticky=True)
+    STATE_OUT = finalize_has_fi(STATE_OUT, dec_prev=dec_prev, sticky=False)
     STATE_OUT.to_csv(STATES_DIR / f"state_next_{year+1}.csv", index=False, encoding="utf-8-sig")
     print(f"[OK] Final state (year {year+1}) saved to: {STATES_DIR / f'state_next_{year+1}.csv'}")
 

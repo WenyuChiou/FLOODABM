@@ -3,7 +3,7 @@
 Excel Output Utility for FLOODABM
 =================================
 Output comprehensive Excel files with:
-- TP (Threat Perception) changes by MG/NMG and tract type
+- TP (Threat Perception) changes by owner/renter and tract type
 - Action rates by tenure and tract type
 - Finance summary
 """
@@ -17,8 +17,8 @@ def export_tp_excel(
     output_dir: Path,
     flood_prone_tracts: list[str] = None,
 ) -> None:
-    """Export TP trajectory data to Excel with MG/NMG and tract type labels.
-    
+    """Export TP trajectory data to Excel with owner/renter and tract type labels.
+
     Args:
         tp_traj_path: Path to tp_traj.csv
         output_dir: Directory for Excel output
@@ -39,13 +39,13 @@ def export_tp_excel(
         # Default: assume all are flood-prone if no list provided
         df['tract_type'] = 'all'
     
-    # Create summary by year, tract_type, and group (MG/NMG)
+    # Create summary by year, tract_type, and group (owner/renter)
     summary_rows = []
     for year in sorted(df['year'].unique()):
         for tract_type in df['tract_type'].unique():
             year_tract = df[(df['year'] == year) & (df['tract_type'] == tract_type)]
-            
-            for group, tp_col in [('MG', 'TP_MG'), ('NMG', 'TP_NMG')]:
+
+            for group, tp_col in [('owner', 'TP_owner'), ('renter', 'TP_renter')]:
                 if tp_col not in year_tract.columns:
                     continue
                 
@@ -74,10 +74,10 @@ def export_tp_excel(
     
     for pre_y, post_y in flood_events:
         for tract_type in df['tract_type'].unique():
-            for group, tp_col in [('MG', 'TP_MG'), ('NMG', 'TP_NMG')]:
+            for group, tp_col in [('owner', 'TP_owner'), ('renter', 'TP_renter')]:
                 if tp_col not in df.columns:
                     continue
-                
+
                 pre = df[(df['year'] == pre_y) & (df['tract_type'] == tract_type)][tp_col].dropna()
                 post = df[(df['year'] == post_y) & (df['tract_type'] == tract_type)][tp_col].dropna()
                 

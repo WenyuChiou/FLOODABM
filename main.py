@@ -96,8 +96,8 @@ if str(ROOT) not in sys.path:
 from utils._helpers import (
     load_yaml_cfg, resolve_path, years_from_cfg,
     load_households_csv, load_depths_legacy, depths_for_year,
-    init_tract_psych_safe, grp_params_from_yaml,
-    load_inline_mgshare_policy, read_finance_from_yaml,
+    grp_params_from_yaml,
+    load_inline_owner_share_policy, read_finance_from_yaml,
     finalize_has_fi,
 )
 from utils.main_helpers import (
@@ -114,9 +114,9 @@ from modules.actions.vuln_for_tp import (
     _attach_hh_flood_damage,
     _export_tract_flood_damage,
 )
-from modules.actions.mgmix_tp import TPConfig, TPGroupParams
-from modules.actions.mgmix_decision import (
-    load_predictors, build_state_indexer, _init_fi_flags_from_yaml,
+from modules.actions.tp import TPConfig, TPGroupParams
+from modules.actions.decision import (
+    load_predictors, _init_fi_flags_from_yaml,
 )
 from modules.finance import run_finance_for_year
 from utils.sa_output_manager import SAOutputManager
@@ -194,6 +194,8 @@ def run_single_scenario(
                     help="Run ALL detected models sequentially")
     ap.add_argument("--years", type=int, default=None,
                     help="Limit simulation to first N years (for testing)")
+    ap.add_argument("--decision-threshold", type=float, default=None,
+                    help="Override decision_threshold (default 0.5). Action adopted if p > threshold.")
     args = ap.parse_args(argv)
     
     # Override scenario if specified (for batch run)
@@ -208,6 +210,8 @@ def run_single_scenario(
         CFG.setdefault("flood", {})["ratio_threshold_owner"] = float(args.thr_owner)
     if args.thr_renter is not None:
         CFG.setdefault("flood", {})["ratio_threshold_renter"] = float(args.thr_renter)
+    if args.decision_threshold is not None:
+        CFG["decision_threshold"] = float(args.decision_threshold)
     # Shock scale overrides for TP configuration
     if args.shock_owner is not None:
         CFG.setdefault("tp_config", {})["shock_scale_owner"] = float(args.shock_owner)
@@ -301,9 +305,17 @@ def run_single_scenario(
     BP_SAMPLER = str(DYN.get("bp_sampler", "lognorm_from_totals"))
 
     CV_NJ = {"rcv": 0.694, "contents": 1.8}
+
+    # ---------------------------------------------------------------------------
+    # Decision Threshold: Probability cutoff for action adoption
+    # Action is adopted if predicted probability > threshold (default 0.5)
+    # ---------------------------------------------------------------------------
+    DECISION_THRESHOLD = float(CFG.get("decision_threshold", 0.5))
+
     print(
         f"[cfg] ratio_threshold_owner={_THR_OWNER} | ratio_threshold_renter={_THR_RENTER} | "
-        f"depth_threshold_m={DEPTH_THRESHOLD_M} | FFE_ft={FFE_FT} | shock_timing={SHOCK_TIMING}"
+        f"depth_threshold_m={DEPTH_THRESHOLD_M} | FFE_ft={FFE_FT} | shock_timing={SHOCK_TIMING} | "
+        f"decision_threshold={DECISION_THRESHOLD}"
     )
 
     # ---------------------------------------------------------------------------
@@ -316,7 +328,7 @@ def run_single_scenario(
     OWNER_INSURES_BOTH = bool(OWNER_INS.get("owner_insures_both", True))
 
     # Policy & owner share
-    OWNER_SHARE, policy_dict = load_inline_mgshare_policy(CFG)
+    OWNER_SHARE, policy_dict = load_inline_owner_share_policy(CFG)
 
     # =========================================================================
     # SECTION 5: DATA LOADING
@@ -328,18 +340,23 @@ def run_single_scenario(
         YEARS = sorted(YEARS)[:args.years]
     print(f"[info] YEARS: {YEARS}")
 
-    # Load household exposure database and initialize insurance flags
+    # Load household exposure database (psych + has_FI pre-baked in CSV)
     STATE = load_households_csv(PATH_HOUSEHOLDS)
     print(f"[info] Loaded households: {len(STATE):,} rows")
-    STATE = _init_fi_flags_from_yaml(
-        STATE,
-        INS_JSON,
-        group_col="identity",
-        tract_col="tract_geoid",
-        seed=INS_JSON.get("seed", CFG.get("seed", 42)),
-        overwrite=True,
-    )
-    print(f"[info] Initial has_FI: {STATE['has_FI'].sum():,} households")
+    if "has_FI" in STATE.columns:
+        STATE["has_FI"] = pd.to_numeric(STATE["has_FI"], errors="coerce").fillna(0).astype("int8")
+        print(f"[info] has_FI from CSV: {STATE['has_FI'].sum():,} households")
+    else:
+        # Fallback: runtime initialization (legacy path)
+        STATE = _init_fi_flags_from_yaml(
+            STATE,
+            INS_JSON,
+            group_col="identity",
+            tract_col="tract_geoid",
+            seed=INS_JSON.get("seed", CFG.get("seed", 42)),
+            overwrite=True,
+        )
+        print(f"[info] Initial has_FI (runtime): {STATE['has_FI'].sum():,} households")
 
     # =========================================================================
     # SECTION 6: PSYCHOLOGY INITIALIZATION
@@ -364,13 +381,23 @@ def run_single_scenario(
     setattr(TP_CFG, "clip_hi", float(TP_CFG_JSON.get("clip_hi", 1.0)))
     setattr(TP_CFG, "skip_decay_on_shock", bool(TP_CFG_JSON.get("skip_decay_on_shock", False)))
 
-    TRACT_PSY = init_tract_psych_safe(TRACTS, SEED, rng)
+    # --- Household-level psychology initialization ---
+    # Each household has its own TP/CP/SP/SC/PA drawn from Beta distributions
+    # (generated by generate_household_psych.py, stored in CSV)
+    psych_init_cols = ["TP_init", "CP_init", "SP_init", "SC_init", "PA_init"]
+    missing_psych = [c for c in psych_init_cols if c not in STATE.columns]
+    if missing_psych:
+        raise ValueError(
+            f"Household CSV is missing psych columns: {missing_psych}. "
+            "Run: python generate_household_psych.py"
+        )
+    STATE["TP"] = STATE["TP_init"].astype(float)
+    STATE["t_clock"] = 0.0
+
     MODEL_PATH = registry.get_path(args.model_dir)  # models/baseline/ or models/optimized/
     if MODEL_PATH is None:
         MODEL_PATH = ROOT / "models" / args.model_dir  # fallback
     predictor_owner, predictor_renter = load_predictors(MODEL_PATH)
-    idxer = build_state_indexer(STATE, TRACT_PSY)
-    w_vec = STATE["tract_geoid"].map(OWNER_SHARE).astype(float).to_numpy()
 
     # =========================================================================
     # SECTION 7: ANNUAL SIMULATION LOOP
@@ -391,7 +418,7 @@ def run_single_scenario(
         # Disaster happens first, then households may relocate
         # -----------------------------------------------------------------------
         STATE_V = STATE.copy()
-        STATE_V = finalize_has_fi(STATE_V, dec_prev=dec_prev, sticky=True)
+        STATE_V = finalize_has_fi(STATE_V, dec_prev=dec_prev, sticky=False)
         STATE_V["tract_geoid"] = STATE_V["tract_geoid"].astype(str)
         STATE_V.insert(1, "year", y)
         STATES_DIR.mkdir(parents=True, exist_ok=True)
@@ -440,7 +467,7 @@ def run_single_scenario(
             ratio_by_tract=ratio_used,
             decisions=dec_prev,
             policy=policy_dict,
-            idxer=idxer,
+            idxer=None,
             gate_by_decisions=not NO_ACTION,
             renters_have_structure=False,
             tract_col="tract_geoid",
@@ -456,11 +483,9 @@ def run_single_scenario(
             ffe_ft=FFE_FT,
         )
 
-        # Maintain ordering / indexer
+        # Maintain ordering
         STATE = STATE.sort_values(["i"]).reset_index(drop=True)
         STATE["tract_geoid"] = STATE["tract_geoid"].astype(str)
-        idxer = build_state_indexer(STATE, TRACT_PSY)
-        w_vec = STATE["tract_geoid"].map(OWNER_SHARE).astype(float).to_numpy()
 
         # Flood bookkeeping
         flood_rows.extend(build_flood_bookkeeping_rows(
@@ -472,11 +497,11 @@ def run_single_scenario(
             # STEP 7.6: Run agent decision model (BASELINE MODE ONLY)
             # Uses Bayesian predictors to determine actions, updates TP
             # -------------------------------------------------------------------
-            from modules.actions.mgmix_pipeline import run_one_year_mgmix_fast
+            from modules.actions.pipeline import run_one_year_mgmix_fast
             # RNG: If --deterministic flag is true, use the same SEED every year (no +y offset)
             _year_seed = SEED if getattr(args, "deterministic", False) else (SEED + y)
-            dec, psy_new, STATE_NEXT_NO_EH, CHG = run_one_year_mgmix_fast(
-                year=y, state=STATE, tract_psy=TRACT_PSY, idxer=idxer, w_vec=w_vec,
+            dec, STATE_NEXT_NO_EH, CHG = run_one_year_mgmix_fast(
+                year=y, state=STATE,
                 predictor_owner=predictor_owner, predictor_renter=predictor_renter,
                 params_owner=PARAMS_OWNER, params_renter=PARAMS_RENTER, tp_cfg=TP_CFG,
                 ratio_by_tract=ratio_used,
@@ -497,6 +522,8 @@ def run_single_scenario(
                     "cv_nj": CV_NJ,
                 },
                 depth_m_by_tract=dmap, rl_dest_k_best=50,
+                decision_threshold=DECISION_THRESHOLD,
+                draw_bounds=CFG.get("draw_bounds", None),
             )
 
             print(
@@ -511,13 +538,21 @@ def run_single_scenario(
             # Per-tract action shares & EH coverage
             save_action_shares(dec, STATE_NEXT_NO_EH, y, DEC_DIR)
 
-            # TP trajectory
-            append_tp_trajectory(psy_new, y, tp_rows)
+            # TP trajectory (aggregate from household-level to tract-level for output)
+            _tp_agg = STATE_NEXT_NO_EH[["tract_geoid","group","TP"]].copy()
+            _tp_agg["tract_geoid"] = _tp_agg["tract_geoid"].astype(str)
+            _tp_own = _tp_agg[_tp_agg["group"]=="owner"].groupby("tract_geoid")["TP"].mean()
+            _tp_ren = _tp_agg[_tp_agg["group"]=="renter"].groupby("tract_geoid")["TP"].mean()
+            for tg in TRACTS:
+                tp_rows.append({
+                    "year": y, "tract_geoid": tg,
+                    "TP_owner": float(_tp_own.get(tg, np.nan)),
+                    "TP_renter": float(_tp_ren.get(tg, np.nan)),
+                    "phase": "after",
+                })
 
             # Advance to next-year state
-            STATE, w_vec = advance_state_for_next_year(STATE, STATE_NEXT_NO_EH, y, OWNER_SHARE)
-            TRACT_PSY = psy_new.copy()
-            idxer = build_state_indexer(STATE, TRACT_PSY)
+            STATE = advance_state_for_next_year(STATE, STATE_NEXT_NO_EH, y)
 
             # Save next-year state snapshot
             if output_mgr.should_save('state_next_csvs'):
@@ -525,18 +560,24 @@ def run_single_scenario(
         else:
             # NO_ACTION mode
             print(f"[year {y}] NO_ACTION mode — decisions/TP skipped, finance gating off")
-            dec_prev = handle_no_action_year(STATE, y, DEC_DIR, tp_rows, TRACT_PSY if 'TRACT_PSY' in locals() else None)
+            dec_prev = handle_no_action_year(STATE, y, DEC_DIR, tp_rows, None)
 
             STATE_OUT = STATE.copy()
             STATE_OUT["tract_geoid"] = STATE_OUT["tract_geoid"].astype(str)
             STATE_OUT.insert(1, "year", y + 1)
-            STATE_OUT = finalize_has_fi(STATE_OUT, dec_prev=dec_prev, sticky=True)
+            STATE_OUT = finalize_has_fi(STATE_OUT, dec_prev=dec_prev, sticky=False)
             if output_mgr.should_save('state_next_csvs'):
                 STATE_OUT.to_csv(STATES_DIR / f"state_next_{y+1}.csv", index=False, encoding="utf-8-sig")
 
     # =========================================================================
     # SECTION 8: POST-SIMULATION FINALIZATION
     # =========================================================================
+    # Always save TP trajectory and flood trigger data (needed for SA)
+    tp_traj = pd.DataFrame(tp_rows)
+    if output_mgr.should_save('tp_trajectory'):
+        tp_traj.to_csv(OUTPUT_DIR / "tp_traj.csv", index=False, encoding="utf-8-sig")
+        pd.DataFrame(flood_rows).to_csv(OUTPUT_DIR / "flood_years_by_tract.csv", index=False, encoding="utf-8-sig")
+
     # Aggregate results across years and generate visualization plots
     ENABLE_PLOTS_CFG = bool(CFG.get("output", {}).get("enable_plots", True))
     if ENABLE_PLOTS_CFG and not getattr(args, "no_plots", False):

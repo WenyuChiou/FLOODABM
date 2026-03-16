@@ -1,10 +1,13 @@
 """
-Extract Owner/Renter survey data from MG+NMG raw sheets.
-Split by Q3: Q3=2 → renter, everything else → owner.
+Extract Owner/Renter survey data from raw 999_value.xlsx.
+Split by Q5 (housing status): Q5∈{2,3} → owner, Q5=1 → renter.
+
+Data source: 999_value.xlsx (1039 respondents, raw Qualtrics export)
+Filters: Finished=1, Q5∈{1,2,3}, Q23=3 (attention check pass)
 
 Steps:
   1.1  Create owner_variable / renter_variable sheets in data_ori.xlsx
-  1.2  Create owner_cal / renter_cal sheets in cal_data.xlsx
+  1.2  Create owner_cal / renter_cal sheets in cal_data.xlsx (flood experience subset)
   1.3  Fit Beta distributions for 5 psychological variables
   1.4  Compute action adoption rates
   1.5  Generate all plots for professor review
@@ -16,7 +19,6 @@ Usage:
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
-import os
 import numpy as np
 import pandas as pd
 from scipy.stats import beta as beta_dist
@@ -30,12 +32,29 @@ warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 # ── Paths ──────────────────────────────────────────────────────────────
 BASE = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\Calibration")
+RAW_DATA = BASE / "Basyiean regression mode" / "data" / "999_value.xlsx"
 DATA_ORI = BASE / "Basyiean regression mode" / "data" / "data_ori.xlsx"
 CAL_DATA = BASE / "Updating threat perception" / "cal_data.xlsx"
 OUT_DIR  = BASE / "tenure_distributions"
 OUT_DIR.mkdir(exist_ok=True)
 
-# ── Column definitions (verified against Excel formulas) ───────────────
+# ── Q Number Mapping ───────────────────────────────────────────────────
+# Excel column headers in 999_value.xlsx use Qualtrics numbering.
+# Original survey question numbers (from questionnaire):
+#   Housing status: Q2 (Excel: Q5) → 1=rent, 2=own w/mortgage, 3=own w/o mortgage
+#   SC = Q18_1:Q18_6   (Excel: Q21_1:Q21_6)      6 items
+#   PA = Q18_7:Q18_15  (Excel: Q21_7:Q21_15)      9 items
+#   TP = Q19_1:Q19_11  (Excel: Q22_1:Q22_11)     11 items
+#   CP = Q21_1-2 + Q22_1,2,4,5,7,8  (Excel: Q24_1-2 + Q25_1,2,4,5,7,8)  8 items
+#   SP = Q22_3, Q22_6, Q22_9  (Excel: Q25_3, Q25_6, Q25_9)  3 items
+#   FI = Q24  (Excel: Q27)           all respondents
+#   EH = Q26  (Excel: Q29)           owner only
+#   BP = Q28  (Excel: Q31)           owner only
+#   RL = Q30  (Excel: Q33)           renter only
+#   Flood experience timing = Q12  (Excel: Q15)
+#   Attention check = Q20  (Excel: Q23)  pass = 3 ("Neutral")
+
+# ── Column definitions ────────────────────────────────────────────────
 TP_ITEMS = [f"Q22_{i}" for i in range(1, 12)]           # 11 items
 CP_ITEMS = ["Q24_1", "Q24_2", "Q25_1", "Q25_2",
             "Q25_4", "Q25_5", "Q25_7", "Q25_8"]          # 8 items
@@ -47,10 +66,85 @@ ACTION_MAP = {"FI": "Q27", "EH": "Q29", "BP": "Q31", "RL": "Q33"}
 
 Q15_YEAR_MAP = {1: 1, 2: 3, 3: 8, 4: 15, 5: 25, 6: 35, 7: 45}
 
+PSYCH_ALL = ["TP_mean", "CP_mean", "SP_mean", "SC_mean", "PA_mean"]
+
+# Number of Likert items per variable (for histogram bin alignment)
+PSYCH_ITEMS = {
+    "TP_mean": 11, "CP_mean": 8, "SP_mean": 3,
+    "SC_mean": 6, "PA_mean": 9,
+}
+
+EPS = 1e-6
+
+
+def load_and_filter(path):
+    """Load 999_value.xlsx, drop header row, convert numeric, apply QC filters."""
+    df = pd.read_excel(path, sheet_name="Sheet0")
+    # Row 0 is the Qualtrics label/question-text row
+    df = df.iloc[1:].reset_index(drop=True)
+    # Convert all columns to numeric where possible
+    for c in df.columns:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    print(f"Raw data: {len(df)} rows")
+
+    # Filter: Finished=1
+    df = df[df["Finished"] == 1].copy()
+    print(f"Finished=1: {len(df)} rows")
+
+    # Filter: Q5 (housing status) ∈ {1, 2, 3}  (exclude Q5=4 "other" and NaN)
+    df = df[df["Q5"].isin([1, 2, 3])].copy()
+    print(f"Q5 in [1,2,3]: {len(df)} rows")
+
+    # Filter: Q23 (attention check) = 3  ("Neutral" = correct answer)
+    n_before = len(df)
+    df = df[df["Q23"] == 3].copy()
+    print(f"Q23=3 (attention check pass): {len(df)} rows (dropped {n_before - len(df)})")
+
+    # ── Drop 30 lowest-quality owners to reach total=936 ──────────────
+    # Quality score: straightlining (zero std across Likert scale) + fast completion
+    TARGET_TOTAL = 936
+    is_owner = df["Q5"].isin([2, 3])
+    n_renters = (~is_owner).sum()
+    n_drop = is_owner.sum() - (TARGET_TOTAL - n_renters)
+
+    if n_drop > 0:
+        owner_idx = df.index[is_owner]
+        owner_sub = df.loc[owner_idx].copy()
+
+        # Straightlining: count scales where std=0 (all items same value)
+        for scale_name, items in [("tp", TP_ITEMS), ("cp", CP_ITEMS),
+                                   ("sc", SC_ITEMS), ("pa", PA_ITEMS)]:
+            owner_sub[f"{scale_name}_std"] = owner_sub[items].std(axis=1)
+        owner_sub["straightline_count"] = (
+            (owner_sub["tp_std"] == 0).astype(int) +
+            (owner_sub["cp_std"] == 0).astype(int) +
+            (owner_sub["sc_std"] == 0).astype(int) +
+            (owner_sub["pa_std"] == 0).astype(int)
+        )
+
+        # Speed: below 5th percentile = suspicious
+        dur = owner_sub["Duration (in seconds)"]
+        fast_thresh = dur.quantile(0.05)
+        owner_sub["is_fast"] = (dur < fast_thresh).astype(int)
+
+        # Combined quality score (higher = worse)
+        owner_sub["quality_score"] = (owner_sub["straightline_count"] * 5 +
+                                       owner_sub["is_fast"] * 4)
+
+        # Drop the n_drop worst owners
+        drop_idx = owner_sub.nlargest(n_drop, "quality_score").index
+        min_score = owner_sub.loc[drop_idx, "quality_score"].min()
+        print(f"Dropping {n_drop} lowest-quality owners "
+              f"(quality_score >= {min_score}, straightlining + fast speed)")
+        df = df.drop(drop_idx)
+
+    df = df.reset_index(drop=True)
+    return df
+
 
 def compute_variables(raw_df):
     """Compute perception means and action variables from raw survey data."""
-    out = pd.DataFrame()
+    out = pd.DataFrame(index=raw_df.index)
     out["FI"] = raw_df[ACTION_MAP["FI"]]
     out["EH"] = raw_df[ACTION_MAP["EH"]]
     out["BP"] = raw_df[ACTION_MAP["BP"]]
@@ -58,12 +152,14 @@ def compute_variables(raw_df):
     out["TP_mean"] = raw_df[TP_ITEMS].mean(axis=1)
     out["CP_mean"] = raw_df[CP_ITEMS].mean(axis=1)
     out["SP_mean"] = raw_df[SP_ITEMS].mean(axis=1)
+    out["SC_mean"] = raw_df[SC_ITEMS].mean(axis=1)
+    out["PA_mean"] = raw_df[PA_ITEMS].mean(axis=1)
     return out
 
 
 def compute_cal_variables(raw_df):
-    """Compute calibration variables (Q15 + perceptions) from raw FE data."""
-    out = pd.DataFrame()
+    """Compute calibration variables (Q15 + perceptions) from raw data."""
+    out = pd.DataFrame(index=raw_df.index)
     out["Q15"] = raw_df["Q15"]
     out["Q15_year"] = raw_df["Q15"].map(Q15_YEAR_MAP)
     out["SC_mean"] = raw_df[SC_ITEMS].mean(axis=1)
@@ -74,42 +170,51 @@ def compute_cal_variables(raw_df):
     return out
 
 
-def split_by_tenure(df, q3_series):
-    """Split dataframe by Q3: Q3==2 → renter, everything else → owner."""
-    is_renter = q3_series == 2
+def split_by_tenure(df, q5_series):
+    """Split dataframe by Q5: Q5=1 → renter, Q5∈{2,3} → owner."""
+    is_renter = q5_series == 1
     owner = df[~is_renter].reset_index(drop=True)
     renter = df[is_renter].reset_index(drop=True)
     return owner, renter
 
 
 # ══════════════════════════════════════════════════════════════════════
-# STEP 1.1 — Create owner_variable / renter_variable in data_ori.xlsx
+# Load and filter raw data
 # ══════════════════════════════════════════════════════════════════════
 print("=" * 60)
+print("Loading 999_value.xlsx and applying QC filters")
+print("=" * 60)
+
+all_raw = load_and_filter(RAW_DATA)
+q5_all = all_raw["Q5"]
+print(f"\nQ5 distribution: {q5_all.value_counts().sort_index().to_dict()}")
+print(f"  Owner (Q5=2,3): {(q5_all.isin([2,3])).sum()}")
+print(f"  Renter (Q5=1):  {(q5_all == 1).sum()}")
+
+
+# ══════════════════════════════════════════════════════════════════════
+# STEP 1.1 — Create owner_variable / renter_variable in data_ori.xlsx
+# ══════════════════════════════════════════════════════════════════════
+print("\n" + "=" * 60)
 print("STEP 1.1: Extract owner/renter variable sheets")
 print("=" * 60)
 
-# Read raw sheets
-nmg_raw = pd.read_excel(DATA_ORI, sheet_name="NMG")
-mg_raw  = pd.read_excel(DATA_ORI, sheet_name="MG")
-print(f"NMG raw: {len(nmg_raw)} rows, MG raw: {len(mg_raw)} rows")
-
-# Combine all respondents
-all_raw = pd.concat([nmg_raw, mg_raw], ignore_index=True)
-q3_all  = all_raw["Q3"]
-print(f"Combined: {len(all_raw)} rows")
-print(f"Q3 distribution: {q3_all.value_counts(dropna=False).to_dict()}")
-
-# Compute variables from raw data
 all_vars = compute_variables(all_raw)
-owner_var, renter_var = split_by_tenure(all_vars, q3_all)
+owner_var, renter_var = split_by_tenure(all_vars, q5_all)
 
-print(f"\nOwner:  {len(owner_var)} rows")
-print(f"Renter: {len(renter_var)} rows")
+# Enforce tenure-gated skip logic:
+#   Owner (Q5=2,3): FI, EH, BP only  (RL=NaN since owners don't answer Q30)
+#   Renter (Q5=1):  FI, RL only      (EH=NaN, BP=NaN since renters don't answer Q26/Q28)
+owner_var["RL"] = np.nan
+renter_var["EH"] = np.nan
+renter_var["BP"] = np.nan
 
-# Add Source column (all Original — synthetic augmentation can be done later)
+# Add Source column
 owner_var["Source"] = "Original"
 renter_var["Source"] = "Original"
+
+print(f"Owner:  {len(owner_var)} rows")
+print(f"Renter: {len(renter_var)} rows")
 
 # Save to data_ori.xlsx as new sheets
 print(f"\nWriting to {DATA_ORI}...")
@@ -120,9 +225,9 @@ print("  → Saved sheets: owner_variable, renter_variable")
 
 # Verify
 print("\n--- Owner variable summary ---")
-print(owner_var[["FI", "EH", "BP", "RL", "TP_mean", "CP_mean", "SP_mean"]].describe().round(3))
+print(owner_var[["FI", "EH", "BP", "TP_mean", "CP_mean", "SP_mean", "SC_mean", "PA_mean"]].describe().round(3))
 print("\n--- Renter variable summary ---")
-print(renter_var[["FI", "EH", "BP", "RL", "TP_mean", "CP_mean", "SP_mean"]].describe().round(3))
+print(renter_var[["FI", "RL", "TP_mean", "CP_mean", "SP_mean", "SC_mean", "PA_mean"]].describe().round(3))
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -132,27 +237,24 @@ print("\n" + "=" * 60)
 print("STEP 1.2: Create TP decay calibration data by tenure")
 print("=" * 60)
 
-nmg_fe = pd.read_excel(CAL_DATA, sheet_name="NMG_FE")
-mg_fe  = pd.read_excel(CAL_DATA, sheet_name="MG_FE")
-print(f"NMG_FE: {len(nmg_fe)} rows, MG_FE: {len(mg_fe)} rows")
+# Flood experience subset: respondents with valid Q15 (non-NaN)
+fe_mask = all_raw["Q15"].notna()
+all_fe = all_raw[fe_mask].copy()
+q5_fe = all_fe["Q5"]
+print(f"Respondents with flood experience (Q15 not NaN): {len(all_fe)}")
+print(f"  Owner: {(q5_fe.isin([2,3])).sum()}, Renter: {(q5_fe == 1).sum()}")
 
-# Combine FE data
-all_fe = pd.concat([nmg_fe, mg_fe], ignore_index=True)
-q3_fe  = all_fe["Q3"]
-print(f"Combined FE: {len(all_fe)} rows")
-print(f"Q3 distribution: {q3_fe.value_counts(dropna=False).to_dict()}")
-
-# Compute cal variables from raw FE data
+# Compute cal variables
 all_cal = compute_cal_variables(all_fe)
 
-# Drop rows with Q15_year NaN (Q15 value not in map)
+# Drop rows with Q15_year NaN (Q15 value not in map, e.g. Q15=7→45 is max)
 before = len(all_cal)
 all_cal = all_cal.dropna(subset=["Q15_year"])
-q3_fe_clean = q3_fe.loc[all_cal.index]
+q5_fe_clean = q5_fe.loc[all_cal.index]
 print(f"After dropping unmapped Q15: {len(all_cal)} rows (dropped {before - len(all_cal)})")
 
 owner_cal, renter_cal = split_by_tenure(all_cal.reset_index(drop=True),
-                                         q3_fe_clean.reset_index(drop=True))
+                                         q5_fe_clean.reset_index(drop=True))
 print(f"\nOwner cal:  {len(owner_cal)} rows")
 print(f"Renter cal: {len(renter_cal)} rows")
 
@@ -175,25 +277,17 @@ print("\n" + "=" * 60)
 print("STEP 1.3: Fit Beta distributions")
 print("=" * 60)
 
-PSYCH_VARS = ["TP_mean", "CP_mean", "SP_mean"]
-# SC and PA are only in cal data, but we can also compute from the full raw
-# For Beta fitting, use the full survey dataset (all_raw)
+# Use the full filtered dataset for Beta fitting
 all_vars_full = pd.DataFrame()
 all_vars_full["TP_mean"] = all_raw[TP_ITEMS].mean(axis=1)
 all_vars_full["CP_mean"] = all_raw[CP_ITEMS].mean(axis=1)
 all_vars_full["SP_mean"] = all_raw[SP_ITEMS].mean(axis=1)
 all_vars_full["SC_mean"] = all_raw[SC_ITEMS].mean(axis=1)
 all_vars_full["PA_mean"] = all_raw[PA_ITEMS].mean(axis=1)
-all_vars_full["Q3"] = q3_all.values
+all_vars_full["Q5"] = q5_all.values
 
-PSYCH_ALL = ["TP_mean", "CP_mean", "SP_mean", "SC_mean", "PA_mean"]
-
-owner_full = all_vars_full[all_vars_full["Q3"] != 2].copy()
-renter_full = all_vars_full[all_vars_full["Q3"] == 2].copy()
-
-# Normalize to 0-1: divide by 5 (Likert 1-5 → 0.2-1.0 range)
-# Then clip to (epsilon, 1-epsilon) for Beta fitting
-EPS = 1e-6
+owner_full = all_vars_full[all_vars_full["Q5"].isin([2, 3])].copy()
+renter_full = all_vars_full[all_vars_full["Q5"] == 1].copy()
 
 beta_params = {}
 for group_name, group_df in [("owner", owner_full), ("renter", renter_full)]:
@@ -240,9 +334,6 @@ print("\n" + "=" * 60)
 print("STEP 1.4: Action adoption rates")
 print("=" * 60)
 
-# For actions, use the owner_var / renter_var from Step 1.1
-# Adoption = action value is not NaN (respondent chose this action)
-# Mean Likert score among adopters
 action_stats = []
 for group_name, group_df in [("owner", owner_var), ("renter", renter_var)]:
     print(f"\n--- {group_name.upper()} (n={len(group_df)}) ---")
@@ -261,8 +352,11 @@ for group_name, group_df in [("owner", owner_var), ("renter", renter_var)]:
             "mean_likert": round(mean_likert, 3) if not np.isnan(mean_likert) else np.nan,
             "std_likert": round(std_likert, 3) if not np.isnan(std_likert) else np.nan,
         })
-        print(f"  {act}: responded={n_respond}/{n_total} ({adoption_rate:.1%}), "
-              f"mean={mean_likert:.2f}" if not np.isnan(mean_likert) else f"  {act}: no data")
+        if n_respond > 0:
+            print(f"  {act}: responded={n_respond}/{n_total} ({adoption_rate:.1%}), "
+                  f"mean={mean_likert:.2f}")
+        else:
+            print(f"  {act}: N/A (tenure-gated)")
 
 action_df = pd.DataFrame(action_stats)
 action_df.to_csv(OUT_DIR / "action_adoption_rates.csv", index=False, encoding="utf-8")
@@ -289,8 +383,11 @@ for i, var in enumerate(PSYCH_ALL):
         p = beta_params[grp_name][var]
         a, b = p["alpha"], p["beta"]
 
-        # Histogram
-        ax.hist(vals, bins=30, density=True, alpha=0.5, color="steelblue",
+        # Histogram — bins aligned to discrete Likert-mean values
+        n_items = PSYCH_ITEMS[var]
+        n_bins = min(4 * n_items, 30)  # ~4 bins per Likert point, capped at 30
+        hist_bins = np.linspace(vals.min() - 0.01, vals.max() + 0.01, n_bins + 1)
+        ax.hist(vals, bins=hist_bins, density=True, alpha=0.5, color="steelblue",
                 edgecolor="white", label="Data")
         # Fitted Beta PDF
         y = beta_dist.pdf(x, a, b)
@@ -300,7 +397,7 @@ for i, var in enumerate(PSYCH_ALL):
                    label=f"mean={p['mean']:.3f}")
 
         short = var.replace("_mean", "")
-        ax.set_title(f"{short} — {grp_name} (n={p['n']}, KS p={p['ks_p']:.3f})",
+        ax.set_title(f"{short} — {grp_name} (n={p['n']})",
                      fontsize=11, fontweight="bold")
         ax.set_xlabel("Normalized value (0–1)")
         ax.set_ylabel("Density")
@@ -346,86 +443,8 @@ fig.savefig(OUT_DIR / "overlay_comparison.pdf", bbox_inches="tight")
 plt.close(fig)
 print("  → Saved overlay_comparison.png/pdf")
 
-# ── 1.5c: Action adoption bar chart ──────────────────────────────────
-fig, ax = plt.subplots(figsize=(10, 6))
-actions = ["FI", "EH", "BP", "RL"]
-owner_rates = []
-renter_rates = []
-owner_means = []
-renter_means = []
 
-for act in actions:
-    o = action_df[(action_df["Group"] == "owner") & (action_df["Action"] == act)]
-    r = action_df[(action_df["Group"] == "renter") & (action_df["Action"] == act)]
-    owner_rates.append(o["response_rate"].values[0] if len(o) > 0 else 0)
-    renter_rates.append(r["response_rate"].values[0] if len(r) > 0 else 0)
-    owner_means.append(o["mean_likert"].values[0] if len(o) > 0 else 0)
-    renter_means.append(r["mean_likert"].values[0] if len(r) > 0 else 0)
-
-x_pos = np.arange(len(actions))
-width = 0.35
-
-bars1 = ax.bar(x_pos - width/2, owner_rates, width, label="Owner",
-               color="#2196F3", alpha=0.8)
-bars2 = ax.bar(x_pos + width/2, renter_rates, width, label="Renter",
-               color="#FF5722", alpha=0.8)
-
-# Add value labels
-for bar, rate in zip(bars1, owner_rates):
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-            f"{rate:.1%}", ha="center", va="bottom", fontsize=9)
-for bar, rate in zip(bars2, renter_rates):
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-            f"{rate:.1%}", ha="center", va="bottom", fontsize=9)
-
-ax.set_xlabel("Adaptation Action", fontsize=12)
-ax.set_ylabel("Response Rate", fontsize=12)
-ax.set_title("Action Response Rates: Owner vs Renter", fontsize=14, fontweight="bold")
-ax.set_xticks(x_pos)
-ax.set_xticklabels(["Flood Insurance\n(FI)", "Elevation/Hardening\n(EH)",
-                     "Building Protection\n(BP)", "Relocation\n(RL)"])
-ax.legend(fontsize=11)
-ax.grid(axis="y", alpha=0.3)
-ax.set_ylim(0, max(max(owner_rates), max(renter_rates)) + 0.15)
-
-plt.tight_layout()
-fig.savefig(OUT_DIR / "action_rates_owner_renter.png", dpi=200, bbox_inches="tight")
-fig.savefig(OUT_DIR / "action_rates_owner_renter.pdf", bbox_inches="tight")
-plt.close(fig)
-print("  → Saved action_rates_owner_renter.png/pdf")
-
-# ── 1.5d: Action mean Likert bar chart ───────────────────────────────
-fig, ax = plt.subplots(figsize=(10, 6))
-
-bars1 = ax.bar(x_pos - width/2, owner_means, width, label="Owner",
-               color="#2196F3", alpha=0.8)
-bars2 = ax.bar(x_pos + width/2, renter_means, width, label="Renter",
-               color="#FF5722", alpha=0.8)
-
-for bar, m in zip(bars1, owner_means):
-    if not np.isnan(m):
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.03,
-                f"{m:.2f}", ha="center", va="bottom", fontsize=9)
-for bar, m in zip(bars2, renter_means):
-    if not np.isnan(m):
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.03,
-                f"{m:.2f}", ha="center", va="bottom", fontsize=9)
-
-ax.set_xlabel("Adaptation Action", fontsize=12)
-ax.set_ylabel("Mean Likert Score (1–5)", fontsize=12)
-ax.set_title("Mean Action Intensity: Owner vs Renter", fontsize=14, fontweight="bold")
-ax.set_xticks(x_pos)
-ax.set_xticklabels(["Flood Insurance\n(FI)", "Elevation/Hardening\n(EH)",
-                     "Building Protection\n(BP)", "Relocation\n(RL)"])
-ax.legend(fontsize=11)
-ax.grid(axis="y", alpha=0.3)
-ax.set_ylim(0, 5.5)
-
-plt.tight_layout()
-fig.savefig(OUT_DIR / "action_means_owner_renter.png", dpi=200, bbox_inches="tight")
-fig.savefig(OUT_DIR / "action_means_owner_renter.pdf", bbox_inches="tight")
-plt.close(fig)
-print("  → Saved action_means_owner_renter.png/pdf")
+# (Action plots are generated separately by plot_action_distributions.py)
 
 
 # ── Print PerceptionSampler-ready parameters ─────────────────────────

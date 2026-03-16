@@ -41,12 +41,12 @@ from utils._helpers import (
     load_yaml_cfg, resolve_path, years_from_cfg,
     load_households_csv, load_depths_legacy,
     init_tract_psych_safe, grp_params_from_yaml,
-    load_inline_mgshare_policy, read_finance_from_yaml,
+    load_inline_owner_share_policy, read_finance_from_yaml,
 )
-from modules.actions.mgmix_tp import TPConfig, TPGroupParams
-from modules.actions.mgmix_decision import load_predictors, build_state_indexer, _init_fi_flags_from_yaml
+from modules.actions.tp import TPConfig, TPGroupParams
+from modules.actions.decision import load_predictors, build_state_indexer, _init_fi_flags_from_yaml
 from modules.actions.vuln_for_tp import ratio_by_tract_from_vuln, _attach_hh_flood_damage
-from modules.actions.mgmix_pipeline import run_one_year_mgmix_fast
+from modules.actions.pipeline import run_one_year_mgmix_fast
 from modules.finance import run_finance_for_year
 
 # ---------- publication style ----------
@@ -174,7 +174,7 @@ def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]
     OWNER_CONTENTS_RATIO = float(OWNER_INS.get("owner_contents_ratio", 0.57))
     OWNER_INSURES_BOTH   = bool(OWNER_INS.get("owner_insures_both", True))
 
-    MG_SHARE, policy_dict = load_inline_mgshare_policy(CFG)
+    OWNER_SHARE, policy_dict = load_inline_owner_share_policy(CFG)
 
     DEPTHS_LONG = load_depths_legacy(PATH_DEPTHS)
     YEARS = years_from_cfg(CFG, DEPTHS_LONG["year"].unique(), PATH_EVENTS)
@@ -184,8 +184,8 @@ def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]
     TRACTS = sorted(set(DEPTHS_LONG["tract_geoid"].astype(str)) | set(STATE["tract_geoid"].astype(str)))
 
     # Fixed parameters
-    PARAMS_MG  = grp_params_from_yaml(CFG, "MG",  TPGroupParams)
-    PARAMS_NMG = grp_params_from_yaml(CFG, "NMG", TPGroupParams)
+    PARAMS_OWNER  = grp_params_from_yaml(CFG, "owner",  TPGroupParams)
+    PARAMS_RENTER = grp_params_from_yaml(CFG, "renter", TPGroupParams)
     TP_CFG = TPConfig(
         shock_scale_owner  = float(TP_CFG_JSON.get("shock_scale_owner", 1.0)),
         shock_scale_renter = float(TP_CFG_JSON.get("shock_scale_renter", 1.0)),
@@ -196,13 +196,58 @@ def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]
     setattr(TP_CFG, "shock_mode", TP_CFG_JSON.get("shock_mode", "additive"))
     setattr(TP_CFG, "flood_ratio_threshold", FLOOD_RATIO_THRESHOLD)
 
-    # Initialize psychology
-    rng_init = np.random.RandomState(int(init_seed))
-    TRACT_PSY = init_tract_psych_safe(TRACTS, int(init_seed), rng_init)
+    # Re-draw household-level psychology using init_seed (Monte Carlo variation)
+    from modules.actions.tp import BETA_PARAMS_OWNER_DEFAULT, BETA_PARAMS_RENTER_DEFAULT
+    psych_rng = np.random.RandomState(int(init_seed))
+    is_owner = STATE["group"].astype(str).str.lower().eq("owner")
+    n_hh = len(STATE)
+    for var in ["TP", "CP", "SP", "SC", "PA"]:
+        col = f"{var}_init"
+        vals = np.empty(n_hh, dtype=np.float64)
+        a_o, b_o = BETA_PARAMS_OWNER_DEFAULT.get(var, (2.0, 2.0))
+        n_own = int(is_owner.sum())
+        if n_own > 0:
+            vals[is_owner.values] = psych_rng.beta(
+                max(a_o, 1e-6), max(b_o, 1e-6), size=n_own
+            )
+        a_r, b_r = BETA_PARAMS_RENTER_DEFAULT.get(var, (2.0, 2.0))
+        n_ren = n_hh - n_own
+        if n_ren > 0:
+            vals[~is_owner.values] = psych_rng.beta(
+                max(a_r, 1e-6), max(b_r, 1e-6), size=n_ren
+            )
+        STATE[col] = vals
 
-    predictor_MG, predictor_NMG = load_predictors(ACTIONS_DIR)
-    idxer = build_state_indexer(STATE, TRACT_PSY)
-    w_vec = STATE["tract_geoid"].map(MG_SHARE).astype(float).to_numpy()
+    # Re-draw initial insurance status using init_seed
+    ins_cfg = CFG.get("insurance_init", {}) or {}
+    fi_rng = np.random.default_rng(int(init_seed) + 1_000_000)
+    STATE["has_FI"] = 0
+    rates = ins_cfg.get("take_rate_by_tract_group", {})
+    if rates:
+        tract_col = STATE["tract_geoid"].astype(str)
+        group_col = STATE["group"].astype(str).str.lower()
+        for tract_str, group_rates in rates.items():
+            tract_str = str(tract_str).zfill(11)
+            if not isinstance(group_rates, dict):
+                continue
+            for grp, rate in group_rates.items():
+                rate = float(rate)
+                if rate <= 0:
+                    continue
+                mask = tract_col.eq(tract_str) & group_col.eq(grp)
+                idx = STATE.index[mask].to_numpy()
+                n = len(idx)
+                if n == 0:
+                    continue
+                k = max(0, min(int(round(rate * n)), n))
+                if k > 0:
+                    chosen = fi_rng.choice(idx, size=k, replace=False)
+                    STATE.loc[chosen, "has_FI"] = 1
+
+    STATE["TP"] = STATE["TP_init"].astype(float)
+    STATE["t_clock"] = 0.0
+
+    predictor_owner, predictor_renter = load_predictors(ACTIONS_DIR)
 
     # Cumulative containers (legacy kept; population denominator added)
     act_counts_overall = {"FI": 0, "BP": 0, "RL": 0, "DN": 0}
@@ -243,15 +288,17 @@ def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]
         )
         ratio_used = {t: (float(r) if float(r) >= SHOCK_MIN_RATIO else 0.0) for t, r in ratio_raw.items()}
 
-        dec, psy_new, STATE_NEXT, _chg = run_one_year_mgmix_fast(
-            year=y, state=STATE, tract_psy=TRACT_PSY, idxer=idxer, w_vec=w_vec,
-            predictor_MG=predictor_MG, predictor_NMG=predictor_NMG,
-            params_MG=PARAMS_MG, params_NMG=PARAMS_NMG, tp_cfg=TP_CFG,
+        dec, STATE_NEXT, _chg = run_one_year_mgmix_fast(
+            year=y, state=STATE,
+            predictor_owner=predictor_owner, predictor_renter=predictor_renter,
+            params_owner=PARAMS_OWNER, params_renter=PARAMS_RENTER, tp_cfg=TP_CFG,
             ratio_by_tract=ratio_used,
             overlay_policy_names={"owner": "owner_standard", "renter": "renter_contents"},
-            rng=np.random.RandomState(BASE_SEED + int(y)),
+            rng=np.random.RandomState(int(init_seed) * 100 + int(y)),
             years_step=1.0, reset_clock_on_flood=False, action_dyn=DYN,
             depth_m_by_tract=dmap, rl_dest_k_best=50,
+            decision_threshold=float(CFG.get("decision_threshold", 0.5)),
+            draw_bounds=CFG.get("draw_bounds", None),
         )
 
         # ----- Action Stats: Taken this year + Population denominator -----
@@ -380,7 +427,7 @@ def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]
         FIN_HH, _ = run_finance_for_year(
             year=y, state_event=state_with_damage, depth_map=dmap,
             ratio_by_tract=ratio_used, decisions=dec, policy=policy_dict,
-            idxer=idxer, gate_by_decisions=True, renters_have_structure=False,
+            idxer=None, gate_by_decisions=True, renters_have_structure=False,
             tract_col="tract_geoid", output_dir=None, save_csv=False,
             premium={**DEFAULT_PREMIUM,
                      "contents_share_owner": OWNER_CONTENTS_RATIO,
@@ -402,10 +449,9 @@ def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]
         all_damage_sum   += float((payout + oop).sum(skipna=True))
         all_n_households += int(len(FIN_HH))
         # ---------- roll ----------
-        STATE = STATE_NEXT.copy()
-        TRACT_PSY = psy_new.copy()
-        idxer = build_state_indexer(STATE, TRACT_PSY)
-        w_vec = STATE["tract_geoid"].map(MG_SHARE).astype(float).to_numpy()
+        # Use advance_state_for_next_year to handle backfill psych initialization
+        from utils.main_helpers import advance_state_for_next_year
+        STATE = advance_state_for_next_year(STATE, STATE_NEXT, y)
 
     # ========= End of Annual Loop =========
     summary = {

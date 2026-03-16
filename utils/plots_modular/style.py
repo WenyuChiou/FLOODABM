@@ -55,7 +55,7 @@ COLOR_BAND = COLORS["band"]
 # Typography and Layout
 # =============================================================================
 
-LEGEND_FONTSIZE = 18
+LEGEND_FONTSIZE = 9
 TITLE_FONTSIZE = 14
 LABEL_FONTSIZE = 12
 TICK_FONTSIZE = 11
@@ -73,13 +73,17 @@ def set_paper_style() -> None:
     clean, professional-looking figures.
     """
     plt.rcParams.update({
+        # Font family — serif for journal consistency
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+
         # Font sizes
         "font.size": 12,
         "axes.titlesize": TITLE_FONTSIZE,
         "axes.labelsize": LABEL_FONTSIZE,
         "xtick.labelsize": TICK_FONTSIZE,
         "ytick.labelsize": TICK_FONTSIZE,
-        "legend.fontsize": LEGEND_FONTSIZE - 4,  # Slightly smaller for legends
+        "legend.fontsize": LEGEND_FONTSIZE,  # 9pt for readability
         
         # Line properties
         "lines.linewidth": 2.0,

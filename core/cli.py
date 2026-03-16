@@ -44,13 +44,13 @@ def create_base_parser(description: str = "FLOODABM Simulation") -> argparse.Arg
         "--thr-mg",
         type=float,
         metavar="RATIO",
-        help="Override flood ratio threshold for MG (minority group)",
+        help="Override flood ratio threshold for owner",
     )
     parser.add_argument(
         "--thr-nmg",
         type=float,
         metavar="RATIO",
-        help="Override flood ratio threshold for NMG (non-minority group)",
+        help="Override flood ratio threshold for renter",
     )
     
     # Output options

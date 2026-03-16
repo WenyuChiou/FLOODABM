@@ -32,18 +32,25 @@ import pandas as pd
 # Vulnerability Module Import
 # =============================================================================
 
+_VULN_CLASS_CACHE = None
+
 def _import_vuln(modules_root: Path):
     """Dynamically import Vulnerability class from vulnerability submodule.
-    
+
     Args:
         modules_root: Path to modules/ directory
-        
+
     Returns:
         Vulnerability class
     """
+    global _VULN_CLASS_CACHE
+    if _VULN_CLASS_CACHE is not None:
+        return _VULN_CLASS_CACHE
     vul_root = modules_root / "vulnerability"
-    sys.path.insert(0, str(vul_root))
+    if str(vul_root) not in sys.path:
+        sys.path.insert(0, str(vul_root))
     from vulnerability import Vulnerability  # type: ignore
+    _VULN_CLASS_CACHE = Vulnerability
     return Vulnerability
 
 
@@ -163,36 +170,32 @@ def compute_losses_quick(
     Vulnerability = _import_vuln(modules_root)
     # Use ffe_ft=0 here since we pass per-row FFE in damage calls
     v = Vulnerability(ffe_ft=0.0)
-    
-    def _row_loss(r):
-        """Calculate loss for a single household row."""
-        # Convert depth from meters to feet
-        depth_ft = float(r["depth_m"]) / 0.3048
-        depth = np.array([depth_ft], dtype=float)
-        
-        # Per-household FFE (includes base + elevation improvements)
-        ffe_ft_row = float(r["ffe_ft_adjust"])
-        
-        s_amt = 0.0
-        c_amt = 0.0
-        rcv = float(r["rcv_kUSD"] or 0.0)
-        con = float(r["contents_kUSD"] or 0.0)
-        
-        if rcv > 0:
-            s, _ = v.structure_damage(rcv, depth, ffe_ft=ffe_ft_row)
-            s_amt = float(s[0])
-        if con > 0:
-            c, _ = v.contents_damage(con, depth, ffe_ft=ffe_ft_row)
-            c_amt = float(c[0])
-        
-        return pd.Series({
-            "gross_structure_loss": s_amt,
-            "gross_contents_loss": c_amt,
-            "gross_total": s_amt + c_amt,
-        })
-    
-    L = cat_in.apply(_row_loss, axis=1)
-    return pd.concat([cat_in.reset_index(drop=True), L], axis=1)
+
+    # Vectorized batch computation (Vulnerability accepts arrays)
+    depth_m_arr = cat_in["depth_m"].to_numpy(dtype=float)
+    ffe_arr = cat_in["ffe_ft_adjust"].to_numpy(dtype=float)
+    rcv_arr = cat_in["rcv_kUSD"].to_numpy(dtype=float)
+    con_arr = cat_in["contents_kUSD"].to_numpy(dtype=float)
+
+    # Replace NaN with 0 for safe computation
+    rcv_arr = np.nan_to_num(rcv_arr, nan=0.0)
+    con_arr = np.nan_to_num(con_arr, nan=0.0)
+
+    # Structure damage (batch)
+    s_dmg, _ = v.structure_damage(rcv_arr, depth_m_arr, ffe_ft=ffe_arr)
+    s_dmg = np.nan_to_num(s_dmg, nan=0.0)
+    s_dmg[rcv_arr <= 0] = 0.0
+
+    # Contents damage (batch)
+    c_dmg, _ = v.contents_damage(con_arr, depth_m_arr, ffe_ft=ffe_arr)
+    c_dmg = np.nan_to_num(c_dmg, nan=0.0)
+    c_dmg[con_arr <= 0] = 0.0
+
+    out = cat_in.reset_index(drop=True).copy()
+    out["gross_structure_loss"] = s_dmg
+    out["gross_contents_loss"] = c_dmg
+    out["gross_total"] = s_dmg + c_dmg
+    return out
 
 
 # =============================================================================
@@ -229,7 +232,7 @@ def ratio_by_tract_from_vuln(
         Dict mapping tract_geoid to damage ratio (0-1)
     """
     # 1) Prepare state: normalize identity and fill missing values
-    df = state.copy()
+    df = state.copy().reset_index(drop=True)
     df["identity"] = df.get("identity", df.get("group", "unknown")).astype(str).str.lower()
     df["tract_geoid"] = df["tract_geoid"].astype(str)
     
@@ -271,7 +274,7 @@ def ratio_by_tract_from_vuln(
     g = tmp.groupby("tract_geoid", as_index=False).sum()
     g["ratio"] = np.where(g["value_kUSD"] > 0, (g["loss_kUSD"] / g["value_kUSD"]).clip(0.0, 1.0), 0.0)
     
-    return {str(r.tract_geoid): float(r.ratio) for _, r in g.iterrows()}
+    return dict(zip(g["tract_geoid"].astype(str), g["ratio"].astype(float)))
 
 
 # =============================================================================

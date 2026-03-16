@@ -66,15 +66,13 @@ def run_finance_for_year(
     df["event_year"] = year
     df["event_tract_geoid"] = df[tract_col].astype(str)
 
-    # Map flood depths
+    # Map flood depths (vectorized via Series lookup)
     if "event_depth_m" not in df.columns:
-        df["event_depth_m"] = df["event_tract_geoid"].map(
-            lambda t: float(depth_map.get(str(t), np.nan))
-        ).astype(float)
+        _depth_series = pd.Series(depth_map, dtype=float)
+        df["event_depth_m"] = df["event_tract_geoid"].map(_depth_series).astype(float)
 
-    df["event_loss_ratio"] = df["event_tract_geoid"].map(
-        lambda t: float(ratio_by_tract.get(str(t), 0.0))
-    ).astype(float)
+    _ratio_series = pd.Series(ratio_by_tract, dtype=float)
+    df["event_loss_ratio"] = df["event_tract_geoid"].map(_ratio_series).fillna(0.0).astype(float)
 
     # Ensure monetary columns exist
     for col in ("rcv_kUSD", "contents_kUSD"):

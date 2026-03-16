@@ -132,7 +132,7 @@ def plot_fin_focus_dashboard(
     trade_xlabel: str = "",
     trade_ylabel: str = "",
     panel_labels: Tuple[str, str] = ("(a)", "(b)"),
-    severe_years: Tuple[int, ...] = (2011, 2014, 2021, 2022, 2023),  # 可調
+    severe_years: Tuple[int, ...] = (2011, 2014, 2021),
     format_legend_labels: bool = True,
 ):
     """
@@ -199,7 +199,7 @@ def plot_rate_delta_cum_dual(
     *,
     baseline: str = "MG=0.5,NMG=0.5",
     highlights: Optional[Dict[str, Dict]] = None,
-    severe_years: Tuple[int, ...] = (2011, 2014, 2021, 2022, 2023),
+    severe_years: Tuple[int, ...] = (2011, 2014, 2021),
     out_png: Path | str = "outputs/experiments/fig/rate_delta_cum_dual.png",
     as_percent: bool = True,
     legend_loc: str = "best",

@@ -16,8 +16,8 @@ LIKERT_PERCEPTION = ['TP_mean', 'CP_mean', 'SP_mean']
 LIKERT_ACTIONS    = ['FI', 'EH', 'BP', 'RL']
 VALID_Q15_YEARS   = {1, 3, 8, 15, 25, 35, 45}
 
-EXPECTED_SURVEY_TOTAL = 937
-EXPECTED_CAL_TOTAL    = 213
+EXPECTED_SURVEY_TOTAL = 936
+EXPECTED_CAL_TOTAL    = 208
 THRESHOLD = 30
 SKEW_THRESH = 2.0
 KURT_THRESH = 7.0
@@ -43,12 +43,12 @@ n_rc  = len(renter_cal)
 survey_total = n_ov + n_rv
 cal_total    = n_oc + n_rc
 
-print(f"  owner_variable  rows : {n_ov:>4}   (expected 694)")
-print(f"  renter_variable rows : {n_rv:>4}   (expected 243)")
+print(f"  owner_variable  rows : {n_ov:>4}   (expected 557)")
+print(f"  renter_variable rows : {n_rv:>4}   (expected 379)")
 survey_ok = "OK" if survey_total == EXPECTED_SURVEY_TOTAL else "*** MISMATCH ***"
 print(f"  Survey total         : {survey_total:>4}   (expected {EXPECTED_SURVEY_TOTAL}) -> {survey_ok}")
-print(f"  owner_cal rows       : {n_oc:>4}   (expected 170)")
-print(f"  renter_cal rows      : {n_rc:>4}   (expected  43)")
+print(f"  owner_cal rows       : {n_oc:>4}   (expected 135)")
+print(f"  renter_cal rows      : {n_rc:>4}   (expected  73)")
 cal_ok = "OK" if cal_total == EXPECTED_CAL_TOTAL else "*** MISMATCH ***"
 print(f"  Cal total            : {cal_total:>4}   (expected {EXPECTED_CAL_TOTAL}) -> {cal_ok}")
 

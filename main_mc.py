@@ -151,7 +151,7 @@ def legend_outside_right(fig, axes=None, *, right_rect=0.82, x_anchor=0.80, ncol
     leg.get_frame().set_facecolor("white")
 
 # ---------- per-run simulation ----------
-def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]:
+def run_once_initpsy(init_seed: int, crn_seed: int, decision_seed: int | None = None) -> tuple[dict, pd.DataFrame]:
     CFG  = load_yaml_cfg(CONFIG_PATH)
     FILES           = CFG.get("files", {}) or {}
     PATH_DEPTHS     = resolve_path(ACTIONS_DIR, FILES.get("depths_overall"), MODULES_ROOT)
@@ -294,7 +294,7 @@ def run_once_initpsy(init_seed: int, crn_seed: int) -> tuple[dict, pd.DataFrame]
             params_owner=PARAMS_OWNER, params_renter=PARAMS_RENTER, tp_cfg=TP_CFG,
             ratio_by_tract=ratio_used,
             overlay_policy_names={"owner": "owner_standard", "renter": "renter_contents"},
-            rng=np.random.RandomState(int(init_seed) * 100 + int(y)),
+            rng=np.random.RandomState(int(decision_seed or init_seed) * 100 + int(y)),
             years_step=1.0, reset_clock_on_flood=False, action_dyn=DYN,
             depth_m_by_tract=dmap, rl_dest_k_best=50,
             decision_threshold=float(CFG.get("decision_threshold", 0.5)),
@@ -502,17 +502,19 @@ def running_center_std(arr: np.ndarray, center: str = "mean"):
     return np.array(centers), np.array(stds)
 
 # ---------- driver ----------
-def main(n_runs: int = 10, init_seed0: int = 71001, crn_seed: int = 2025):
+def main(n_runs: int = 10, init_seed0: int = 71001, crn_seed: int = 2025,
+         decision_seed0: int = 90001):
     _set_style()
 
     runs, seeds, ts_list = [], [], []
     for i in range(n_runs):
-        init_seed = init_seed0 + i*37
-        print(f"[InitPsyMC] Run {i+1}/{n_runs} (init_seed={init_seed}) ...")
-        s, ts = run_once_initpsy(init_seed=init_seed, crn_seed=crn_seed)
+        decision_seed = decision_seed0 + i*37
+        print(f"[InitPsyMC] Run {i+1}/{n_runs} (init_seed={init_seed0}, decision_seed={decision_seed}) ...")
+        s, ts = run_once_initpsy(init_seed=init_seed0, crn_seed=crn_seed,
+                                 decision_seed=decision_seed)
         s["run_id"] = i+1; runs.append(s)
         ts["run_id"] = i+1; ts_list.append(ts)
-        seeds.append({"run_id": i+1, "init_seed": init_seed})
+        seeds.append({"run_id": i+1, "init_seed": init_seed0, "decision_seed": decision_seed})
 
     df_runs  = pd.DataFrame(runs).set_index("run_id")
     df_seeds = pd.DataFrame(seeds).set_index("run_id")
@@ -684,8 +686,10 @@ if __name__ == "__main__":
     parser.add_argument("--runs", type=int, default=10, help="Number of Monte Carlo runs (default: 10)")
     parser.add_argument("--init-seed", type=int, default=71001, help="Initial seed for psychology (default: 71001)")
     parser.add_argument("--crn-seed", type=int, default=2025, help="Common random number seed for simulation (default: 2025)")
-    
+    parser.add_argument("--decision-seed", type=int, default=90001, help="Base seed for decision-making draws (default: 90001)")
+
     args = parser.parse_args()
-    
+
     # Check flow; increase n_runs for robustness (e.g. 30/50/100)
-    main(n_runs=args.runs, init_seed0=args.init_seed, crn_seed=args.crn_seed)
+    main(n_runs=args.runs, init_seed0=args.init_seed, crn_seed=args.crn_seed,
+         decision_seed0=args.decision_seed)

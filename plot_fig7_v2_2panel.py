@@ -143,8 +143,8 @@ def annotate_endpoints(ax, x_arr, medians, color, offset_y=0.02, side="both"):
                     xytext=(x_arr[idx], val + offset_y),
                     fontsize=8, fontweight="bold", color=color, ha=ha, va="bottom",
                     clip_on=True, zorder=5,
-                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white",
-                              edgecolor="none", alpha=0.7))
+                    bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                              edgecolor=color, linewidth=0.6, alpha=1.0))
 
 def plot_two_groups(ax, owner_key, renter_key, title, panel_label):
     shade_severe(ax)

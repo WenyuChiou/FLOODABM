@@ -234,8 +234,8 @@ for val, color in [(rO[-1], C_OWN_BASE), (rR[-1], C_REN_BASE)]:
     ax_r.text(x_r[-1] + 0.3, val, f"{val:.2f}\u00d7",
               fontsize=11, fontweight="bold", color=color,
               ha="left", va="center", clip_on=False,
-              bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
-                        edgecolor="none", alpha=0.85))
+              bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                        edgecolor=color, linewidth=0.6, alpha=1.0))
 
 ax_r.set_ylabel("\u0394 Cumul. damage / \u0394 Cumul. actual loss", fontsize=11)
 ax_r.set_title("Insurance Leverage Ratio", fontsize=13, fontweight="bold", pad=8)

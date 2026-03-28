@@ -74,8 +74,8 @@ for med, color, name in [(o_med, OWNER_COLOR, "Owner"), (r_med, RENTER_COLOR, "R
         ax.annotate(f"{val:.2f}", xy=(x[idx], val),
                     xytext=(x[idx], val + offset),
                     fontsize=9, fontweight="bold", color=color, ha="center", va="bottom",
-                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white",
-                              edgecolor="none", alpha=0.7), zorder=5)
+                    bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                              edgecolor=color, linewidth=0.6, alpha=1.0), zorder=5)
 
 ax.set_ylabel("Threat perception (TP)")
 ax.set_xlabel("Year")

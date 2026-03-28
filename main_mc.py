@@ -389,8 +389,20 @@ def run_once_initpsy(init_seed: int, crn_seed: int, decision_seed: int | None = 
         sum_overall_DN  += dn_all
 
         # ---- Annual timeseries ----
+        # NEW: Annual decision rates (annual flow, comparable to LLM-ABM traces)
+        nEH_o_new = int(new_eh.reindex(dec.index[mask_o], fill_value=False).sum())
         rows_ts.append({
             "year": int(y),
+            # Annual decision rates (population denominator) — for RQ1 comparison
+            "owner_annual_FI": float(fi_o / max(1, owners_n)),
+            "owner_annual_EH": float(nEH_o_new / max(1, owners_n)),
+            "owner_annual_BP": float(bp_o / max(1, owners_n)),
+            "owner_annual_DN": float(dn_o / max(1, owners_n)),
+            "renter_annual_FI": float(fi_r / max(1, renters_n)),
+            "renter_annual_RL": float(rl_r / max(1, renters_n)),
+            "renter_annual_DN": float(dn_r / max(1, renters_n)),
+            "owner_N": owners_n,
+            "renter_N": renters_n,
             # Legacy columns (kept)
             "owner_share_FI":       float(fi_o / den_o_act),
             "owner_share_BP":       float(bp_o / den_o_act),
@@ -528,6 +540,8 @@ def main(n_runs: int = 10, init_seed0: int = 71001, crn_seed: int = 2025,
 
     # Merge TS
     TS = pd.concat(ts_list, ignore_index=True)
+    TS.to_csv(MC_DIR / "mc_initpsy_timeseries.csv", index=False, encoding="utf-8-sig")
+    print("[OK] Saved:", MC_DIR / "mc_initpsy_timeseries.csv")
 
     # ============== Figure 1: Cumulated Actions (Population Denominator) ==============
     x = np.arange(1, len(df_runs) + 1)

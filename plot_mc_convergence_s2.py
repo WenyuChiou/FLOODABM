@@ -11,23 +11,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 MC_DIR = ROOT / "outputs" / "montecarlo"
-OUT_PATH = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\draft\v2_sections\SM\mc_convergence_figure_s2.png")
+OUT_PATH = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\draft\submission_files\Figure_S2.png")
 
 # Paper style
 plt.rcParams.update({
     "figure.dpi": 300,
     "savefig.dpi": 300,
-    "font.family": "sans-serif",
-    "font.size": 11,
-    "axes.labelsize": 12,
-    "axes.titlesize": 13,
-    "xtick.labelsize": 10,
-    "ytick.labelsize": 10,
-    "axes.linewidth": 0.8,
-    "xtick.direction": "out",
-    "ytick.direction": "out",
-    "axes.spines.top": False,
-    "axes.spines.right": False,
+    "savefig.bbox": "tight",
+    "font.family": "serif",
+    "font.serif": ["Times New Roman", "DejaVu Serif"],
+    "font.size": 10,
+    "axes.labelsize": 11,
+    "axes.titlesize": 12,
+    "legend.fontsize": 9,
+    "xtick.labelsize": 9,
+    "ytick.labelsize": 9,
+    "lines.linewidth": 2.0,
+    "axes.grid": True,
+    "grid.alpha": 0.3,
+    "grid.linestyle": "--",
     "axes.facecolor": "white",
     "figure.facecolor": "white",
 })
@@ -61,8 +63,6 @@ ax.set_xlim(0.5, n_runs + 0.5)
 ax.legend(loc="upper right", frameon=True, fancybox=False,
           edgecolor="gray", framealpha=0.9)
 
-# Clean grid
-ax.grid(axis="y", color="#E0E0E0", linewidth=0.5, zorder=0)
 ax.set_axisbelow(True)
 
 fig.tight_layout()

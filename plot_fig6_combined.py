@@ -183,13 +183,13 @@ def annotate_bar(ax, stats_df, acts, idx):
         bottom += height
 
 
-def annotate_endpoint(ax, x_pos, val, color, offset_y=0.01):
+def annotate_endpoint(ax, x_pos, val, color, offset_y=0.01, va="bottom"):
     fmt = f"{val*100:.1f}%" if val < 0.05 else f"{val*100:.0f}%"
     ax.annotate(fmt, xy=(x_pos, val),
                 xytext=(x_pos, val + offset_y),
-                fontsize=10, fontweight="bold", color=color, ha="center", va="bottom",
-                bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
-                          edgecolor="none", alpha=0.8))
+                fontsize=10, fontweight="bold", color=color, ha="center", va=va,
+                bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                          edgecolor=color, linewidth=0.6, alpha=1.0))
 
 
 def setup_flow_ax(ax, title, plbl):
@@ -306,9 +306,12 @@ def plot_action_two_lines(ax, group, action, color, label, marker_prone="o", mar
 # ── (c) Homeowner FI (prone vs non-prone) ──
 shade_severe_years(ax_c, years, SEVERE)
 o_fi_p, o_fi_n = plot_action_two_lines(ax_c, "owner", "FI", "#1f77b4", "FI", "o", "o")
-for vals, color in [(o_fi_p, "#1f77b4")]:
-    annotate_endpoint(ax_c, x[0], vals[0], color, offset_y=0.02)
-    annotate_endpoint(ax_c, x[-1], vals[-1], color, offset_y=0.02)
+# Prone: above
+annotate_endpoint(ax_c, x[0],  o_fi_p[0],  "#1f77b4", offset_y=0.03)
+annotate_endpoint(ax_c, x[-1], o_fi_p[-1], "#1f77b4", offset_y=0.03)
+# Non-prone: above (well below prone, no overlap)
+annotate_endpoint(ax_c, x[0],  o_fi_n[0],  "#1f77b4", offset_y=0.03)
+annotate_endpoint(ax_c, x[-1], o_fi_n[-1], "#1f77b4", offset_y=0.03)
 setup_flow_ax(ax_c, "Flood Insurance (FI) — Homeowner", "(c)")
 ax_c.set_ylim(0, 1.0)
 ax_c.legend(loc="upper left", fontsize=10, frameon=True, facecolor="white",
@@ -317,9 +320,12 @@ ax_c.legend(loc="upper left", fontsize=10, frameon=True, facecolor="white",
 # ── (d) Renter FI (prone vs non-prone) ──
 shade_severe_years(ax_d, years, SEVERE)
 r_fi_p, r_fi_n = plot_action_two_lines(ax_d, "renter", "FI", "#d62728", "FI", "s", "s")
-for vals, color in [(r_fi_p, "#d62728")]:
-    annotate_endpoint(ax_d, x[0], vals[0], color, offset_y=0.02)
-    annotate_endpoint(ax_d, x[-1], vals[-1], color, offset_y=0.02)
+# Prone: above
+annotate_endpoint(ax_d, x[0],  r_fi_p[0],  "#d62728", offset_y=0.03)
+annotate_endpoint(ax_d, x[-1], r_fi_p[-1], "#d62728", offset_y=0.03)
+# Non-prone: above (much lower than prone, no overlap)
+annotate_endpoint(ax_d, x[0],  r_fi_n[0],  "#d62728", offset_y=0.03)
+annotate_endpoint(ax_d, x[-1], r_fi_n[-1], "#d62728", offset_y=0.03)
 setup_flow_ax(ax_d, "Flood Insurance (FI) — Renter", "(d)")
 ax_d.set_ylim(0, 1.0)
 ax_d.legend(loc="upper left", fontsize=10, frameon=True, facecolor="white",
@@ -328,22 +334,27 @@ ax_d.legend(loc="upper left", fontsize=10, frameon=True, facecolor="white",
 # ── (e) EH — Homeowner (prone vs non-prone) ──
 shade_severe_years(ax_e, years, SEVERE)
 o_eh_p, o_eh_n = plot_action_two_lines(ax_e, "owner", "EH", LC["EH"], "EH", "o", "o")
-for vals, color in [(o_eh_p, LC["EH"])]:
-    annotate_endpoint(ax_e, x[0], vals[0], color, offset_y=0.005)
-    annotate_endpoint(ax_e, x[-1], vals[-1], color, offset_y=0.005)
+# Prone start: below (non-prone starts slightly higher, so separate them)
+annotate_endpoint(ax_e, x[0],  o_eh_p[0],  LC["EH"], offset_y=-0.012, va="top")
+# Non-prone start: above
+annotate_endpoint(ax_e, x[0],  o_eh_n[0],  LC["EH"], offset_y=0.012)
+# End: only prone (both converge to ~0.1%)
+annotate_endpoint(ax_e, x[-1], o_eh_p[-1], LC["EH"], offset_y=0.006)
 setup_flow_ax(ax_e, "Elevation (EH) — Homeowner", "(e)")
-# Legend at center-right where lines have decayed
+ax_e.set_ylim(0, 0.072)  # headroom for "4.5%" label above non-prone start
 ax_e.legend(loc="center right", fontsize=10, frameon=True, facecolor="white",
             edgecolor="0.6", framealpha=0.95)
 
 # ── (f) RL — Renter (prone vs non-prone) ──
 shade_severe_years(ax_f, years, SEVERE)
 r_rl_p, r_rl_n = plot_action_two_lines(ax_f, "renter", "RL", LC["RL"], "RL", "o", "o")
-for vals, color in [(r_rl_p, LC["RL"])]:
-    annotate_endpoint(ax_f, x[0], vals[0], color, offset_y=0.01)
-    annotate_endpoint(ax_f, x[-1], vals[-1], color, offset_y=0.01)
+# Prone (lower line): above
+annotate_endpoint(ax_f, x[0],  r_rl_p[0],  LC["RL"], offset_y=0.018)
+annotate_endpoint(ax_f, x[-1], r_rl_p[-1], LC["RL"], offset_y=0.018)
+# Non-prone (upper line): above
+annotate_endpoint(ax_f, x[0],  r_rl_n[0],  LC["RL"], offset_y=0.018)
+annotate_endpoint(ax_f, x[-1], r_rl_n[-1], LC["RL"], offset_y=0.018)
 setup_flow_ax(ax_f, "Relocation (RL) — Renter", "(f)")
-# Legend at lower-left, below the prone line
 ax_f.legend(loc="lower left", fontsize=10, frameon=True, facecolor="white",
             edgecolor="0.6", framealpha=0.95)
 

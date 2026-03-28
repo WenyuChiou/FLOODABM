@@ -48,14 +48,25 @@ Thumbs.db
 *.h5
 *.feather
 
-# Calibration pipeline: allow data, CSVs, and outputs
+# Calibration pipeline: allow code and model weights; ignore regenerable outputs
 !calibration/
 !calibration/**
 calibration/data/data_ori.xlsx
+# phase1 outputs (regenerable via plot_action_distributions.py + generate_report.py)
+calibration/phase1_tenure_distributions/*.png
+calibration/phase1_tenure_distributions/*.csv
+calibration/phase1_tenure_distributions/*.docx
+# phase2 outputs (regenerable via bayesian_engine); keep models/*.npz
+calibration/phase2_bayesian_regression/*.png
+calibration/phase2_bayesian_regression/*.xlsx
+calibration/phase2_bayesian_regression/owner_group/**/*.xlsx
+calibration/phase2_bayesian_regression/renter_group/**/*.xlsx
+# phase3 outputs (regenerable via run_calibration.py + core/visualizer.py)
+# keep: tp_decay_params_for_abm.json (ABM needs it)
+calibration/phase3_tp_decay/outputs/*.png
+calibration/phase3_tp_decay/outputs/*.xlsx
+calibration/phase3_tp_decay/outputs/*.csv
 
 # Misc
 _UL
 *.pdf
-
-# Temporary figures
-fig4_FRESH.png

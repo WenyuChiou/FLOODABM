@@ -187,8 +187,8 @@ def annotate_last_bar(ax, stats_df, acts):
             fs = 7 if height < 0.03 else 9
             ax.text(last_idx, mid, pct, ha="center", va="center",
                     fontsize=fs, fontweight="bold", color="#222222",
-                    bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
-                              edgecolor="none", alpha=0.75))
+                    bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                              edgecolor="#888888", linewidth=0.6, alpha=1.0))
         bottom += height
 
 annotate_last_bar(ax1, df_own, owner_actions)
@@ -212,8 +212,8 @@ def annotate_first_bar(ax, stats_df, acts):
             fs = 7 if height < 0.03 else 9
             ax.text(0, mid, pct, ha="center", va="center",
                     fontsize=fs, fontweight="bold", color="#222222",
-                    bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
-                              edgecolor="none", alpha=0.75))
+                    bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                              edgecolor="#888888", linewidth=0.6, alpha=1.0))
         bottom += height
 
 annotate_first_bar(ax1, df_own, owner_actions)

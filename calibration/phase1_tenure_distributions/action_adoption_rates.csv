@@ -1,9 +1,0 @@
-Group,Action,n_total,n_respond,response_rate,mean_likert,std_likert
-owner,FI,557,557,1.0,2.952,1.146
-owner,EH,557,557,1.0,2.601,1.181
-owner,BP,557,557,1.0,2.634,1.125
-owner,RL,557,0,0.0,,
-renter,FI,379,379,1.0,2.931,1.153
-renter,EH,379,0,0.0,,
-renter,BP,379,0,0.0,,
-renter,RL,379,379,1.0,3.137,1.135

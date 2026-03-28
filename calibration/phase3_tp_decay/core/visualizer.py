@@ -14,8 +14,8 @@ from core.model import precompute_eff_grid, LN2, eff_closed_form
 
 # --- Design Tokens ---
 STYLE_CONF = {
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Arial", "DejaVu Sans"],
+    "font.family": "serif",
+    "font.serif": ["Times New Roman", "DejaVu Serif"],
     "font.size": 10,
     "axes.labelsize": 11,
     "axes.titlesize": 12,
@@ -30,13 +30,15 @@ STYLE_CONF = {
     "savefig.dpi": 300,
     "savefig.bbox": "tight",
     "savefig.transparent": False,
+    "axes.facecolor": "white",
+    "figure.facecolor": "white",
 }
 
 COLORS = {
-    "owner": "#2171B5",       # Blue
+    "owner": "#2171B5",       # Blue (Homeowner)
     "owner_fill": "#6BAED6",  # Light Blue
-    "renter": "#CB181D",      # Red
-    "renter_fill": "#FB6A4A", # Light Red
+    "renter": "#238B45",      # Green (Renter) — matches main text
+    "renter_fill": "#74C476", # Light Green
 }
 
 def set_pub_style():
@@ -114,14 +116,13 @@ def plot_confidence_intervals(best_pair, owner_boot, renter_boot, owner_raw, ren
         return lo, med, hi
 
     lo, med, hi = get_ribbon(owner_boot, best_pair["owner"], owner_raw)
-    ax.fill_between(t, lo, hi, color=COLORS["owner_fill"], alpha=0.5, label="Owner 95% CI")
-    ax.plot(t, med, color=COLORS["owner"], linestyle="-", label="Owner Median")
+    ax.fill_between(t, lo, hi, color=COLORS["owner_fill"], alpha=0.5, label="Homeowner 95% CI")
+    ax.plot(t, med, color=COLORS["owner"], linestyle="-", label="Homeowner Median")
 
     lo, med, hi = get_ribbon(renter_boot, best_pair["renter"], renter_raw)
     ax.fill_between(t, lo, hi, color=COLORS["renter_fill"], alpha=0.5, label="Renter 95% CI")
     ax.plot(t, med, color=COLORS["renter"], linestyle="-", label="Renter Median")
 
-    ax.set_title("Bootstrap Parameter Uncertainty (N=100)")
     ax.set_xlabel("Years since Flood")
     ax.set_ylabel("Relative TP(t)")
     ax.legend(loc="upper right", frameon=True)

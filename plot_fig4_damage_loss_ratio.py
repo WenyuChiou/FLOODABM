@@ -181,8 +181,8 @@ for val, color, nudge in [(rB_O[-1], OWNER_COLOR, 0.04), (rB_R[-1], RENTER_COLOR
                 xytext=(x[-1] + 0.3, val + nudge),
                 fontsize=10, fontweight="bold", color=color,
                 ha="left", va="center", zorder=5,
-                bbox=dict(boxstyle="round,pad=0.1", facecolor="white",
-                          edgecolor="none", alpha=0.7))
+                bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                          edgecolor=color, linewidth=0.6, alpha=1.0))
 
 # Start annotations
 for val, color, nudge in [(rB_O[0], OWNER_COLOR, 0.04), (rB_R[0], RENTER_COLOR, -0.06)]:
@@ -190,8 +190,8 @@ for val, color, nudge in [(rB_O[0], OWNER_COLOR, 0.04), (rB_R[0], RENTER_COLOR, 
                 xytext=(x[0] - 0.3, val + nudge),
                 fontsize=10, fontweight="bold", color=color,
                 ha="right", va="center", zorder=5,
-                bbox=dict(boxstyle="round,pad=0.1", facecolor="white",
-                          edgecolor="none", alpha=0.7))
+                bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                          edgecolor=color, linewidth=0.6, alpha=1.0))
 
 ax.set_ylabel("Cumulative damage / actual loss ratio", fontsize=12)
 ax.set_xlabel("Year")

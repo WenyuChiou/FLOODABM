@@ -32,19 +32,19 @@ from pathlib import Path
 # ── Figure registry ──────────────────────────────────────────────────────────
 # Maps figure number → (script_path, description, extra_args)
 FIGURES = {
-    3: ("plot_nfip_validation_paper.py",
+    3: ("scripts/paper_figures/plot_nfip_validation_paper.py",
         "NFIP z-score validation (county-level)", []),
-    4: ("plot_fig_rq1_combined.py",
+    4: ("scripts/paper_figures/plot_fig_rq1_combined.py",
         "RQ1 — damage & loss ratio by tenure (Fig 4 + Fig 5)", []),
-    5: ("plot_fig_rq1_combined.py",
+    5: ("scripts/paper_figures/plot_fig_rq1_combined.py",
         "RQ1 — finance panels (generated together with Fig 4)", []),
-    6: ("plot_fig_cumulative_behavior.py",
+    6: ("scripts/paper_figures/plot_fig_cumulative_behavior.py",
         "Cumulative adaptive behavior composition", []),
-    7: ("plot_fig7_v2_2panel.py",
+    7: ("scripts/paper_figures/plot_fig7_v2_2panel.py",
         "Annual adoption rate divergence (2-panel)", []),
-    9: ("plot_sa_rt_delta.py",
+    9: ("scripts/paper_figures/plot_sa_rt_delta.py",
         "SA ratio-threshold delta grid (2x2)", []),
-    10: ("plot_fig10_tp_boxplot.py",
+    10: ("scripts/paper_figures/plot_fig10_tp_boxplot.py",
         "TP boxplot by year (homeowner vs renter)", []),
 }
 
@@ -70,13 +70,17 @@ def run_figure(fig_num: int, root: str | None, dry_run: bool = False) -> bool:
         return True
 
     env = os.environ.copy()
+    # Ensure scripts can import from project root (utils/, core/, modules/)
+    project_root = str(Path(__file__).resolve().parent)
+    env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
     if root:
         env["FLOODABM_OUTPUT_ROOT"] = root
 
     cmd = [sys.executable, script] + extra
     try:
         result = subprocess.run(
-            cmd, env=env, capture_output=True, text=True, timeout=300,
+            cmd, env=env, cwd=project_root,
+            capture_output=True, text=True, timeout=300,
             encoding="utf-8", errors="replace",
         )
         if result.returncode != 0:

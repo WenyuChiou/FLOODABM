@@ -31,7 +31,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # ── paths ──────────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 SA_ROOT = Path("C:/temp/dt_rt_grid_sa")
 
 DT_VALUES = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]   # decision_threshold

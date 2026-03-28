@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 MC_DIR = ROOT / "outputs" / "montecarlo"
 OUT_PATH = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\draft\submission_files\Figure_S2.png")
 

@@ -14,7 +14,7 @@ import pandas as pd
 sys.stdout.reconfigure(encoding="utf-8")
 
 # ── paths ──────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 DEFAULT_SIM = ROOT / "outputs" / "baseline" / "baseline" / "finance"
 DEFAULT_OBS = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\flood insurance\openfema_claims_summary_by_tract_year.csv")
 DEFAULT_OUT = ROOT / "outputs" / "baseline" / "baseline" / "visualization" / "validation"

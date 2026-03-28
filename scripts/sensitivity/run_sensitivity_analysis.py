@@ -34,7 +34,7 @@ import yaml
 sys.stdout.reconfigure(encoding="utf-8")
 
 # ── paths ────────────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 YAML_PATH = ROOT / "config" / "abm_params.yaml"
 CSV_PATH = ROOT / "config" / "households_for_abm.csv"
 DEPTHS_JSON = ROOT / "config" / "overall_md_mean_by_tract_2011_2023.json"

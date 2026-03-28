@@ -19,58 +19,43 @@ Each action modifies exposure or vulnerability in the catastrophe flood model. S
 
 ```
 FLOODABM/
-├── main.py                      # Single-run simulation
+├── main.py                      # Single-run simulation (2011-2023)
 ├── main_mc.py                   # Monte Carlo batch runner
-├── run_sensitivity_analysis.py  # Sensitivity analysis runner
-├── sa_ratio_threshold.py        # SA: ratio threshold sweep
-├── sa_decision_threshold.py     # SA: decision threshold sweep
+├── generate_paper_figures.py    # Unified paper figure pipeline (Fig 3-10)
 ├── requirements.txt
 │
 ├── config/                      # Configuration and input data
-│   ├── abm_params.yaml                        # All simulation parameters
-│   ├── households_for_abm.csv                  # Household inventory
-│   ├── mg_share_by_tract.json                  # Renter share by tract (ACS, legacy filename)
-│   └── overall_md_mean_by_tract_2011_2023.json # Mean flood depths by tract-year
+│   ├── abm_params.yaml          # All simulation parameters
+│   ├── households_for_abm.csv   # Household inventory (52,141 households)
+│   └── overall_md_mean_by_tract_2011_2023.json  # Flood depths by tract-year
 │
 ├── core/                        # Framework infrastructure
-│   ├── cli.py                   # Command-line arguments
 │   ├── config.py                # Configuration loader
 │   ├── data.py                  # Data loading utilities
+│   ├── cli.py                   # Command-line arguments
 │   └── paths.py                 # Path management
 │
 ├── modules/
-│   ├── actions/                 # Household decision models
-│   │   ├── pipeline.py          # Action pipeline orchestration
-│   │   ├── decision.py          # Decision logic (FI/EH/BP/RL)
-│   │   ├── tp.py                # Threat perception dynamics (ODE)
-│   │   ├── vuln_for_tp.py       # Vulnerability input for TP
-│   │   └── bayes_fast_predictors.py  # Fast Bayesian prediction
-│   ├── finance/                 # Financial outcome calculations
-│   │   ├── core.py              # Damage and payout
-│   │   ├── premium.py           # NFIP premium calculation
-│   │   ├── decisions.py         # Insurance decision logic
-│   │   ├── aggregation.py       # Tract-level aggregation
-│   │   └── runner.py            # Finance pipeline runner
-│   └── vulnerability/           # Flood vulnerability functions
-│       └── vulnerability.py
+│   ├── actions/                 # Household decision models (Bayesian + TP)
+│   ├── finance/                 # NFIP premium, payout, OOP calculations
+│   └── vulnerability/           # Flood damage functions
 │
 ├── models/
 │   └── baseline_fast/           # Pre-trained Bayesian models (.npz)
 │
 ├── calibration/                 # Calibration pipeline (3 phases)
-│   ├── phase1_tenure_distributions/  # Action distributions by homeownership status
+│   ├── phase1_tenure_distributions/  # Beta distribution fitting
 │   ├── phase2_bayesian_regression/   # Bayesian logistic regression
 │   └── phase3_tp_decay/             # TP decay parameter estimation
 │
-├── utils/                       # Visualization and output
-│   ├── main_helpers.py          # Simulation loop helpers
-│   ├── finalize.py              # Post-simulation output
-│   ├── plots.py                 # Core plotting functions
-│   ├── plots_modular/           # Modular plot components
-│   └── sa_dr/                   # SA visualization utilities
+├── utils/                       # Visualization helpers and output
 │
-├── plot_*.py                    # Paper figure generation scripts
-└── validate_nfip.py             # NFIP validation against observed data
+└── scripts/                     # Organized scripts (not called directly)
+    ├── paper_figures/           # Individual figure scripts (called by generate_paper_figures.py)
+    ├── sensitivity/             # Sensitivity analysis runners
+    ├── validation/              # NFIP validation
+    ├── utilities/               # One-time data generation and export tools
+    └── legacy_plots/            # Superseded figure scripts (kept for reference)
 ```
 
 ## Installation
@@ -123,8 +108,8 @@ python main.py --compare-flood-or --output-mode full
 python main_mc.py --runs 30
 
 # Sensitivity analysis
-python sa_ratio_threshold.py
-python sa_decision_threshold.py
+python scripts/sensitivity/sa_ratio_threshold.py
+python scripts/sensitivity/sa_decision_threshold.py
 ```
 
 ## Configuration

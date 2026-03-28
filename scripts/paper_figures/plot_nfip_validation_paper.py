@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 # ── paths ──
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 VAL_DIR = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\validation")
 TS_CSV = VAL_DIR / "sim_vs_actual_standardized - 複製.csv"   # all years (for time series)
 SC_CSV = VAL_DIR / "sim_vs_actual_standardized.csv"           # filtered (for scatter)

@@ -26,7 +26,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.colors import Normalize
 
 # ── paths ──────────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 SA_ROOT = ROOT / "outputs" / "experiments" / "ratio_threshold_sa"
 
 THRESHOLDS = [0.01, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50]

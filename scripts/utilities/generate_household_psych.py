@@ -150,7 +150,7 @@ def main():
     ap.add_argument("--yaml", type=str, default=None)
     args = ap.parse_args()
 
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent.parent.parent  # project root
     csv_path = Path(args.csv) if args.csv else root / "config" / "households_for_abm.csv"
     yaml_path = Path(args.yaml) if args.yaml else root / "config" / "abm_params.yaml"
     if not csv_path.exists():

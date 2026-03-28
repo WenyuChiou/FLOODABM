@@ -28,7 +28,7 @@ from matplotlib.colors import Normalize
 sys.stdout.reconfigure(encoding="utf-8")
 
 # Add project root to path for imports
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 sys.path.insert(0, str(ROOT))
 
 from utils.plots_modular.style import (

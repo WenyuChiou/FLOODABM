@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 # ── paths ──────────────────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 BASE_DIR = ROOT / "outputs" / "baseline" / "baseline"
 WORST_DIR = ROOT / "outputs" / "baseline" / "worst"
 CONFIG = ROOT / "config" / "overall_md_mean_by_tract_2011_2023.json"

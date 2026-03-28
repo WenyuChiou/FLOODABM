@@ -11,7 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 sys.path.insert(0, str(ROOT))
 from utils.plots_modular.style import (
     set_paper_style, panel_label, shade_severe_years,

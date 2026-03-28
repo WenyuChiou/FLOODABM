@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 sys.path.insert(0, str(ROOT))
 from utils.plots_modular.style import set_paper_style, panel_label as _panel_label, shade_severe_years, COLORS
 set_paper_style()

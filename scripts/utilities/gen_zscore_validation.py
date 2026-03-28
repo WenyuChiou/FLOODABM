@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 # ── paths ──
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 OLD_TS = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\validation\sim_vs_actual_standardized - 複製.csv")
 OLD_SC = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\validation\sim_vs_actual_standardized.csv")
 NEW_COUNTY = ROOT / "outputs" / "baseline" / "baseline" / "visualization" / "validation" / "nfip_county_year_comparison.csv"

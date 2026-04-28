@@ -2,7 +2,11 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20587985.svg)](https://doi.org/10.5281/zenodo.20587985)
 
-A coupled agent-based and catastrophe flood modeling framework (ABM-CAT) for simulating household flood adaptation in the Passaic River Basin, New Jersey (2011-2023).
+A coupled agent-based and catastrophe flood modeling framework (ABM-CAT) for simulating household flood adaptation in the Passaic River Basin, New Jersey (2011–2023).
+
+![Framework flowchart](docs/framework_flowchart.png)
+
+*Two-way coupling between the agent-based model (ABM) and the catastrophe flood model (CAT). Flood depths drive damage and household threat perception (TP); adaptation decisions (FI / EH / BP / RL) modify exposure and vulnerability, which feed back into the next year's flood loss.*
 
 ## Overview
 

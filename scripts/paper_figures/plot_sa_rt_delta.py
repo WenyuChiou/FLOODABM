@@ -157,7 +157,7 @@ def main():
         (ax_c, "cum_owner_loss", "Homeowner", "(c)"),
         (ax_d, "cum_renter_loss","Renter",    "(d)"),
     ]
-    row_labels = {0: "Change in Cumulative Damage per HH", 1: "Change in Cumulative Actual Loss per HH"}
+    row_labels = {0: "Change in Cumulative GUL per HH", 1: "Change in Cumulative Actual Loss per HH"}
 
     for idx, (ax, metric, col_title, plbl) in enumerate(panels):
         row = idx // 2

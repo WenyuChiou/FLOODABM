@@ -18,6 +18,13 @@ from utils.plots_modular.style import (
     COLORS, COLOR_OWNER, COLOR_RENTER,
 )
 
+# 50-run Monte Carlo baseline.
+MC_ROOT = Path(r"C:\FLOODABM_mc50")
+N_RUNS = 50
+
+def run_path(rid):
+    return MC_ROOT / "baseline" / f"run_{rid:02d}" / "baseline" / "baseline"
+
 BASE = ROOT / "outputs" / "baseline" / "baseline"
 SEVERE_YEARS = [2011, 2021]
 
@@ -25,13 +32,36 @@ SEVERE_YEARS = [2011, 2021]
 def main():
     set_paper_style()
 
-    tp = pd.read_csv(BASE / "tp_traj.csv", dtype={"tract_geoid": str})
-    tp = tp[tp["phase"] == "after"]
+    # Pool tract-level mean TP across 50 baseline runs. Each (year, group)
+    # gets 50 * n_tracts samples, yielding a more robust boxplot than a
+    # single-run version that only has n_tracts samples per year.
+    owner_pool = {}   # year -> list of tract means across runs
+    renter_pool = {}
+    n_loaded = 0
+    years_ref = None
+    for rid in range(1, N_RUNS + 1):
+        rd = run_path(rid)
+        tp_path = rd / "tp_traj.csv"
+        if not tp_path.exists():
+            continue
+        tp = pd.read_csv(tp_path, dtype={"tract_geoid": str})
+        tp = tp[tp["phase"] == "after"]
+        yrs = sorted(tp["year"].unique())
+        if years_ref is None:
+            years_ref = yrs
+        for y in yrs:
+            yr_tp = tp[tp["year"] == y]
+            owner_tract = yr_tp.groupby("tract_geoid")["TP_owner"].mean().values
+            renter_tract = yr_tp.groupby("tract_geoid")["TP_renter"].mean().values
+            owner_pool.setdefault(y, []).append(owner_tract)
+            renter_pool.setdefault(y, []).append(renter_tract)
+        n_loaded += 1
 
-    years = sorted(tp["year"].unique())
-    owner_data = {y: tp[tp["year"] == y].groupby("tract_geoid")["TP_owner"].mean().values for y in years}
-    renter_data = {y: tp[tp["year"] == y].groupby("tract_geoid")["TP_renter"].mean().values for y in years}
-    print(f"Loaded {len(years)} years of tract-level TP data: {years[0]}-{years[-1]}")
+    years = years_ref
+    owner_data = {y: np.concatenate(owner_pool[y]) for y in years}
+    renter_data = {y: np.concatenate(renter_pool[y]) for y in years}
+    print(f"Pooled tract-level TP from {n_loaded} MC runs ({years[0]}-{years[-1]})")
+    print(f"  Samples per year: owner={len(owner_data[years[0]])}, renter={len(renter_data[years[0]])}")
 
     fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(14, 5))
 
@@ -75,13 +105,16 @@ def main():
 
     fig.tight_layout(w_pad=2.5)
 
-    # Save
+    # Save — legacy visualization dir + paper Figure folder
     out_dir = BASE / "visualization" / "action"
     out_dir.mkdir(parents=True, exist_ok=True)
+    paper_dir = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\Figure")
     for ext in ["png", "pdf"]:
         fig.savefig(out_dir / f"tp_boxplot_by_year.{ext}", dpi=300, bbox_inches="tight")
+        fig.savefig(paper_dir / f"tp_boxplot_by_year.{ext}", dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved: {out_dir / 'tp_boxplot_by_year.png'}")
+    print(f"Saved: {paper_dir / 'tp_boxplot_by_year.png'}")
 
 
 if __name__ == "__main__":

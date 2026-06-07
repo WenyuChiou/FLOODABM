@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 
 # ── paths ──────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent.parent  # project root
-SA_ROOT = Path("C:/temp/rt_grid_sa")
+SA_ROOT = Path("C:/temp/rt_grid_sa_v2")
 
 RT_VALUES = [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90]
 BASELINE_RT_O = 0.10

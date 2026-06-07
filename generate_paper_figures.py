@@ -37,8 +37,8 @@ from pathlib import Path
 # ── Figure registry ──────────────────────────────────────────────────────────
 # Maps figure number → (script_path, description, extra_args)
 FIGURES = {
-    5: ("scripts/paper_figures/plot_nfip_validation_paper.py",
-        "NFIP avg payout per claim (z-score), 50-run median + IQR", []),
+    5: ("scripts/paper_figures/plot_fig5_nfip_validation.py",
+        "NFIP avg payout per claim (z-score), 3 counties on one panel, 50-run median + IQR", []),
     6: ("scripts/paper_figures/plot_fig_rq1_combined.py",
         "cumulative ground-up & actual loss per household (also renders Fig 7)", []),
     7: ("scripts/paper_figures/plot_fig_rq1_combined.py",

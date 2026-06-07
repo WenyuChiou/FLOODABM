@@ -158,7 +158,7 @@ The figure scripts live in `scripts/paper_figures/` and read from a 50-run Monte
 
 | Manuscript figure | Script |
 |--------|--------|
-| Fig 5 — NFIP avg payout per claim (z-score), 50-run median + IQR | `plot_nfip_validation_paper.py` |
+| Fig 5 — NFIP avg payout per claim (z-score), 3 counties on one panel, 50-run median + IQR | `plot_fig5_nfip_validation.py` |
 | Fig 6 — cumulative ground-up and actual loss per household | `plot_fig_rq1_combined.py` |
 | Fig 7 — financial outcomes and loss AEP curves | `plot_fig_rq1_combined.py` (same run as Fig 6) |
 | Fig 9 — tract-level mean threat perception, flood-prone vs non-prone | `plot_fig8_tp_by_prone.py` |

@@ -1,9 +1,12 @@
 # Generated artifacts
 outputs/
-data/
+data/*
 fig/
 logs/
 cache/
+
+# Published supplementary data (cited in the Supporting Information)
+!data/supplementary/
 
 # Keep folder markers
 !outputs/.gitkeep
@@ -43,6 +46,7 @@ Thumbs.db
 # Large data files
 *.csv
 !config/households_for_abm.csv
+!data/supplementary/*.csv
 *.parquet
 *.pkl
 *.h5

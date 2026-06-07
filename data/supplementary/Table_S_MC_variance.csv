@@ -1,0 +1,342 @@
+﻿figure,metric,unit,year,median,q25,q75
+Fig5,owner_cum_actual_loss_baseline,$K/household,2011,55.794,55.794,55.794
+Fig5,owner_cum_actual_loss_baseline,$K/household,2012,62.237,61.599,63.19
+Fig5,owner_cum_actual_loss_baseline,$K/household,2013,69.43,68.075,71.41
+Fig5,owner_cum_actual_loss_baseline,$K/household,2014,80.008,77.524,83.398
+Fig5,owner_cum_actual_loss_baseline,$K/household,2015,84.077,81.265,88.166
+Fig5,owner_cum_actual_loss_baseline,$K/household,2016,88.746,85.593,93.537
+Fig5,owner_cum_actual_loss_baseline,$K/household,2017,95.833,92.292,101.632
+Fig5,owner_cum_actual_loss_baseline,$K/household,2018,102.448,98.77,109.088
+Fig5,owner_cum_actual_loss_baseline,$K/household,2019,107.119,103.212,114.565
+Fig5,owner_cum_actual_loss_baseline,$K/household,2020,112.161,108.155,120.427
+Fig5,owner_cum_actual_loss_baseline,$K/household,2021,140.411,135.2,151.2
+Fig5,owner_cum_actual_loss_baseline,$K/household,2022,149.945,144.45,162.355
+Fig5,owner_cum_actual_loss_baseline,$K/household,2023,164.029,158.246,178.696
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2011,55.794,55.794,55.794
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2012,67.353,67.353,67.353
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2013,81.395,81.395,81.395
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2014,103.087,103.087,103.087
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2015,113.525,113.525,113.525
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2016,125.395,125.395,125.395
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2017,142.548,142.548,142.548
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2018,158.829,158.829,158.829
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2019,170.958,170.958,170.958
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2020,183.655,183.655,183.655
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2021,230.385,230.385,230.385
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2022,253.071,253.071,253.071
+Fig5,owner_cum_actual_loss_noadapt,$K/household,2023,283.402,283.402,283.402
+Fig5,owner_cum_damage_baseline,$K/household,2011,69.681,69.681,69.681
+Fig5,owner_cum_damage_baseline,$K/household,2012,84.082,83.976,84.167
+Fig5,owner_cum_damage_baseline,$K/household,2013,101.545,101.21,101.791
+Fig5,owner_cum_damage_baseline,$K/household,2014,128.382,127.67,129.028
+Fig5,owner_cum_damage_baseline,$K/household,2015,141.262,140.268,142.228
+Fig5,owner_cum_damage_baseline,$K/household,2016,156.056,154.572,157.466
+Fig5,owner_cum_damage_baseline,$K/household,2017,177.562,175.255,179.553
+Fig5,owner_cum_damage_baseline,$K/household,2018,197.703,194.871,200.553
+Fig5,owner_cum_damage_baseline,$K/household,2019,212.67,209.526,216.184
+Fig5,owner_cum_damage_baseline,$K/household,2020,228.446,224.83,232.568
+Fig5,owner_cum_damage_baseline,$K/household,2021,284.889,279.078,289.417
+Fig5,owner_cum_damage_baseline,$K/household,2022,312.919,306.185,318.49
+Fig5,owner_cum_damage_baseline,$K/household,2023,350.352,342.058,356.876
+Fig5,owner_cum_damage_noadapt,$K/household,2011,69.681,69.681,69.681
+Fig5,owner_cum_damage_noadapt,$K/household,2012,84.385,84.385,84.385
+Fig5,owner_cum_damage_noadapt,$K/household,2013,102.313,102.313,102.313
+Fig5,owner_cum_damage_noadapt,$K/household,2014,130.102,130.102,130.102
+Fig5,owner_cum_damage_noadapt,$K/household,2015,143.354,143.354,143.354
+Fig5,owner_cum_damage_noadapt,$K/household,2016,158.47,158.47,158.47
+Fig5,owner_cum_damage_noadapt,$K/household,2017,180.425,180.425,180.425
+Fig5,owner_cum_damage_noadapt,$K/household,2018,201.26,201.26,201.26
+Fig5,owner_cum_damage_noadapt,$K/household,2019,216.7,216.7,216.7
+Fig5,owner_cum_damage_noadapt,$K/household,2020,232.889,232.889,232.889
+Fig5,owner_cum_damage_noadapt,$K/household,2021,291.636,291.636,291.636
+Fig5,owner_cum_damage_noadapt,$K/household,2022,320.65,320.65,320.65
+Fig5,owner_cum_damage_noadapt,$K/household,2023,359.318,359.318,359.318
+Fig5,owner_leverage_ratio,dimensionless,2011,,,
+Fig5,owner_leverage_ratio,dimensionless,2012,0.066,0.041,0.1
+Fig5,owner_leverage_ratio,dimensionless,2013,0.072,0.043,0.125
+Fig5,owner_leverage_ratio,dimensionless,2014,0.075,0.044,0.137
+Fig5,owner_leverage_ratio,dimensionless,2015,0.072,0.038,0.131
+Fig5,owner_leverage_ratio,dimensionless,2016,0.068,0.029,0.128
+Fig5,owner_leverage_ratio,dimensionless,2017,0.068,0.022,0.129
+Fig5,owner_leverage_ratio,dimensionless,2018,0.07,0.017,0.129
+Fig5,owner_leverage_ratio,dimensionless,2019,0.067,0.008,0.127
+Fig5,owner_leverage_ratio,dimensionless,2020,0.063,0.004,0.127
+Fig5,owner_leverage_ratio,dimensionless,2021,0.082,0.025,0.151
+Fig5,owner_leverage_ratio,dimensionless,2022,0.079,0.021,0.151
+Fig5,owner_leverage_ratio,dimensionless,2023,0.08,0.02,0.155
+Fig5,renter_cum_actual_loss_baseline,$K/household,2011,6.985,6.985,6.985
+Fig5,renter_cum_actual_loss_baseline,$K/household,2012,7.337,7.325,7.356
+Fig5,renter_cum_actual_loss_baseline,$K/household,2013,7.672,7.646,7.707
+Fig5,renter_cum_actual_loss_baseline,$K/household,2014,8.021,7.977,8.094
+Fig5,renter_cum_actual_loss_baseline,$K/household,2015,8.246,8.201,8.324
+Fig5,renter_cum_actual_loss_baseline,$K/household,2016,8.472,8.424,8.559
+Fig5,renter_cum_actual_loss_baseline,$K/household,2017,8.738,8.672,8.829
+Fig5,renter_cum_actual_loss_baseline,$K/household,2018,8.958,8.893,9.064
+Fig5,renter_cum_actual_loss_baseline,$K/household,2019,9.167,9.098,9.274
+Fig5,renter_cum_actual_loss_baseline,$K/household,2020,9.375,9.301,9.488
+Fig5,renter_cum_actual_loss_baseline,$K/household,2021,10.445,10.329,10.574
+Fig5,renter_cum_actual_loss_baseline,$K/household,2022,10.662,10.535,10.806
+Fig5,renter_cum_actual_loss_baseline,$K/household,2023,10.914,10.777,11.075
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2011,6.985,6.985,6.985
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2012,8.55,8.55,8.55
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2013,10.726,10.726,10.726
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2014,13.965,13.965,13.965
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2015,15.345,15.345,15.345
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2016,17.052,17.052,17.052
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2017,19.684,19.684,19.684
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2018,22.231,22.231,22.231
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2019,23.911,23.911,23.911
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2020,25.839,25.839,25.839
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2021,31.93,31.93,31.93
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2022,35.214,35.214,35.214
+Fig5,renter_cum_actual_loss_noadapt,$K/household,2023,39.492,39.492,39.492
+Fig5,renter_cum_damage_baseline,$K/household,2011,7.539,7.539,7.539
+Fig5,renter_cum_damage_baseline,$K/household,2012,9.055,9.039,9.077
+Fig5,renter_cum_damage_baseline,$K/household,2013,11.027,10.977,11.091
+Fig5,renter_cum_damage_baseline,$K/household,2014,13.842,13.721,13.962
+Fig5,renter_cum_damage_baseline,$K/household,2015,15.061,14.91,15.198
+Fig5,renter_cum_damage_baseline,$K/household,2016,16.549,16.337,16.717
+Fig5,renter_cum_damage_baseline,$K/household,2017,18.709,18.43,18.922
+Fig5,renter_cum_damage_baseline,$K/household,2018,20.768,20.44,21.036
+Fig5,renter_cum_damage_baseline,$K/household,2019,22.185,21.822,22.477
+Fig5,renter_cum_damage_baseline,$K/household,2020,23.765,23.364,24.088
+Fig5,renter_cum_damage_baseline,$K/household,2021,28.355,27.855,28.765
+Fig5,renter_cum_damage_baseline,$K/household,2022,30.853,30.331,31.368
+Fig5,renter_cum_damage_baseline,$K/household,2023,33.938,33.348,34.53
+Fig5,renter_cum_damage_noadapt,$K/household,2011,7.539,7.539,7.539
+Fig5,renter_cum_damage_noadapt,$K/household,2012,9.215,9.215,9.215
+Fig5,renter_cum_damage_noadapt,$K/household,2013,11.556,11.556,11.556
+Fig5,renter_cum_damage_noadapt,$K/household,2014,15.051,15.051,15.051
+Fig5,renter_cum_damage_noadapt,$K/household,2015,16.527,16.527,16.527
+Fig5,renter_cum_damage_noadapt,$K/household,2016,18.357,18.357,18.357
+Fig5,renter_cum_damage_noadapt,$K/household,2017,21.193,21.193,21.193
+Fig5,renter_cum_damage_noadapt,$K/household,2018,23.936,23.936,23.936
+Fig5,renter_cum_damage_noadapt,$K/household,2019,25.738,25.738,25.738
+Fig5,renter_cum_damage_noadapt,$K/household,2020,27.808,27.808,27.808
+Fig5,renter_cum_damage_noadapt,$K/household,2021,34.389,34.389,34.389
+Fig5,renter_cum_damage_noadapt,$K/household,2022,37.933,37.933,37.933
+Fig5,renter_cum_damage_noadapt,$K/household,2023,42.555,42.555,42.555
+Fig5,renter_leverage_ratio,dimensionless,2011,,,
+Fig5,renter_leverage_ratio,dimensionless,2012,0.132,0.115,0.149
+Fig5,renter_leverage_ratio,dimensionless,2013,0.174,0.154,0.195
+Fig5,renter_leverage_ratio,dimensionless,2014,0.205,0.185,0.23
+Fig5,renter_leverage_ratio,dimensionless,2015,0.207,0.187,0.233
+Fig5,renter_leverage_ratio,dimensionless,2016,0.211,0.191,0.238
+Fig5,renter_leverage_ratio,dimensionless,2017,0.228,0.207,0.253
+Fig5,renter_leverage_ratio,dimensionless,2018,0.239,0.219,0.264
+Fig5,renter_leverage_ratio,dimensionless,2019,0.242,0.221,0.266
+Fig5,renter_leverage_ratio,dimensionless,2020,0.247,0.226,0.27
+Fig5,renter_leverage_ratio,dimensionless,2021,0.282,0.261,0.304
+Fig5,renter_leverage_ratio,dimensionless,2022,0.29,0.267,0.311
+Fig5,renter_leverage_ratio,dimensionless,2023,0.303,0.281,0.324
+,,,,,,
+Fig6,owner_OOP_rate_pct,percent,2011,3.307,3.307,3.307
+Fig6,owner_OOP_rate_pct,percent,2012,5.522,4.682,5.976
+Fig6,owner_OOP_rate_pct,percent,2013,5.353,4.682,5.804
+Fig6,owner_OOP_rate_pct,percent,2014,6.502,5.989,6.921
+Fig6,owner_OOP_rate_pct,percent,2015,5.47,5.155,5.895
+Fig6,owner_OOP_rate_pct,percent,2016,5.383,5.21,5.785
+Fig6,owner_OOP_rate_pct,percent,2017,6.131,5.879,6.52
+Fig6,owner_OOP_rate_pct,percent,2018,5.955,5.792,6.345
+Fig6,owner_OOP_rate_pct,percent,2019,5.774,5.596,6.115
+Fig6,owner_OOP_rate_pct,percent,2020,5.493,5.321,5.804
+Fig6,owner_OOP_rate_pct,percent,2021,8.667,8.119,9.067
+Fig6,owner_OOP_rate_pct,percent,2022,7.721,7.249,8.017
+Fig6,owner_OOP_rate_pct,percent,2023,9.149,8.583,9.494
+Fig6,owner_payout_rate_pct,percent,2011,19.93,19.93,19.93
+Fig6,owner_payout_rate_pct,percent,2012,54.756,48.526,59.543
+Fig6,owner_payout_rate_pct,percent,2013,58.466,52.469,63.259
+Fig6,owner_payout_rate_pct,percent,2014,59.913,54.361,63.767
+Fig6,owner_payout_rate_pct,percent,2015,67.546,60.8,70.753
+Fig6,owner_payout_rate_pct,percent,2016,67.477,62.327,69.604
+Fig6,owner_payout_rate_pct,percent,2017,65.623,61.142,67.951
+Fig6,owner_payout_rate_pct,percent,2018,66.981,62.647,69.419
+Fig6,owner_payout_rate_pct,percent,2019,68.997,64.024,70.922
+Fig6,owner_payout_rate_pct,percent,2020,67.446,63.338,69.433
+Fig6,owner_payout_rate_pct,percent,2021,47.895,45.27,50.585
+Fig6,owner_payout_rate_pct,percent,2022,65.078,60.777,67.307
+Fig6,owner_payout_rate_pct,percent,2023,61.472,57.29,63.485
+Fig6,renter_OOP_rate_pct,percent,2011,0.485,0.485,0.485
+Fig6,renter_OOP_rate_pct,percent,2012,15.389,15.151,15.573
+Fig6,renter_OOP_rate_pct,percent,2013,11.388,11.214,11.53
+Fig6,renter_OOP_rate_pct,percent,2014,8.479,8.362,8.601
+Fig6,renter_OOP_rate_pct,percent,2015,17.198,16.998,17.349
+Fig6,renter_OOP_rate_pct,percent,2016,13.868,13.747,14.038
+Fig6,renter_OOP_rate_pct,percent,2017,9.313,9.222,9.476
+Fig6,renter_OOP_rate_pct,percent,2018,9.36,9.292,9.479
+Fig6,renter_OOP_rate_pct,percent,2019,13.145,13.025,13.39
+Fig6,renter_OOP_rate_pct,percent,2020,11.59,11.487,11.77
+Fig6,renter_OOP_rate_pct,percent,2021,4.772,4.714,4.842
+Fig6,renter_OOP_rate_pct,percent,2022,7.649,7.597,7.736
+Fig6,renter_OOP_rate_pct,percent,2023,6.597,6.537,6.669
+Fig6,renter_payout_rate_pct,percent,2011,7.352,7.352,7.352
+Fig6,renter_payout_rate_pct,percent,2012,76.756,75.533,77.621
+Fig6,renter_payout_rate_pct,percent,2013,83.322,82.392,83.893
+Fig6,renter_payout_rate_pct,percent,2014,87.351,86.571,88.204
+Fig6,renter_payout_rate_pct,percent,2015,81.539,81.319,81.726
+Fig6,renter_payout_rate_pct,percent,2016,84.639,84.226,84.86
+Fig6,renter_payout_rate_pct,percent,2017,88.125,87.666,88.63
+Fig6,renter_payout_rate_pct,percent,2018,89.162,88.631,89.33
+Fig6,renter_payout_rate_pct,percent,2019,85.717,85.499,85.845
+Fig6,renter_payout_rate_pct,percent,2020,87.145,86.829,87.314
+Fig6,renter_payout_rate_pct,percent,2021,76.9,75.925,77.571
+Fig6,renter_payout_rate_pct,percent,2022,91.244,90.802,91.539
+Fig6,renter_payout_rate_pct,percent,2023,91.609,91.009,92.015
+,,,,,,
+Fig7,owner_EH_floodprone_rate_pct,percent,2011,3.498,2.837,4.437
+Fig7,owner_EH_floodprone_rate_pct,percent,2012,2.426,2.066,3.171
+Fig7,owner_EH_floodprone_rate_pct,percent,2013,1.63,1.294,2.128
+Fig7,owner_EH_floodprone_rate_pct,percent,2014,1.117,0.804,1.329
+Fig7,owner_EH_floodprone_rate_pct,percent,2015,0.883,0.636,1.126
+Fig7,owner_EH_floodprone_rate_pct,percent,2016,0.651,0.449,0.906
+Fig7,owner_EH_floodprone_rate_pct,percent,2017,0.441,0.298,0.629
+Fig7,owner_EH_floodprone_rate_pct,percent,2018,0.319,0.203,0.486
+Fig7,owner_EH_floodprone_rate_pct,percent,2019,0.279,0.162,0.42
+Fig7,owner_EH_floodprone_rate_pct,percent,2020,0.197,0.111,0.325
+Fig7,owner_EH_floodprone_rate_pct,percent,2021,0.209,0.152,0.301
+Fig7,owner_EH_floodprone_rate_pct,percent,2022,0.154,0.108,0.243
+Fig7,owner_EH_floodprone_rate_pct,percent,2023,0.167,0.125,0.223
+Fig7,owner_EH_nonprone_rate_pct,percent,2011,4.287,3.022,5.705
+Fig7,owner_EH_nonprone_rate_pct,percent,2012,2.446,1.803,3.326
+Fig7,owner_EH_nonprone_rate_pct,percent,2013,1.706,1.066,2.265
+Fig7,owner_EH_nonprone_rate_pct,percent,2014,1.106,0.675,1.471
+Fig7,owner_EH_nonprone_rate_pct,percent,2015,0.691,0.421,1.022
+Fig7,owner_EH_nonprone_rate_pct,percent,2016,0.538,0.267,0.808
+Fig7,owner_EH_nonprone_rate_pct,percent,2017,0.4,0.173,0.653
+Fig7,owner_EH_nonprone_rate_pct,percent,2018,0.297,0.141,0.479
+Fig7,owner_EH_nonprone_rate_pct,percent,2019,0.21,0.098,0.357
+Fig7,owner_EH_nonprone_rate_pct,percent,2020,0.137,0.066,0.324
+Fig7,owner_EH_nonprone_rate_pct,percent,2021,0.122,0.057,0.226
+Fig7,owner_EH_nonprone_rate_pct,percent,2022,0.09,0.047,0.159
+Fig7,owner_EH_nonprone_rate_pct,percent,2023,0.074,0.039,0.148
+Fig7,owner_FI_floodprone_rate_pct,percent,2011,41.418,35.535,44.876
+Fig7,owner_FI_floodprone_rate_pct,percent,2012,34.646,30.593,38.98
+Fig7,owner_FI_floodprone_rate_pct,percent,2013,33.433,30.457,37.234
+Fig7,owner_FI_floodprone_rate_pct,percent,2014,34.963,32.38,39.174
+Fig7,owner_FI_floodprone_rate_pct,percent,2015,32.159,30.501,36.717
+Fig7,owner_FI_floodprone_rate_pct,percent,2016,31.32,29.438,36.115
+Fig7,owner_FI_floodprone_rate_pct,percent,2017,31.592,30.054,36.154
+Fig7,owner_FI_floodprone_rate_pct,percent,2018,32.219,30.406,36.357
+Fig7,owner_FI_floodprone_rate_pct,percent,2019,31.418,29.744,35.224
+Fig7,owner_FI_floodprone_rate_pct,percent,2020,31.893,29.909,35.779
+Fig7,owner_FI_floodprone_rate_pct,percent,2021,33.5,31.764,38.301
+Fig7,owner_FI_floodprone_rate_pct,percent,2022,33.995,31.944,37.877
+Fig7,owner_FI_floodprone_rate_pct,percent,2023,35.264,33.021,39.248
+Fig7,owner_FI_nonprone_rate_pct,percent,2011,17.387,12.919,23.494
+Fig7,owner_FI_nonprone_rate_pct,percent,2012,11.662,7.477,18.919
+Fig7,owner_FI_nonprone_rate_pct,percent,2013,10.399,4.958,15.958
+Fig7,owner_FI_nonprone_rate_pct,percent,2014,9.308,3.664,14.579
+Fig7,owner_FI_nonprone_rate_pct,percent,2015,8.258,3.299,13.401
+Fig7,owner_FI_nonprone_rate_pct,percent,2016,7.512,3.119,13.579
+Fig7,owner_FI_nonprone_rate_pct,percent,2017,6.977,2.712,14.903
+Fig7,owner_FI_nonprone_rate_pct,percent,2018,7.444,2.84,14.699
+Fig7,owner_FI_nonprone_rate_pct,percent,2019,7.443,2.927,14.426
+Fig7,owner_FI_nonprone_rate_pct,percent,2020,7.614,3.051,14.44
+Fig7,owner_FI_nonprone_rate_pct,percent,2021,8.405,3.123,14.779
+Fig7,owner_FI_nonprone_rate_pct,percent,2022,8.593,3.461,14.761
+Fig7,owner_FI_nonprone_rate_pct,percent,2023,9.102,3.628,14.538
+Fig7,renter_FI_floodprone_rate_pct,percent,2011,68.579,66.717,69.984
+Fig7,renter_FI_floodprone_rate_pct,percent,2012,68.018,65.844,70.029
+Fig7,renter_FI_floodprone_rate_pct,percent,2013,68.627,66.072,70.717
+Fig7,renter_FI_floodprone_rate_pct,percent,2014,72.773,70.557,74.834
+Fig7,renter_FI_floodprone_rate_pct,percent,2015,73.874,71.148,75.482
+Fig7,renter_FI_floodprone_rate_pct,percent,2016,70.453,67.351,72.085
+Fig7,renter_FI_floodprone_rate_pct,percent,2017,70.585,67.549,72.14
+Fig7,renter_FI_floodprone_rate_pct,percent,2018,73.458,70.362,75.076
+Fig7,renter_FI_floodprone_rate_pct,percent,2019,75.123,72.35,77.639
+Fig7,renter_FI_floodprone_rate_pct,percent,2020,77.07,73.61,79.464
+Fig7,renter_FI_floodprone_rate_pct,percent,2021,77.516,73.483,79.405
+Fig7,renter_FI_floodprone_rate_pct,percent,2022,76.543,72.754,78.485
+Fig7,renter_FI_floodprone_rate_pct,percent,2023,79.02,75.139,81.078
+Fig7,renter_FI_nonprone_rate_pct,percent,2011,39.622,36.763,42.138
+Fig7,renter_FI_nonprone_rate_pct,percent,2012,27.625,25.001,30.058
+Fig7,renter_FI_nonprone_rate_pct,percent,2013,20.417,17.744,22.416
+Fig7,renter_FI_nonprone_rate_pct,percent,2014,15.597,13.594,17.382
+Fig7,renter_FI_nonprone_rate_pct,percent,2015,12.671,10.576,14.323
+Fig7,renter_FI_nonprone_rate_pct,percent,2016,10.512,8.802,12.083
+Fig7,renter_FI_nonprone_rate_pct,percent,2017,9.086,7.656,10.721
+Fig7,renter_FI_nonprone_rate_pct,percent,2018,7.882,6.731,9.569
+Fig7,renter_FI_nonprone_rate_pct,percent,2019,7.274,5.738,8.456
+Fig7,renter_FI_nonprone_rate_pct,percent,2020,6.382,5.233,7.605
+Fig7,renter_FI_nonprone_rate_pct,percent,2021,6.439,5.284,7.779
+Fig7,renter_FI_nonprone_rate_pct,percent,2022,5.305,4.495,6.615
+Fig7,renter_FI_nonprone_rate_pct,percent,2023,4.819,3.876,5.948
+Fig7,renter_RL_floodprone_rate_pct,percent,2011,15.788,14.578,16.961
+Fig7,renter_RL_floodprone_rate_pct,percent,2012,15.077,14.066,16.158
+Fig7,renter_RL_floodprone_rate_pct,percent,2013,13.341,12.36,14.41
+Fig7,renter_RL_floodprone_rate_pct,percent,2014,10.021,9.323,10.785
+Fig7,renter_RL_floodprone_rate_pct,percent,2015,9.261,8.714,9.981
+Fig7,renter_RL_floodprone_rate_pct,percent,2016,10.764,9.733,11.667
+Fig7,renter_RL_floodprone_rate_pct,percent,2017,9.706,9.03,10.838
+Fig7,renter_RL_floodprone_rate_pct,percent,2018,7.456,6.845,8.084
+Fig7,renter_RL_floodprone_rate_pct,percent,2019,6.33,5.68,7.027
+Fig7,renter_RL_floodprone_rate_pct,percent,2020,4.819,4.341,5.572
+Fig7,renter_RL_floodprone_rate_pct,percent,2021,5.523,4.951,6.131
+Fig7,renter_RL_floodprone_rate_pct,percent,2022,5.385,4.365,6.11
+Fig7,renter_RL_floodprone_rate_pct,percent,2023,3.468,3.188,3.954
+Fig7,renter_RL_nonprone_rate_pct,percent,2011,26.806,24.447,28.534
+Fig7,renter_RL_nonprone_rate_pct,percent,2012,31.606,28.187,34.278
+Fig7,renter_RL_nonprone_rate_pct,percent,2013,33.183,29.252,36.058
+Fig7,renter_RL_nonprone_rate_pct,percent,2014,33.978,29.288,36.143
+Fig7,renter_RL_nonprone_rate_pct,percent,2015,33.132,28.733,35.581
+Fig7,renter_RL_nonprone_rate_pct,percent,2016,31.817,27.637,35.198
+Fig7,renter_RL_nonprone_rate_pct,percent,2017,30.799,26.834,34.354
+Fig7,renter_RL_nonprone_rate_pct,percent,2018,30.09,26.218,33.782
+Fig7,renter_RL_nonprone_rate_pct,percent,2019,29.339,25.745,32.78
+Fig7,renter_RL_nonprone_rate_pct,percent,2020,28.507,24.963,32.164
+Fig7,renter_RL_nonprone_rate_pct,percent,2021,27.867,24.578,31.031
+Fig7,renter_RL_nonprone_rate_pct,percent,2022,26.586,23.257,30.755
+Fig7,renter_RL_nonprone_rate_pct,percent,2023,25.922,22.372,29.71
+,,,,,,
+Fig8,owner_TP_floodprone,TP (0–1),2011,0.645,0.645,0.646
+Fig8,owner_TP_floodprone,TP (0–1),2012,0.605,0.604,0.606
+Fig8,owner_TP_floodprone,TP (0–1),2013,0.593,0.591,0.595
+Fig8,owner_TP_floodprone,TP (0–1),2014,0.601,0.598,0.604
+Fig8,owner_TP_floodprone,TP (0–1),2015,0.579,0.574,0.582
+Fig8,owner_TP_floodprone,TP (0–1),2016,0.564,0.56,0.569
+Fig8,owner_TP_floodprone,TP (0–1),2017,0.558,0.553,0.564
+Fig8,owner_TP_floodprone,TP (0–1),2018,0.552,0.546,0.558
+Fig8,owner_TP_floodprone,TP (0–1),2019,0.541,0.534,0.547
+Fig8,owner_TP_floodprone,TP (0–1),2020,0.536,0.528,0.543
+Fig8,owner_TP_floodprone,TP (0–1),2021,0.566,0.559,0.574
+Fig8,owner_TP_floodprone,TP (0–1),2022,0.555,0.547,0.565
+Fig8,owner_TP_floodprone,TP (0–1),2023,0.563,0.555,0.574
+Fig8,owner_TP_nonprone,TP (0–1),2011,0.501,0.501,0.502
+Fig8,owner_TP_nonprone,TP (0–1),2012,0.453,0.452,0.454
+Fig8,owner_TP_nonprone,TP (0–1),2013,0.421,0.42,0.422
+Fig8,owner_TP_nonprone,TP (0–1),2014,0.398,0.397,0.4
+Fig8,owner_TP_nonprone,TP (0–1),2015,0.38,0.379,0.381
+Fig8,owner_TP_nonprone,TP (0–1),2016,0.365,0.364,0.367
+Fig8,owner_TP_nonprone,TP (0–1),2017,0.353,0.351,0.354
+Fig8,owner_TP_nonprone,TP (0–1),2018,0.342,0.34,0.344
+Fig8,owner_TP_nonprone,TP (0–1),2019,0.332,0.331,0.334
+Fig8,owner_TP_nonprone,TP (0–1),2020,0.324,0.322,0.326
+Fig8,owner_TP_nonprone,TP (0–1),2021,0.321,0.319,0.323
+Fig8,owner_TP_nonprone,TP (0–1),2022,0.31,0.309,0.312
+Fig8,owner_TP_nonprone,TP (0–1),2023,0.302,0.301,0.304
+Fig8,renter_TP_floodprone,TP (0–1),2011,0.71,0.707,0.712
+Fig8,renter_TP_floodprone,TP (0–1),2012,0.686,0.682,0.689
+Fig8,renter_TP_floodprone,TP (0–1),2013,0.695,0.689,0.701
+Fig8,renter_TP_floodprone,TP (0–1),2014,0.731,0.723,0.741
+Fig8,renter_TP_floodprone,TP (0–1),2015,0.722,0.713,0.733
+Fig8,renter_TP_floodprone,TP (0–1),2016,0.712,0.702,0.724
+Fig8,renter_TP_floodprone,TP (0–1),2017,0.723,0.711,0.733
+Fig8,renter_TP_floodprone,TP (0–1),2018,0.746,0.733,0.759
+Fig8,renter_TP_floodprone,TP (0–1),2019,0.744,0.729,0.761
+Fig8,renter_TP_floodprone,TP (0–1),2020,0.763,0.741,0.78
+Fig8,renter_TP_floodprone,TP (0–1),2021,0.797,0.775,0.811
+Fig8,renter_TP_floodprone,TP (0–1),2022,0.795,0.773,0.807
+Fig8,renter_TP_floodprone,TP (0–1),2023,0.815,0.794,0.831
+Fig8,renter_TP_nonprone,TP (0–1),2011,0.528,0.528,0.529
+Fig8,renter_TP_nonprone,TP (0–1),2012,0.488,0.486,0.489
+Fig8,renter_TP_nonprone,TP (0–1),2013,0.461,0.459,0.463
+Fig8,renter_TP_nonprone,TP (0–1),2014,0.439,0.437,0.442
+Fig8,renter_TP_nonprone,TP (0–1),2015,0.422,0.42,0.425
+Fig8,renter_TP_nonprone,TP (0–1),2016,0.409,0.406,0.411
+Fig8,renter_TP_nonprone,TP (0–1),2017,0.397,0.394,0.4
+Fig8,renter_TP_nonprone,TP (0–1),2018,0.387,0.384,0.39
+Fig8,renter_TP_nonprone,TP (0–1),2019,0.378,0.375,0.381
+Fig8,renter_TP_nonprone,TP (0–1),2020,0.368,0.366,0.372
+Fig8,renter_TP_nonprone,TP (0–1),2021,0.366,0.363,0.369
+Fig8,renter_TP_nonprone,TP (0–1),2022,0.355,0.353,0.358
+Fig8,renter_TP_nonprone,TP (0–1),2023,0.347,0.345,0.35

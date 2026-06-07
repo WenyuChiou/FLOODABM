@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
 """
-Unified paper figure pipeline — generates Figs 3–10 from FLOODABM outputs.
+Unified paper figure pipeline for FLOODABM (Water Resources Research).
 
 Usage:
-    python generate_paper_figures.py                        # all figures, default root
-    python generate_paper_figures.py --root outputs/thr050  # different output root
-    python generate_paper_figures.py --figs 4 5 6 7         # specific figures only
-    python generate_paper_figures.py --list                 # show figure registry
+    python generate_paper_figures.py                  # all registered figure scripts
+    python generate_paper_figures.py --root <dir>     # different output root
+    python generate_paper_figures.py --figs 6 7       # specific figures only
+    python generate_paper_figures.py --list           # show the figure registry
 
-Each figure delegates to its source script. When --root is given, the
+Each entry delegates to its source script. When --root is given, the
 FLOODABM_OUTPUT_ROOT environment variable is set so scripts can optionally
-read it instead of their hardcoded paths.
+read it instead of their default paths. The figure scripts read from a Monte
+Carlo output tree (50 stochastic runs); see the README for how it is produced.
 
-Figure registry (updated 2026-03-07):
-    Fig 3  — NFIP z-score validation
-    Fig 4  — RQ1 damage & loss ratio by tenure
-    Fig 5  — RQ1 finance panels (same script as Fig 4)
-    Fig 6  — Cumulative adaptive behavior composition
-    Fig 7  — Annual adoption rate divergence (2-panel)
-    Fig 9  — SA ratio-threshold delta grid (2×2)
-    Fig 10 — TP boxplot by year
+Registry follows the Water Resources Research manuscript numbering:
+    Fig 5  — NFIP avg payout per claim (z-score), 50-run median + IQR
+    Fig 6  — cumulative ground-up and actual loss per household
+    Fig 7  — financial outcomes and loss AEP curves (same script as Fig 6)
+    Fig 9  — tract-level mean threat perception, flood-prone vs non-prone
 
-    Fig 1 (study area), Fig 2 (flowchart), Fig 8 (spatial map) are static assets.
+Prepared outside this pipeline:
+    Fig 1 (study area), Fig 2 (Bayesian procedure), Fig 3 (flowchart), and
+    Fig 4 (flood-model diagnostics) are static / external assets.
+    Fig 8 (adaptation trajectories) is rendered by the adoption scripts in
+    scripts/paper_figures/ (plot_fig7_v2_2panel.py, plot_fig_cumulative_behavior.py).
+    Fig 10 spatial FI maps and SI Fig S4 population maps are drawn externally
+    in ArcGIS from the CSVs written by scripts/utilities/gen_spatial_*_mc50.py.
 """
 import argparse
 import os
@@ -32,20 +36,14 @@ from pathlib import Path
 # ── Figure registry ──────────────────────────────────────────────────────────
 # Maps figure number → (script_path, description, extra_args)
 FIGURES = {
-    3: ("scripts/paper_figures/plot_nfip_validation_paper.py",
-        "NFIP z-score validation (county-level)", []),
-    4: ("scripts/paper_figures/plot_fig_rq1_combined.py",
-        "RQ1 — damage & loss ratio by tenure (Fig 4 + Fig 5)", []),
-    5: ("scripts/paper_figures/plot_fig_rq1_combined.py",
-        "RQ1 — finance panels (generated together with Fig 4)", []),
-    6: ("scripts/paper_figures/plot_fig_cumulative_behavior.py",
-        "Cumulative adaptive behavior composition", []),
-    7: ("scripts/paper_figures/plot_fig7_v2_2panel.py",
-        "Annual adoption rate divergence (2-panel)", []),
-    9: ("scripts/paper_figures/plot_sa_rt_delta.py",
-        "SA ratio-threshold delta grid (2x2)", []),
-    10: ("scripts/paper_figures/plot_fig10_tp_boxplot.py",
-        "TP boxplot by year (homeowner vs renter)", []),
+    5: ("scripts/paper_figures/plot_nfip_validation_paper.py",
+        "NFIP avg payout per claim (z-score), 50-run median + IQR", []),
+    6: ("scripts/paper_figures/plot_fig_rq1_combined.py",
+        "cumulative ground-up & actual loss per household (also renders Fig 7)", []),
+    7: ("scripts/paper_figures/plot_fig_rq1_combined.py",
+        "financial outcomes & loss AEP curves (generated together with Fig 6)", []),
+    9: ("scripts/paper_figures/plot_fig8_tp_by_prone.py",
+        "tract-level mean threat perception, flood-prone vs non-prone", []),
 }
 
 # Figs 4 & 5 come from the same script — deduplicate
@@ -101,7 +99,7 @@ def run_figure(fig_num: int, root: str | None, dry_run: bool = False) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate paper figures 3–10 from FLOODABM outputs."
+        description="Generate Water Resources Research manuscript figures from FLOODABM outputs."
     )
     parser.add_argument(
         "--root", type=str, default=None,
@@ -109,7 +107,7 @@ def main():
     )
     parser.add_argument(
         "--figs", type=int, nargs="+", default=None,
-        help="Figure numbers to generate (default: all 3–9)"
+        help="Manuscript figure numbers to generate (default: all registered)"
     )
     parser.add_argument(
         "--list", action="store_true",

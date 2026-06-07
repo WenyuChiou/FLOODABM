@@ -18,6 +18,7 @@ Registry follows the Water Resources Research manuscript numbering:
     Fig 6  — cumulative ground-up and actual loss per household
     Fig 7  — financial outcomes and loss AEP curves (same script as Fig 6)
     Fig 9  — tract-level mean threat perception, flood-prone vs non-prone
+    Fig 11 — income-normalized AEP (loss as % of tenure median household income)
 
 Prepared outside this pipeline:
     Fig 1 (study area), Fig 2 (Bayesian procedure), Fig 3 (flowchart), and
@@ -44,9 +45,11 @@ FIGURES = {
         "financial outcomes & loss AEP curves (generated together with Fig 6)", []),
     9: ("scripts/paper_figures/plot_fig8_tp_by_prone.py",
         "tract-level mean threat perception, flood-prone vs non-prone", []),
+    11: ("scripts/paper_figures/plot_fig11_income_aep.py",
+        "income-normalized AEP of household loss (% of tenure median income)", []),
 }
 
-# Figs 4 & 5 come from the same script — deduplicate
+# Figs 6 & 7 come from the same script — deduplicate
 _ALREADY_RAN = set()
 
 

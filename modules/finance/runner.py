@@ -143,21 +143,34 @@ def run_finance_for_year(
 
     tmp["prem_s_usd"] = pd.to_numeric(tmp.get("premium_structure_kUSD", 0.0), errors="coerce").fillna(0.0) * 1000.0
     tmp["prem_c_usd"] = pd.to_numeric(tmp.get("premium_contents_kUSD", 0.0), errors="coerce").fillna(0.0) * 1000.0
+    # Per-tenure payout / OOP — Fig5 finance needs per-HH averages and rate
+    # metrics by tenure. Finance module only emits household-level detail
+    # (finance_households_*.csv), which is skipped in summary mode, so we must
+    # aggregate the tract-level per-tenure totals here.
+    # Unit: kUSD columns are in thousands of USD; convert to USD before summing.
+    tmp["pay_usd"] = pd.to_numeric(tmp.get("payout_total_kUSD", 0.0), errors="coerce").fillna(0.0) * 1000.0
+    tmp["oop_usd"] = pd.to_numeric(tmp.get("oop_total_kUSD", 0.0), errors="coerce").fillna(0.0) * 1000.0
 
     o = (
         tmp[tmp["identity"] == "owner"]
-        .groupby("tract_geoid")[["prem_s_usd", "prem_c_usd"]]
+        .groupby("tract_geoid")[["prem_s_usd", "prem_c_usd", "pay_usd", "oop_usd"]]
         .sum()
         .rename(columns={
             "prem_s_usd": "owner_premium_structure_usd",
             "prem_c_usd": "owner_premium_contents_usd",
+            "pay_usd": "owner_payout_total_usd",
+            "oop_usd": "owner_oop_total_usd",
         })
     )
     r = (
         tmp[tmp["identity"] == "renter"]
-        .groupby("tract_geoid")[["prem_c_usd"]]
+        .groupby("tract_geoid")[["prem_c_usd", "pay_usd", "oop_usd"]]
         .sum()
-        .rename(columns={"prem_c_usd": "renter_premium_contents_usd"})
+        .rename(columns={
+            "prem_c_usd": "renter_premium_contents_usd",
+            "pay_usd": "renter_payout_total_usd",
+            "oop_usd": "renter_oop_total_usd",
+        })
     )
 
     prem_tract = o.join(r, how="outer").fillna(0.0).reset_index()

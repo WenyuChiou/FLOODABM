@@ -26,6 +26,7 @@ Example:
 from __future__ import annotations
 
 import json
+import os
 import sys
 import types
 from pathlib import Path
@@ -518,16 +519,58 @@ def _unpickle(path: Path):
 
 def _load_or_cache_weights(pkl_path: Path, npz_path: Path) -> tuple[np.ndarray, float]:
     """Load weights from cache or extract from pickle and cache.
-    
-    Priority: 
+
+    Priority:
+        0. If env var FLOODABM_POSTERIOR_IDX is set (integer), bypass the mean
+           cache and use the specified posterior sample from the training npz.
+           This enables Monte Carlo sampling of Bayesian regression posterior
+           uncertainty across runs.
         1. Load from npz cache (FLOODABM format: w, b)
         1.5. Load from _fast sibling directory (training project format: posterior_xxx)
         2. Load from npz in same directory as pkl (training project format: posterior_xxx)
         3. Load from pkl and create npz cache
-    
+
     Raises:
         RuntimeError: If pkl cannot be read or contains incompatible data format
     """
+    # Priority 0: Bayesian posterior sampling (Monte Carlo over posterior uncertainty)
+    posterior_idx_env = os.environ.get("FLOODABM_POSTERIOR_IDX")
+    if posterior_idx_env is not None:
+        try:
+            posterior_idx = int(posterior_idx_env)
+        except ValueError:
+            posterior_idx = None
+        if posterior_idx is not None:
+            # Find the training npz with full posterior samples
+            models_parent = pkl_path.parent.parent
+            model_name = pkl_path.parent.name
+            candidates = [
+                Path(str(models_parent / model_name) + "_fast") / pkl_path.with_suffix(".npz").name,
+                pkl_path.with_suffix(".npz"),
+            ]
+            for cand in candidates:
+                if not cand.exists():
+                    continue
+                try:
+                    data = np.load(cand, allow_pickle=True)
+                except Exception:
+                    continue
+                if not any(k.startswith("posterior_beta_") for k in data.keys()):
+                    continue
+                # All posterior arrays share the same length; wrap idx modulo len.
+                n_samples = int(np.asarray(data["posterior_beta_0"]).shape[0])
+                i = posterior_idx % n_samples
+                weights = []
+                for feat in FEATURES:
+                    key = f"posterior_beta_{feat.lower()}"
+                    if key in data:
+                        weights.append(float(np.asarray(data[key])[i]))
+                    else:
+                        weights.append(0.0)
+                bias = float(np.asarray(data["posterior_beta_0"])[i])
+                return np.array(weights, dtype=np.float32), bias
+            # If no training npz found, fall through to the mean-cache path below.
+
     # Priority 1: Check FLOODABM-style cache
     if npz_path.exists():
         data = np.load(npz_path)

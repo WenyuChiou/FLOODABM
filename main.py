@@ -492,6 +492,14 @@ def run_single_scenario(
             y, TRACTS, ratio_raw, ratio_used, dmap, _THR_OWNER, _THR_RENTER, DEPTH_THRESHOLD_M
         ))
 
+        # Tract-level finance CSV must be written in BOTH baseline and worst:
+        # initial insurance holders still receive payouts in the worst (no-action)
+        # scenario, so their finance outputs are meaningful for adaptation-vs-no-adapt
+        # comparisons (e.g. Fig 4 cumulative loss).
+        if NO_ACTION:
+            FIN_TRACT.to_csv(FIN_DIR / f"finance_tract_{y}.csv",
+                              index=False, encoding="utf-8-sig")
+
         if not NO_ACTION:
             # -------------------------------------------------------------------
             # STEP 7.6: Run agent decision model (BASELINE MODE ONLY)

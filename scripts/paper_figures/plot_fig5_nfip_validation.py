@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Task 4a: merge the 3 stacked county panels of Fig4_nfip_validation into ONE panel.
-
 Single-panel NFIP validation (Water Resources Research Fig 5): three counties on
 one time-series axis, 50-run MC median + IQR, with per-county filtered-subset
 Pearson r. The county FIPS mapping has been corrected to standard NJ FIPS
 (34027 = Morris, 34031 = Passaic); an earlier version had these two swapped,
 which transposed the Morris/Passaic curves and r values.
 
-Outputs two draft candidates to the validation/ folder for review (does NOT
-overwrite the paper Figure/ copy):
-  Fig4_merged_timeseries.png  - 3 counties overlaid, sim(solid)+actual(dashed)
-  Fig4_merged_scatter.png     - pooled sim vs actual scatter, colored by county
+Writes Figure/Fig05_nfip_validation.{png,pdf} (the manuscript figure) plus two
+draft candidates in the validation/ folder:
+  Fig05_merged_timeseries.png  - 3 counties overlaid, sim(solid)+actual(dashed)
+  Fig05_merged_scatter.png     - pooled sim vs actual scatter, colored by county
 """
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
@@ -167,13 +165,13 @@ ax.add_artist(leg1)
 ax.legend(handles=style_handles, loc="upper right", fontsize=11, frameon=True, framealpha=0.95)
 fig.tight_layout()
 PAPER_FIG = Path(r"C:\Users\wenyu\OneDrive - Lehigh University\Desktop\Lehigh\NSF-project\ABM\paper\Figure")
-fig.savefig(VAL_DIR / "Fig4_merged_timeseries.png", dpi=300, bbox_inches="tight")
-# FINALIZE as the paper Fig4 (replaces the 3-panel version; layout-only change,
-# county mapping replicated as-is per user decision "就基於原圖改").
+fig.savefig(VAL_DIR / "Fig05_merged_timeseries.png", dpi=300, bbox_inches="tight")
+# FINALIZE as the paper Fig 5 (single-panel; replaces the 3-panel version).
+# County mapping uses corrected census FIPS (34027=Morris, 34031=Passaic).
 for ext in ("png", "pdf"):
-    fig.savefig(PAPER_FIG / f"Fig4_nfip_validation.{ext}", dpi=300, bbox_inches="tight")
+    fig.savefig(PAPER_FIG / f"Fig05_nfip_validation.{ext}", dpi=300, bbox_inches="tight")
 plt.close(fig)
-print("saved Fig4_merged_timeseries.png + Figure/Fig4_nfip_validation.{png,pdf}")
+print("saved Fig05_merged_timeseries.png + Figure/Fig05_nfip_validation.{png,pdf}")
 
 # ============ CANDIDATE 2: pooled scatter ============
 fig, ax = plt.subplots(figsize=(6.4, 6.2))
@@ -197,7 +195,7 @@ ax.text(0.05, 0.95, f"pooled r = {r_all:.2f}\nn = {len(allx)}", transform=ax.tra
         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="0.7"))
 ax.legend(loc="lower right", fontsize=11, frameon=True, framealpha=0.95)
 fig.tight_layout()
-fig.savefig(VAL_DIR / "Fig4_merged_scatter.png", dpi=300, bbox_inches="tight")
+fig.savefig(VAL_DIR / "Fig05_merged_scatter.png", dpi=300, bbox_inches="tight")
 plt.close(fig)
-print(f"saved Fig4_merged_scatter.png  (pooled r={r_all:.2f}, n={len(allx)})")
+print(f"saved Fig05_merged_scatter.png  (pooled r={r_all:.2f}, n={len(allx)})")
 print("Done.")

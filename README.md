@@ -74,7 +74,7 @@ All input data required to run the simulation are included in the `config/` dire
 - `households_for_abm.csv` -- household inventory (52,141 households across 27 tracts)
 - `overall_md_mean_by_tract_2011_2023.json` -- mean flood depths per tract-year from the CAT model
 
-No external data download is needed to run the model. Processed outputs that support published tables and figures are provided under `data/supplementary/`, for example `Table_S_MC_variance.csv`, the annual median and interquartile range across the 50 stochastic runs reported in the Supporting Information. Other contents of `data/` are runtime caches and are not tracked by git.
+No external data download is needed to run the model. Processed outputs that support published tables and figures are provided under `data/supplementary/`, for example `Table_S_MC_variance.csv` (the annual median and interquartile range across the 50 stochastic runs reported in the Supporting Information) and `mc_initpsy_seeds.csv` (the 50-run Monte Carlo seed list). Other contents of `data/` are runtime caches and are not tracked by git.
 
 ## Quick Start
 
@@ -168,7 +168,7 @@ Adaptation-trajectory (Fig 8), threat-perception distribution, ratio-threshold s
 
 Prepared outside this pipeline: the study-area map (Fig 1), the Bayesian-procedure diagram (Fig 2), the framework flowchart (Fig 3), and the flood-model diagnostics (Fig 4). The spatial flood-insurance maps (Fig 10) and the supporting population-change maps (SI Fig S4) are drawn in ArcGIS from the tract-level CSVs written by `scripts/utilities/gen_spatial_fi_delta_mc50.py` and `gen_spatial_pop_delta_mc50.py`.
 
-> Note: the figure and Monte Carlo scripts read from an output tree whose root is set inside each script (an absolute path used for the published run). Adjust that path to your environment before running. Some scripts also save output files under their own internal working numbers (for example `Fig4_nfip_validation.png`), which can differ from the manuscript figure numbers above. Map figures by the table above, not by the saved filename.
+> Note: the Monte Carlo driver (`scripts/utilities/run_mc100_local.py`) writes under `FLOODABM_MC_ROOT` (default `outputs/mc50/`); set that variable to relocate the output tree, which the figure scripts then read. The 50-run seed list is published at `data/supplementary/mc_initpsy_seeds.csv`. Each run draws a distinct Bayesian posterior sample (the posterior `.npz` ship in `models/baseline/`), so the 50-run posterior spread is reproduced directly; single runs use the posterior-mean cache in `models/baseline_fast/`.
 
 ## Runtime
 

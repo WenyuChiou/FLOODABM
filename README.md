@@ -1,5 +1,7 @@
 # FLOODABM
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20587985.svg)](https://doi.org/10.5281/zenodo.20587985)
+
 A coupled agent-based and catastrophe flood modeling framework (ABM-CAT) for simulating household flood adaptation in the Passaic River Basin, New Jersey (2011-2023).
 
 ## Overview
@@ -176,11 +178,11 @@ A single baseline run (2011–2023) completes in approximately 2 minutes on a st
 
 ## Citing
 
-If you use this code, please cite:
+If you use this code, please cite both the paper and the archived software:
 
 > Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). Household flood adaptation and financial outcomes: A coupled human-flood modeling analysis of homeowners and renters. *Water Resources Research* (under review).
 
-A citable archived release of this repository will be made available through Zenodo (DOI to be assigned on acceptance).
+> Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). *FLOODABM* (v1.0.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.20587986
 
 ## License
 

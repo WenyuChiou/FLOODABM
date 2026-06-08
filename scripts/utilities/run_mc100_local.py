@@ -2,17 +2,26 @@
 """
 Monte Carlo 100-run (baseline + worst) using the legacy mc_initpsy seeds.
 
-- Reads seeds from outputs/montecarlo/mc_initpsy_seeds.csv (50 rows).
+- Reads seeds from data/supplementary/mc_initpsy_seeds.csv (50 rows).
 - Patches insurance_init.seed (init_seed) and top-level seed (decision_seed).
 - Runs main.py twice per seed: --scenario baseline then --scenario worst.
-- Writes each run to  C:\\FLOODABM_mc50\\{scenario}\\run_XX\\baseline\\{scenario}\\...
-- Deletes the large `states/` subfolder after each run to keep disk usage ~3.5 GB.
+- Writes each run under FLOODABM_MC_ROOT (default outputs/mc50/) as
+  {scenario}/run_XX/baseline/{scenario}/...
+- Deletes the large `states/` subfolder after each run to keep disk usage down.
 - Always restores the original YAML on exit (success or failure).
 
 Usage:
     python scripts/utilities/run_mc100_local.py
     python scripts/utilities/run_mc100_local.py --scenarios baseline
     python scripts/utilities/run_mc100_local.py --start 1 --end 5   # test slice
+
+Bayesian posterior sampling:
+    Each run sets FLOODABM_POSTERIOR_IDX so the decision model draws a distinct
+    posterior sample per run (see modules/actions/bayes_fast_predictors.py,
+    Priority 0). The posterior-sample .npz (posterior_beta_* arrays with their
+    calibrators) ship in models/baseline/, so the 50-run posterior spread is
+    reproduced directly. With FLOODABM_POSTERIOR_IDX unset, runs use the
+    posterior-mean cache in models/baseline_fast/.
 """
 from __future__ import annotations
 import argparse
@@ -30,8 +39,15 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 REPO = Path(__file__).resolve().parents[2]
 YAML_PATH = REPO / "config" / "abm_params.yaml"
-SEEDS_CSV = REPO / "outputs" / "montecarlo" / "mc_initpsy_seeds.csv"
-OUT_ROOT = Path(r"C:\FLOODABM_mc50_v2")
+# Seed list is published under data/supplementary/ (tracked). Fall back to the
+# legacy outputs/montecarlo/ location if a local copy is present there.
+SEEDS_CSV = REPO / "data" / "supplementary" / "mc_initpsy_seeds.csv"
+if not SEEDS_CSV.exists():
+    SEEDS_CSV = REPO / "outputs" / "montecarlo" / "mc_initpsy_seeds.csv"
+# Output root is configurable via the FLOODABM_MC_ROOT environment variable and
+# defaults to a repo-relative folder, so the script is portable (this was a
+# hardcoded C:\ path).
+OUT_ROOT = Path(os.environ.get("FLOODABM_MC_ROOT", str(REPO / "outputs" / "mc50")))
 
 
 def patch_yaml(text: str, init_seed: int, decision_seed: int) -> str:

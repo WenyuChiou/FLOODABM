@@ -14,10 +14,14 @@ cache/
 !fig/.gitkeep
 !logs/.gitkeep
 
-# Models: only keep baseline_fast for reproducibility
+# Models: keep baseline_fast (posterior-mean cache) and the baseline posterior
+# samples + calibrators (npz only; the large .pkl stay ignored via *.pkl below).
 models/**
 !models/baseline_fast/
 !models/baseline_fast/*.npz
+!models/baseline/
+!models/baseline/*.npz
+!models/baseline/best_calibrators.json
 
 # Archive (legacy scripts)
 archive/

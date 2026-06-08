@@ -1,0 +1,36 @@
+{
+  "owner": {
+    "BP": {
+      "method": "beta",
+      "evalset": "test",
+      "delta_Brier": -0.0257185697555542,
+      "delta_ECE": -0.1274371538311243
+    },
+    "EH": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": -0.010460823774337769,
+      "delta_ECE": -0.05623575739030327
+    },
+    "FI": {
+      "method": "beta",
+      "evalset": "test",
+      "delta_Brier": -0.0450383722782135,
+      "delta_ECE": -0.12249890102871827
+    }
+  },
+  "renter": {
+    "FI": {
+      "method": "temp",
+      "evalset": "test",
+      "delta_Brier": -0.0021048784255981445,
+      "delta_ECE": 0.001254071856473915
+    },
+    "RL": {
+      "method": "platt",
+      "evalset": "test",
+      "delta_Brier": 0.0014188289642333984,
+      "delta_ECE": -0.004542223044804158
+    }
+  }
+}

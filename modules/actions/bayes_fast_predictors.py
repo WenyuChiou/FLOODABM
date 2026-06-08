@@ -683,9 +683,15 @@ def _load_group_models(models_root: Path, group_tag: str, calib_path: Path | Non
     Returns:
         (W, b, calibrators): Weight matrix (4x3), bias vector (4,), calibrator list
     """
-    # Detect model directory structure
-    if (models_root / "owner_FI.pkl").exists() or (models_root / "renter_FI.pkl").exists():
-        # Direct model directory (e.g., models_optimized/)
+    # Detect model directory structure. A "direct" model directory holds the
+    # per-action model files (.pkl) or their .npz exports (e.g. models/baseline/),
+    # paired with a sibling *_fast cache of posterior-mean weights.
+    _direct = any(
+        (models_root / f"{g}_{a}{ext}").exists()
+        for g in ("owner", "renter") for a in ACTIONS for ext in (".pkl", ".npz")
+    )
+    if _direct:
+        # Direct model directory (e.g., models/baseline/ or models_optimized/)
         models_dir = models_root
         cache_dir = Path(str(models_root) + "_fast")
     else:
@@ -706,10 +712,12 @@ def _load_group_models(models_root: Path, group_tag: str, calib_path: Path | Non
     # Load each action model
     for j, action in enumerate(ACTIONS):
         pkl_file = models_dir / f"{group_tag}_{action}.pkl"
-        if not pkl_file.exists():
+        npz_file = cache_dir / f"{group_tag}_{action}.npz"
+        # Proceed when either the pkl model or a cached/exported .npz is present,
+        # so npz-only model directories (no .pkl shipped) load correctly.
+        if not pkl_file.exists() and not npz_file.exists():
             continue  # Missing model -> use zero weights
 
-        npz_file = cache_dir / f"{group_tag}_{action}.npz"
         W[j, :], b[j] = _load_or_cache_weights(pkl_file, npz_file)
 
         # Priority 1: load calibrator from npz (cache or training)

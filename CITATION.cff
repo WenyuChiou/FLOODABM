@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "FLOODABM: A coupled agent-based and catastrophe flood modeling framework for household flood adaptation"
+type: software
+authors:
+  - given-names: Wenyu
+    family-names: Chiou
+    affiliation: "Department of Civil and Environmental Engineering, Lehigh University"
+  - given-names: "Y. C. Ethan"
+    family-names: Yang
+    affiliation: "Department of Civil and Environmental Engineering, Lehigh University"
+  - given-names: Tomohiro
+    family-names: Tanaka
+    affiliation: "Disaster Prevention Research Institute, Kyoto University"
+  - given-names: Sarawut
+    family-names: Jamrussri
+    affiliation: "Disaster Prevention Research Institute, Kyoto University"
+  - given-names: Shi
+    family-names: Feng
+    affiliation: "Disaster Prevention Research Institute, Kyoto University"
+license: MIT
+repository-code: "https://github.com/WenyuChiou/FLOODABM"
+version: v1.0.0
+date-released: "2026-06-08"
+keywords:
+  - agent-based model
+  - flood risk
+  - household adaptation
+  - National Flood Insurance Program
+  - catastrophe modeling
+  - socio-hydrology
+  - Passaic River Basin

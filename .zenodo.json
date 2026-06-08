@@ -1,0 +1,22 @@
+{
+  "title": "FLOODABM: A coupled agent-based and catastrophe flood modeling framework for household flood adaptation",
+  "description": "Coupled agent-based (ABM) and catastrophe (CAT) flood modeling framework that simulates how homeowners and renters adapt to repeated flooding (flood insurance, elevation, buyout, relocation) in the Passaic River Basin, New Jersey, 2011-2023. Software accompanying the Water Resources Research manuscript.",
+  "upload_type": "software",
+  "license": "MIT",
+  "creators": [
+    {"name": "Chiou, Wenyu", "affiliation": "Lehigh University"},
+    {"name": "Yang, Y. C. Ethan", "affiliation": "Lehigh University"},
+    {"name": "Tanaka, Tomohiro", "affiliation": "Kyoto University"},
+    {"name": "Jamrussri, Sarawut", "affiliation": "Kyoto University"},
+    {"name": "Feng, Shi", "affiliation": "Kyoto University"}
+  ],
+  "keywords": [
+    "agent-based model",
+    "flood risk",
+    "household adaptation",
+    "National Flood Insurance Program",
+    "catastrophe modeling",
+    "socio-hydrology",
+    "Passaic River Basin"
+  ]
+}

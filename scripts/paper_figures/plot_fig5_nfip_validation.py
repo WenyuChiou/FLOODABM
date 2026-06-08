@@ -2,9 +2,11 @@
 """
 Task 4a: merge the 3 stacked county panels of Fig4_nfip_validation into ONE panel.
 
-This REPLICATES the data pipeline of plot_nfip_validation_paper.py exactly (same
-MC root, same (possibly swapped) COUNTY_MAP, same filtered-subset Pearson r) so the
-only change is layout: 3 counties overlaid on a single time-series axis.
+Single-panel NFIP validation (Water Resources Research Fig 5): three counties on
+one time-series axis, 50-run MC median + IQR, with per-county filtered-subset
+Pearson r. The county FIPS mapping has been corrected to standard NJ FIPS
+(34027 = Morris, 34031 = Passaic); an earlier version had these two swapped,
+which transposed the Morris/Passaic curves and r values.
 
 Outputs two draft candidates to the validation/ folder for review (does NOT
 overwrite the paper Figure/ copy):
@@ -31,7 +33,7 @@ SC_CSV = VAL_DIR / "sim_vs_actual_standardized.csv"
 
 COUNTIES = ["Essex", "Morris", "Passaic"]
 WARMUP = [2011, 2012]
-COUNTY_MAP = {"34013": "Essex", "34027": "Passaic", "34031": "Morris"}  # replicate as-is (flagged)
+COUNTY_MAP = {"34013": "Essex", "34027": "Morris", "34031": "Passaic"}  # corrected NJ FIPS (previously swapped 34027<->34031)
 YEARS = list(range(2011, 2024))
 # colorblind-safe county colors
 CCOL = {"Essex": "#0072B2", "Morris": "#E69F00", "Passaic": "#009E73"}

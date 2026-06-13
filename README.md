@@ -80,16 +80,22 @@ No external data download is needed to run the model. Processed outputs that sup
 
 ## Quick Start
 
+Install, then run the baseline experiment. Use `--no-plots` to write all data outputs without the optional plotting step — this is the recommended way to run the model and the entry point for adding new scenarios (e.g. climate projections):
+
 ```bash
-# Run baseline scenario (with adaptation)
-python main.py --scenario baseline --output-mode full
+pip install -r requirements.txt
 
-# Run no-adaptation scenario (--scenario worst disables all adaptive actions)
-python main.py --scenario worst --output-mode full
+# Baseline scenario: households adapt via flood insurance, elevation, buyout, relocation
+python main.py --scenario baseline --no-plots --output-mode full
 
-# Run both and generate comparison plots
-python main.py --compare-flood-or --output-mode full
+# No-adaptation baseline (--scenario worst disables all adaptive actions)
+python main.py --scenario worst --no-plots --output-mode full
 ```
+
+A baseline run takes ~2 minutes and writes results under `outputs/baseline/`:
+`decisions/` (household actions and adoption shares by tract), `finance/` (premiums, payouts, OOP, per-tract financial summaries), `vulnerability/` (flood damage ratios), and `states/` (year-end household state). The `worst` scenario writes to `outputs/worst/`.
+
+> Plotting is optional and separate from running the experiment. The inline plots (omit `--no-plots`) and the paper-figure scripts need `scipy` + `openpyxl` with `matplotlib < 3.9` (pinned in `requirements.txt`); some inline plots are still fragile. For running the model and analysing results, use `--no-plots` and read the output CSVs.
 
 ### CLI Arguments
 

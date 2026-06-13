@@ -131,6 +131,7 @@ projections, future-behavior + CAT studies):
 | [docs/FUTURE_SIMULATION.md](docs/FUTURE_SIMULATION.md) | Running beyond 2023 (future-behavior + CAT) — **read the silent-truncation warning** |
 | [docs/DATA_FORMATS.md](docs/DATA_FORMATS.md) | Exact input schemas (flood-depth file, household file) + the GEOID-alignment requirement |
 | [docs/PARAMETERS.md](docs/PARAMETERS.md) | Calibrated (keep-frozen) vs tunable parameters; reuse the shipped models vs recalibrate |
+| [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Engineering caveats for reusers/extenders: inert config, two-entrypoint differences, hardcoded action set, silent-failure modes |
 | `scripts/examples/make_future_depths.py` | Starter script to build a future flood-depth file |
 
 ## Configuration

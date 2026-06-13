@@ -3,6 +3,13 @@
 Unified Configuration Module for FLOODABM
 ==========================================
 
+.. WARNING:: LEGACY — NOT USED AT RUNTIME (verified 2026-06).
+    The live simulation does NOT import this module. ``main.py`` and
+    ``main_mc.py`` read ``config/abm_params.yaml`` directly via
+    ``utils._helpers.load_yaml_cfg``. Editing the dataclasses, defaults, or
+    env-var handling here has NO effect on a run. Kept for reference only;
+    see ``docs/PARAMETERS.md`` for the parameters that ARE live.
+
 This module consolidates configuration loading from multiple sources:
 1. YAML config file (abm_params.yaml)
 2. Command-line arguments

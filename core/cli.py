@@ -3,8 +3,16 @@
 CLI Argument Parser for FLOODABM
 ================================
 
-Shared command-line argument parsing for all entry points.
-This ensures consistent CLI interface across main.py, sa_main.py, and main_mc.py.
+.. WARNING:: LEGACY — NOT USED AT RUNTIME (verified 2026-06).
+    ``main.py`` builds its OWN inline argparse parser; the live flags are
+    ``--thr-owner`` / ``--thr-renter`` / ``--shock-owner`` / ``--shock-renter``
+    / ``--decision-threshold`` / ``--scenario`` / ``--no-plots`` / ``--model-dir``.
+    The flags defined in THIS file (e.g. ``--thr-mg`` / ``--thr-nmg`` /
+    ``--seed`` / ``--deterministic``) are NOT wired to any live run.
+    Kept for reference only.
+
+Historically intended as shared command-line argument parsing for all entry
+points, but main.py / main_mc.py do not import it.
 
 Example:
     >>> from core.cli import create_parser, parse_args

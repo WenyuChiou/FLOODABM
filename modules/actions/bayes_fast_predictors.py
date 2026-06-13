@@ -716,7 +716,14 @@ def _load_group_models(models_root: Path, group_tag: str, calib_path: Path | Non
         # Proceed when either the pkl model or a cached/exported .npz is present,
         # so npz-only model directories (no .pkl shipped) load correctly.
         if not pkl_file.exists() and not npz_file.exists():
-            continue  # Missing model -> use zero weights
+            # EXPECTED for tenure-unavailable actions: owner_RL, renter_EH and
+            # renter_BP are intentionally not shipped (those actions are never
+            # offered to that group in sequential_decision_fast), so the
+            # zero-weight -> sigmoid(0)=0.5 probability here is never consumed.
+            # EXTENDER WARNING: if you add an action to ACTIONS without training
+            # its model file, you will SILENTLY get p=0.5 for it with no error —
+            # train owner_<X>.npz / renter_<X>.npz before adding it to ACTIONS.
+            continue  # no model file -> zero weights (sigmoid(0)=0.5)
 
         W[j, :], b[j] = _load_or_cache_weights(pkl_file, npz_file)
 

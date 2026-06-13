@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 FLOODABM/utils/config_loader.py
+
+.. WARNING:: LEGACY — NOT USED AT RUNTIME (verified 2026-06).
+    The live runners hardcode ``CONFIG_PATH = config/abm_params.yaml`` (main.py)
+    and load it via ``utils._helpers.load_yaml_cfg``. The ``--cfg`` / ``-c``
+    flag and ``FLOODABM_CONFIG`` env var below are NOT honored by
+    main.py / main_mc.py, and this loader looks for ``abm_params.json`` (not the
+    shipped ``.yaml``). Kept for reference only.
+
 Centralized config & path loading for FLOODABM runners.
 - Supports external configs (CLI --cfg / env FLOODABM_CONFIG)
 - Resolves relative files w.r.t. config folder (then modules/, then CWD)

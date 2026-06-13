@@ -54,6 +54,7 @@ FLOODABM/
 │
 └── scripts/                     # Organized scripts (not called directly)
     ├── paper_figures/           # Individual figure scripts (called by generate_paper_figures.py)
+    ├── examples/                # Example helper scripts (e.g. future-depth generator)
     ├── sensitivity/             # Sensitivity analysis runners
     ├── validation/              # NFIP validation
     ├── utilities/               # One-time data generation and export tools
@@ -118,6 +119,19 @@ python main_mc.py --runs 50
 python scripts/sensitivity/sa_ratio_threshold.py
 python scripts/sensitivity/sa_decision_threshold.py
 ```
+
+## Documentation
+
+Guides for running your own scenarios and extending the model (e.g. climate
+projections, future-behavior + CAT studies):
+
+| Guide | For |
+|---|---|
+| [docs/SCENARIOS.md](docs/SCENARIOS.md) | Running climate / CAT hazard scenarios — swap the flood-depth file (`--scenario` is adaptation on/off, **not** the hazard) |
+| [docs/FUTURE_SIMULATION.md](docs/FUTURE_SIMULATION.md) | Running beyond 2023 (future-behavior + CAT) — **read the silent-truncation warning** |
+| [docs/DATA_FORMATS.md](docs/DATA_FORMATS.md) | Exact input schemas (flood-depth file, household file) + the GEOID-alignment requirement |
+| [docs/PARAMETERS.md](docs/PARAMETERS.md) | Calibrated (keep-frozen) vs tunable parameters; reuse the shipped models vs recalibrate |
+| `scripts/examples/make_future_depths.py` | Starter script to build a future flood-depth file |
 
 ## Configuration
 

@@ -69,7 +69,7 @@ files:
   depths_overall: config/overall_md_mean_by_tract_2011_2023.json
   flood_events: vulnerability/data/flood_events.csv
   grid_depths_yaml: config/grid_depths_hist.yaml  # DEAD CONFIG: no live consumer (depths load from depths_overall)
-  households: config/households_for_abm.csv
+  households: config/households_for_abm_sfha.csv
 finance:
   default_premium:
     contents_share: 0.3
@@ -242,6 +242,13 @@ draw_bounds:
   EH: [0.30, 0.60]
   BP: [0.25, 0.65]
   RL: [0.30, 0.95]
+sfha_initialization:
+  enabled: true
+  attribute: inside_SFHA
+  shares_file: config/sfha_shares.csv
+  assignment_seed: 20260817
+  fi_draw_bounds_inside: [0.00, 0.10]
+  fi_draw_bounds_outside: [0.35, 0.55]
 seed: 90334
 # ==============================================================================
 # Threat Perception (TP) Configuration

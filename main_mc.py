@@ -153,6 +153,11 @@ def legend_outside_right(fig, axes=None, *, right_rect=0.82, x_anchor=0.80, ncol
 # ---------- per-run simulation ----------
 def run_once_initpsy(init_seed: int, crn_seed: int, decision_seed: int | None = None) -> tuple[dict, pd.DataFrame]:
     CFG  = load_yaml_cfg(CONFIG_PATH)
+    if bool((CFG.get("sfha_initialization") or {}).get("enabled", False)):
+        raise RuntimeError(
+            "main_mc.py is a legacy Monte Carlo implementation and does not apply "
+            "SFHA-aware FI bounds. Use main.py with the SFHA configuration."
+        )
     FILES           = CFG.get("files", {}) or {}
     PATH_DEPTHS     = resolve_path(ACTIONS_DIR, FILES.get("depths_overall"), MODULES_ROOT)
     PATH_EVENTS     = resolve_path(ACTIONS_DIR, FILES.get("flood_events"),  MODULES_ROOT)

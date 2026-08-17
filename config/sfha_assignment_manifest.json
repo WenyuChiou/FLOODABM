@@ -1,0 +1,44 @@
+{
+  "seed": 20260817,
+  "nsi_paths": [
+    {
+      "path": "C:\\Users\\wenyu\\WRR_reviewer_response_analysis\\06_sfha_initialization\\raw\\nsi_2022_34_study_bbox.gpkg",
+      "sha256": "e0ded1985b299ff55d802ddc35409ffd834a471af843c4948f5a4ab2cdcea837"
+    }
+  ],
+  "sfha_path": {
+    "path": "C:\\Users\\wenyu\\WRR_reviewer_response_analysis\\06_sfha_initialization\\raw\\nj_nfhl_sfha_study_tracts.geojson",
+    "sha256": "9bb2422c77a91ac9c7abf5e3358b2753aaafc2e1cb7ebda4f2a372de6664dfc0"
+  },
+  "tract_path": {
+    "path": "C:\\Users\\wenyu\\WRR_reviewer_response_analysis\\06_sfha_initialization\\raw\\study_tracts_svi.gpkg",
+    "sha256": "07ac664f8c171459e8625fd12a0b065c3f7aad6ecf4ad907c2f5d2d9e808d3b1"
+  },
+  "household_path": {
+    "path": "C:\\Users\\wenyu\\OneDrive - Lehigh University\\Desktop\\Lehigh\\NSF-project\\ABM\\paper\\draft\\mg_sensitivity\\FLOODABM\\config\\households_for_abm_sfha.csv",
+    "sha256": "19e71042a098edab815eee16a295c2bd26966f0009ce151af93f34e9c5beb4c8"
+  },
+  "fi_bounds": {
+    "inside_SFHA": [
+      0.0,
+      0.1
+    ],
+    "outside_SFHA": [
+      0.35,
+      0.55
+    ]
+  },
+  "renter_class_weight": {
+    "RES3F": 50.0
+  },
+  "sfha_share_file": "config/sfha_shares.csv",
+  "fallback_assumption": {
+    "tract_geoid": "34027040302",
+    "group": "renter",
+    "sfha_share": 0.0,
+    "reason": "no supported NSI RES3 record"
+  },
+  "initial_has_FI": "retained",
+  "n_tracts": 27,
+  "n_households": 52141
+}

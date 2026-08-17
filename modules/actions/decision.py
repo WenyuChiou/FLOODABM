@@ -219,10 +219,11 @@ def sequential_decision_fast(
         overlay_policy_names: Policy name overrides for FI decisions
         decision_threshold: Minimum probability floor (default 0.0).
             An action can only be adopted if p_a > this floor.
-        draw_bounds: Action-specific bounds for the uniform draw.
-            Dict mapping action name to (low, high) tuple.
-            e.g. {"FI": (0.4, 0.6), "EH": (0.05, 0.25), ...}
-            If None or action not in dict, defaults to (0, 1).
+        draw_bounds: Action-specific bounds for the uniform draw. If
+            ``FI_inside_SFHA`` is present and the state has ``inside_SFHA``,
+            FI uses that interval for inside-SFHA households and ``FI`` for
+            all other households. If None or an action is not in dict,
+            defaults to (0, 1).
 
     Returns:
         DataFrame with columns: action, ELEV_FT, POLICY_NAME
@@ -264,7 +265,21 @@ def sequential_decision_fast(
     eh_lo, eh_hi = draw_bounds.get("EH", (0.0, 1.0))
     bp_lo, bp_hi = draw_bounds.get("BP", (0.0, 1.0))
     rl_lo, rl_hi = draw_bounds.get("RL", (0.0, 1.0))
-    u_fi = rng.uniform(fi_lo, fi_hi, size=N)
+    # SFHA-aware FI bounds are a row-level initialization rule, not a change
+    # to calibrated psychological parameters. The outside-SFHA interval stays
+    # equal to the current model interval.
+    fi_inside = draw_bounds.get("FI_inside_SFHA")
+    if fi_inside is not None and "inside_SFHA" in state.columns:
+        inside = pd.to_numeric(state["inside_SFHA"], errors="raise").to_numpy(dtype=int)
+        if not np.isin(inside, [0, 1]).all():
+            raise ValueError("inside_SFHA must contain only 0/1 values")
+        fi_in_lo, fi_in_hi = map(float, fi_inside)
+        fi_out_lo, fi_out_hi = map(float, (fi_lo, fi_hi))
+        fi_lo_arr = np.where(inside == 1, fi_in_lo, fi_out_lo)
+        fi_hi_arr = np.where(inside == 1, fi_in_hi, fi_out_hi)
+        u_fi = rng.uniform(fi_lo_arr, fi_hi_arr)
+    else:
+        u_fi = rng.uniform(fi_lo, fi_hi, size=N)
     u_eh = rng.uniform(eh_lo, eh_hi, size=N)
     u_bp = rng.uniform(bp_lo, bp_hi, size=N)
     u_rl = rng.uniform(rl_lo, rl_hi, size=N)

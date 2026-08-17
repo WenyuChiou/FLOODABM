@@ -36,9 +36,9 @@ sys.stdout.reconfigure(encoding="utf-8")
 # ── paths ────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent.parent  # project root
 YAML_PATH = ROOT / "config" / "abm_params.yaml"
-CSV_PATH = ROOT / "config" / "households_for_abm.csv"
 DEPTHS_JSON = ROOT / "config" / "overall_md_mean_by_tract_2011_2023.json"
 SA_OUT = ROOT / "outputs" / "experiments" / "sensitivity_analysis"
+HOUSEHOLD_GENERATOR = ROOT / "scripts" / "utilities" / "generate_household_psych.py"
 
 # ── SA parameter definitions ────────────────────────────────────────────
 
@@ -58,6 +58,16 @@ BASELINE_TAU_INF_RENTER = 46.0431
 def load_yaml() -> dict:
     """Load YAML config as dict."""
     return yaml.safe_load(YAML_PATH.read_text(encoding="utf-8"))
+
+
+def configured_households_path() -> Path:
+    """Resolve the active household input selected by the YAML config."""
+    cfg = load_yaml()
+    raw_path = (cfg.get("files", {}) or {}).get(
+        "households", "config/households_for_abm.csv"
+    )
+    path = Path(raw_path)
+    return path if path.is_absolute() else ROOT / path
 
 
 def save_yaml(cfg: dict) -> None:
@@ -80,12 +90,29 @@ def restore_yaml(original_text: str) -> None:
 
 def backup_csv() -> bytes:
     """Return CSV bytes for later restore."""
-    return CSV_PATH.read_bytes()
+    return configured_households_path().read_bytes()
 
 
 def restore_csv(original_bytes: bytes) -> None:
     """Restore CSV from saved bytes."""
-    CSV_PATH.write_bytes(original_bytes)
+    configured_households_path().write_bytes(original_bytes)
+
+
+def regenerate_households() -> None:
+    """Regenerate the active household file without dropping SFHA attributes."""
+    csv_path = configured_households_path()
+    if not HOUSEHOLD_GENERATOR.exists():
+        raise FileNotFoundError(f"Household generator not found: {HOUSEHOLD_GENERATOR}")
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m", "scripts.utilities.generate_household_psych",
+            "--seed", "2025",
+            "--csv", str(csv_path),
+            "--yaml", str(YAML_PATH),
+        ],
+        cwd=str(ROOT),
+    )
 
 
 # ── run dir helpers (from sa_ratio_threshold.py) ─────────────────────────
@@ -356,11 +383,7 @@ def run_sa2(reuse: bool = False, dry_run: bool = False) -> list[dict]:
             if not dry_run:
                 print(f"  [regen] Regenerating households CSV for mult={mult}")
                 restore_csv(csv_backup)  # Start from original CSV
-                subprocess.check_call(
-                    [sys.executable, "generate_household_psych.py",
-                     "--seed", "2025"],
-                    cwd=str(ROOT),
-                )
+                regenerate_households()
 
             run_dir, elapsed = run_sim(
                 f"SA2 {tag}", out_dir, reuse=False, dry_run=dry_run
@@ -379,10 +402,7 @@ def run_sa2(reuse: bool = False, dry_run: bool = False) -> list[dict]:
         # Regenerate with original config
         if not dry_run:
             print("  [restore] Regenerating original households CSV")
-            subprocess.call(
-                [sys.executable, "generate_household_psych.py", "--seed", "2025"],
-                cwd=str(ROOT),
-            )
+            regenerate_households()
 
     return results
 
@@ -482,11 +502,7 @@ def run_sa3(reuse: bool = False, dry_run: bool = False) -> list[dict]:
             if not dry_run:
                 print(f"  [regen] Regenerating households CSV for thr={thr}")
                 restore_csv(csv_backup)
-                subprocess.check_call(
-                    [sys.executable, "generate_household_psych.py",
-                     "--seed", "2025"],
-                    cwd=str(ROOT),
-                )
+                regenerate_households()
 
             run_dir, elapsed = run_sim(
                 f"SA3 {tag}", out_dir, reuse=False, dry_run=dry_run
@@ -506,10 +522,7 @@ def run_sa3(reuse: bool = False, dry_run: bool = False) -> list[dict]:
         restore_csv(csv_backup)
         if not dry_run:
             print("  [restore] Regenerating original households CSV")
-            subprocess.call(
-                [sys.executable, "generate_household_psych.py", "--seed", "2025"],
-                cwd=str(ROOT),
-            )
+            regenerate_households()
 
     return results
 

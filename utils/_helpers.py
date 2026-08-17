@@ -175,7 +175,7 @@ def load_households_csv(path: Path) -> pd.DataFrame:
     HH["tract_geoid"] = HH["tract_geoid"].astype(str)
     # Keep psych columns and has_FI if present (household-level initial conditions)
     keep = ["i","group","tract_geoid","rcv_kUSD","contents_kUSD","elev_ft_total","policy_name","i_orig","hh_idx_within_group"]
-    extra_cols = [c for c in ("TP_init","CP_init","SP_init","SC_init","PA_init","has_FI") if c in HH.columns]
+    extra_cols = [c for c in ("TP_init","CP_init","SP_init","SC_init","PA_init","has_FI","inside_SFHA") if c in HH.columns]
     keep.extend(extra_cols)
     return HH[keep]
 

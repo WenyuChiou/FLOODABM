@@ -129,6 +129,44 @@ from utils.sa_output_manager import SAOutputManager
 from utils.finalize import finalize_and_plot
 
 
+def _refresh_sfha_after_relocation(
+    state_before: pd.DataFrame,
+    state_next: pd.DataFrame,
+    sfha_share_map: dict[tuple[str, str], float],
+    *,
+    seed: int,
+    year: int,
+) -> pd.DataFrame:
+    """Update inside_SFHA for relocated or newly created households only.
+
+    Households that remain in their tract retain their assigned attribute.
+    Relocated or backfilled households receive a deterministic Bernoulli draw
+    from the destination tract/tenure SFHA share.
+    """
+    out = state_next.copy()
+    if "inside_SFHA" not in out.columns:
+        out["inside_SFHA"] = 0
+    old_tract = state_before.set_index("i")["tract_geoid"].astype(str)
+    old_tract = old_tract[~old_tract.index.duplicated(keep="last")]
+    old_for_next = out["i"].map(old_tract)
+    new_location = old_for_next.isna() | (old_for_next.astype(str) != out["tract_geoid"].astype(str))
+    if new_location.any():
+        new_rows = out.loc[new_location].copy()
+        new_rows["tract_geoid"] = new_rows["tract_geoid"].astype(str)
+        new_rows["group"] = new_rows["group"].astype(str).str.lower()
+        for (tract, group), idx in new_rows.groupby(["tract_geoid", "group"]).groups.items():
+            share = float(sfha_share_map.get((str(tract), str(group)), 0.0))
+            if not 0.0 <= share <= 1.0:
+                raise ValueError(f"Invalid destination SFHA share for {tract}/{group}: {share}")
+            stream_seed = int(seed) + int(year) * 1009 + int(str(tract)[-6:]) * 17 + (1 if group == "renter" else 0)
+            rng = np.random.default_rng(stream_seed)
+            out.loc[idx, "inside_SFHA"] = (rng.random(len(idx)) < share).astype("int8")
+    out["inside_SFHA"] = pd.to_numeric(out["inside_SFHA"], errors="raise").fillna(0).astype("int8")
+    if not out["inside_SFHA"].isin([0, 1]).all():
+        raise ValueError("inside_SFHA must contain only 0/1 values")
+    return out
+
+
 def run_single_scenario(
     argv: list[str] | None = None,
     scenario_override: str | None = None,
@@ -343,6 +381,40 @@ def run_single_scenario(
     # Load household exposure database (psych + has_FI pre-baked in CSV)
     STATE = load_households_csv(PATH_HOUSEHOLDS)
     print(f"[info] Loaded households: {len(STATE):,} rows")
+    SFHA_CFG = CFG.get("sfha_initialization", {}) or {}
+    SFHA_SHARE_MAP: dict[tuple[str, str], float] = {}
+    if bool(SFHA_CFG.get("enabled", False)):
+        if "inside_SFHA" not in STATE.columns:
+            raise ValueError("SFHA-aware configuration requires inside_SFHA in households CSV")
+        STATE["inside_SFHA"] = pd.to_numeric(STATE["inside_SFHA"], errors="raise").astype("int8")
+        if not STATE["inside_SFHA"].isin([0, 1]).all():
+            raise ValueError("inside_SFHA must contain only 0/1 values")
+        share_path = resolve_path(ACTIONS_DIR, SFHA_CFG.get("shares_file"), MODULES_ROOT)
+        if share_path is None or not share_path.exists():
+            raise FileNotFoundError("SFHA-aware configuration requires shares_file")
+        share_df = pd.read_csv(share_path, dtype={"tract_geoid": "string", "_group": "string"})
+        required_share_cols = {"tract_geoid", "_group", "sfha_share", "share_status"}
+        if not required_share_cols.issubset(share_df.columns):
+            raise ValueError(f"SFHA shares file missing columns: {sorted(required_share_cols - set(share_df.columns))}")
+        if share_df.duplicated(["tract_geoid", "_group"]).any():
+            raise ValueError("SFHA shares file contains duplicate tract/group rows")
+        share_df["tract_geoid"] = share_df["tract_geoid"].astype(str)
+        share_df["_group"] = share_df["_group"].astype(str).str.lower()
+        share_df["sfha_share"] = pd.to_numeric(share_df["sfha_share"], errors="raise")
+        if not share_df["sfha_share"].between(0.0, 1.0).all():
+            raise ValueError("SFHA shares must be in [0, 1]")
+        SFHA_SHARE_MAP = {
+            (str(tract), str(group)): float(share)
+            for tract, group, share in share_df[["tract_geoid", "_group", "sfha_share"]].itertuples(index=False, name=None)
+        }
+        outside_bounds = tuple(map(float, SFHA_CFG.get("fi_draw_bounds_outside", CFG.get("draw_bounds", {}).get("FI", (0.35, 0.55)))))
+        model_bounds = tuple(map(float, CFG.get("draw_bounds", {}).get("FI", (0.0, 1.0))))
+        if outside_bounds != model_bounds:
+            raise ValueError("fi_draw_bounds_outside must equal draw_bounds.FI")
+        inside_bounds = tuple(map(float, SFHA_CFG.get("fi_draw_bounds_inside", (0.0, 0.1))))
+        if len(inside_bounds) != 2 or not (0.0 <= inside_bounds[0] < inside_bounds[1] <= 1.0):
+            raise ValueError("fi_draw_bounds_inside must be an ordered interval within [0, 1]")
+        print(f"[info] inside_SFHA households: {int(STATE['inside_SFHA'].sum()):,}")
     if "has_FI" in STATE.columns:
         STATE["has_FI"] = pd.to_numeric(STATE["has_FI"], errors="coerce").fillna(0).astype("int8")
         print(f"[info] has_FI from CSV: {STATE['has_FI'].sum():,} households")
@@ -531,7 +603,9 @@ def run_single_scenario(
                 },
                 depth_m_by_tract=dmap, rl_dest_k_best=50,
                 decision_threshold=DECISION_THRESHOLD,
-                draw_bounds=CFG.get("draw_bounds", None),
+                draw_bounds=({**(CFG.get("draw_bounds", {}) or {}),
+                              "FI_inside_SFHA": SFHA_CFG.get("fi_draw_bounds_inside")}
+                             if bool(SFHA_CFG.get("enabled", False)) else CFG.get("draw_bounds", None)),
             )
 
             print(
@@ -560,6 +634,11 @@ def run_single_scenario(
                 })
 
             # Advance to next-year state
+            if bool(SFHA_CFG.get("enabled", False)):
+                STATE_NEXT_NO_EH = _refresh_sfha_after_relocation(
+                    STATE, STATE_NEXT_NO_EH, SFHA_SHARE_MAP,
+                    seed=int(SFHA_CFG.get("assignment_seed", SEED)), year=y,
+                )
             STATE = advance_state_for_next_year(STATE, STATE_NEXT_NO_EH, y)
 
             # Save next-year state snapshot

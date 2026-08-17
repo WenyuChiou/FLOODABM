@@ -78,7 +78,11 @@ Requires Python 3.10+.
 All input data required to run the simulation are included in the `config/` directory:
 
 - `abm_params.yaml` -- simulation parameters (TP decay, action bounds, NFIP rates)
-- `households_for_abm.csv` -- household inventory (52,141 households across 27 tracts)
+- `households_for_abm_sfha.csv` -- current household inventory (52,141 households across 27 tracts), including the binary `inside_SFHA` attribute
+- `households_for_abm.csv` -- retained legacy inventory without the SFHA attribute
+- `sfha_shares.csv` -- NSI-based SFHA share by tract and tenure group
+- `sfha_assignment_manifest.json` -- input provenance, `RES3F=50` renter weighting, and the documented zero-share fallback
+- `mg_share_by_tract.json` -- renter share per tract derived from ACS data
 - `overall_md_mean_by_tract_2011_2023.json` -- mean flood depths per tract-year from the CAT model
 
 No external data download is needed to run the model. Processed outputs that support published tables and figures are provided under `data/supplementary/`, for example `Table_S_MC_variance.csv` (the annual median and interquartile range across the 50 stochastic runs reported in the Supporting Information) and `mc_initpsy_seeds.csv` (the 50-run Monte Carlo seed list). Other contents of `data/` are runtime caches and are not tracked by git.
@@ -116,8 +120,8 @@ A baseline run takes ~2 minutes and writes results under `outputs/baseline/`:
 ### Monte Carlo and Sensitivity Analysis
 
 ```bash
-# Monte Carlo stochastic runs (the analyses in the paper use 50 runs)
-python main_mc.py --runs 50
+# Local Monte Carlo ensemble used for the paper figures
+python scripts/utilities/run_mc100_local.py --scenarios baseline worst
 
 # Sensitivity analysis
 python scripts/sensitivity/sa_ratio_threshold.py
@@ -146,7 +150,12 @@ All parameters are defined in `config/abm_params.yaml`, organized into:
 - **Action dynamics** -- elevation caps, buyout/relocation toggles, draw bounds
 - **Finance** -- NFIP premium rates, deductibles, coverage limits by homeownership status
 - **Insurance initialization** -- take-up rates by tract and homeownership status
+- **SFHA initialization** -- NSI-based tract/tenure shares; inside-SFHA households use FI draw bounds U(0, 0.10), while outside-SFHA households retain U(0.35, 0.55)
 - **Flood hazard** -- depth thresholds, event masking
+
+`main_mc.py` is retained as a legacy implementation and exits when the
+SFHA-aware configuration is enabled; it must not be used to produce the
+current baseline.
 
 ## Simulation Flow
 

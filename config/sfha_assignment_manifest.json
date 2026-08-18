@@ -16,7 +16,7 @@
   },
   "household_path": {
     "path": "C:\\Users\\wenyu\\OneDrive - Lehigh University\\Desktop\\Lehigh\\NSF-project\\ABM\\paper\\draft\\mg_sensitivity\\FLOODABM\\config\\households_for_abm_sfha.csv",
-    "sha256": "19e71042a098edab815eee16a295c2bd26966f0009ce151af93f34e9c5beb4c8"
+    "sha256": "e5dea74f58cd290ba2fd669b7cc58ac95d4f2b938a5f16fc6a76a697c67304c7"
   },
   "fi_bounds": {
     "inside_SFHA": [
@@ -38,7 +38,28 @@
     "sfha_share": 0.0,
     "reason": "no supported NSI RES3 record"
   },
-  "initial_has_FI": "retained",
+  "initial_FI": {
+    "assignment_seed": 20260818,
+    "method": "exact_count_random_assignment_by_group_and_SFHA_status",
+    "rates_pct": {
+      "owner": {
+        "outside_SFHA": 3,
+        "inside_SFHA": 30
+      },
+      "renter": {
+        "outside_SFHA": 2,
+        "inside_SFHA": 8
+      }
+    },
+    "counts": {
+      "owner_outside_SFHA": 1183,
+      "owner_inside_SFHA": 630,
+      "renter_outside_SFHA": 191,
+      "renter_inside_SFHA": 86,
+      "total": 2090
+    },
+    "interpretation": "literature-informed but modeler-specified initial FI rates"
+  },
   "n_tracts": 27,
   "n_households": 52141
 }

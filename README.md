@@ -78,10 +78,10 @@ Requires Python 3.10+.
 All input data required to run the simulation are included in the `config/` directory:
 
 - `abm_params.yaml` -- simulation parameters (TP decay, action bounds, NFIP rates)
-- `households_for_abm_sfha.csv` -- current household inventory (52,141 households across 27 tracts), including the binary `inside_SFHA` attribute
+- `households_for_abm_sfha.csv` -- current household inventory (52,141 households across 27 tracts), including the binary `inside_SFHA` attribute and the SFHA-specific initial FI status
 - `households_for_abm.csv` -- retained legacy inventory without the SFHA attribute
-- `sfha_shares.csv` -- NSI-based SFHA share by tract and tenure group
-- `sfha_assignment_manifest.json` -- input provenance, `RES3F=50` renter weighting, and the documented zero-share fallback
+- `sfha_shares.csv` -- NSI-based SFHA share by tract and homeowner/renter group
+- `sfha_assignment_manifest.json` -- input provenance, `RES3F=50` renter weighting, initial FI rates, and the documented zero-share fallback
 - `mg_share_by_tract.json` -- renter share per tract derived from ACS data
 - `overall_md_mean_by_tract_2011_2023.json` -- mean flood depths per tract-year from the CAT model
 
@@ -149,8 +149,8 @@ All parameters are defined in `config/abm_params.yaml`, organized into:
 - **Threat perception** -- shock amplitude, decay rates (owner vs renter)
 - **Action dynamics** -- elevation caps, buyout/relocation toggles, draw bounds
 - **Finance** -- NFIP premium rates, deductibles, coverage limits by homeownership status
-- **Insurance initialization** -- take-up rates by tract and homeownership status
-- **SFHA initialization** -- NSI-based tract/tenure shares; inside-SFHA households use FI draw bounds U(0, 0.10), while outside-SFHA households retain U(0.35, 0.55)
+- **Insurance initialization** -- take-up rates by homeowner/renter group and SFHA status
+- **SFHA initialization** -- NSI-based tract and homeowner/renter shares. Initial FI rates are 30% for homeowners inside the SFHA, 3% for homeowners outside, 8% for renters inside, and 2% for renters outside. Inside-SFHA households use FI draw bounds U(0, 0.10), while outside-SFHA households use U(0.35, 0.55).
 - **Flood hazard** -- depth thresholds, event masking
 
 `main_mc.py` is retained as a legacy implementation and exits when the

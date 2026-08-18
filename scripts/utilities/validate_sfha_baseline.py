@@ -1,9 +1,9 @@
 """Validate the committed SFHA-aware household initialization inputs.
 
 This check is intentionally independent of the simulation loop. It verifies
-that SFHA assignment changes only the new attribute, preserves the original
-initial FI flags, and contains one valid share row for each study tract and
-tenure group.
+that SFHA assignment preserves the original household attributes, except for
+the revised initial FI flag, and contains one valid share row for each study
+tract and homeowner/renter group.
 """
 from __future__ import annotations
 
@@ -33,12 +33,14 @@ def main() -> None:
     shares = pd.read_csv(SHARES, dtype={"tract_geoid": str, "_group": str})
     if len(old) != len(new) or set(old["i"]) != set(new["i"]):
         raise AssertionError("SFHA input changed household rows or IDs")
-    key = ["i", "tract_geoid", "group"]
     left = old.sort_values("i").reset_index(drop=True)
     right = new.sort_values("i").reset_index(drop=True)
-    for col in ["tract_geoid", "group", "has_FI"]:
+    protected_columns = [column for column in left.columns if column != "has_FI"]
+    for col in protected_columns:
         if not left[col].astype(str).equals(right[col].astype(str)):
             raise AssertionError(f"SFHA assignment changed protected column: {col}")
+    if not right["has_FI"].isin([0, 1]).all():
+        raise AssertionError("has_FI must be a binary household attribute")
     if "inside_SFHA" not in right.columns or not right["inside_SFHA"].isin([0, 1]).all():
         raise AssertionError("inside_SFHA must be a binary household attribute")
     if len(shares) != 54 or shares.duplicated(["tract_geoid", "_group"]).any():
@@ -52,12 +54,50 @@ def main() -> None:
     expected = manifest["household_path"]["sha256"].lower()
     if expected != sha256(NEW):
         raise AssertionError("Assignment manifest does not bind the committed SFHA household file")
+    expected_counts = {
+        ("owner", 0): manifest["initial_FI"]["counts"]["owner_outside_SFHA"],
+        ("owner", 1): manifest["initial_FI"]["counts"]["owner_inside_SFHA"],
+        ("renter", 0): manifest["initial_FI"]["counts"]["renter_outside_SFHA"],
+        ("renter", 1): manifest["initial_FI"]["counts"]["renter_inside_SFHA"],
+    }
+    rates = manifest["initial_FI"]["rates_pct"]
+    expected_rates = {
+        ("owner", 0): rates["owner"]["outside_SFHA"],
+        ("owner", 1): rates["owner"]["inside_SFHA"],
+        ("renter", 0): rates["renter"]["outside_SFHA"],
+        ("renter", 1): rates["renter"]["inside_SFHA"],
+    }
+    stratum_sizes = right.groupby(["group", "inside_SFHA"], observed=True).size().to_dict()
+    derived_counts = {
+        key: int(round(stratum_sizes[key] * rate / 100.0))
+        for key, rate in expected_rates.items()
+    }
+    if expected_counts != derived_counts:
+        raise AssertionError(
+            f"Manifest FI counts do not match its rates: {derived_counts}"
+        )
+    observed_counts = (
+        right.groupby(["group", "inside_SFHA"], observed=True)["has_FI"]
+        .sum()
+        .astype(int)
+        .to_dict()
+    )
+    if observed_counts != expected_counts:
+        raise AssertionError(
+            f"Initial FI counts do not match the manifest: {observed_counts}"
+        )
+    if int(right["has_FI"].sum()) != int(manifest["initial_FI"]["counts"]["total"]):
+        raise AssertionError("Initial FI total does not match the manifest")
     print(json.dumps({
         "status": "PASS",
         "n_households": int(len(new)),
         "n_tracts": int(new["tract_geoid"].nunique()),
         "inside_SFHA": int(new["inside_SFHA"].sum()),
         "initial_has_FI": int(new["has_FI"].sum()),
+        "initial_FI_counts": {
+            f"{group}_{'inside' if inside else 'outside'}_SFHA": count
+            for (group, inside), count in observed_counts.items()
+        },
         "fallback": "34027040302/renter=0",
     }, indent=2))
 

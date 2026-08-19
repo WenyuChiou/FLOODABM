@@ -1,172 +1,235 @@
-# -*- coding: utf-8 -*-
-"""
-Monte Carlo 100-run (baseline + worst) using the legacy mc_initpsy seeds.
+"""Run the paper's 50-draw Monte Carlo ensemble outside the repository.
 
-- Reads seeds from data/supplementary/mc_initpsy_seeds.csv (50 rows).
-- Patches insurance_init.seed (init_seed) and top-level seed (decision_seed).
-- Runs main.py twice per seed: --scenario baseline then --scenario worst.
-- Writes each run under FLOODABM_MC_ROOT (default outputs/mc50/) as
-  {scenario}/run_XX/baseline/{scenario}/...
-- Deletes the large `states/` subfolder after each run to keep disk usage down.
-- Always restores the original YAML on exit (success or failure).
-
-Usage:
-    python scripts/utilities/run_mc100_local.py
-    python scripts/utilities/run_mc100_local.py --scenarios baseline
-    python scripts/utilities/run_mc100_local.py --start 1 --end 5   # test slice
-
-Bayesian posterior sampling:
-    Each run sets FLOODABM_POSTERIOR_IDX so the decision model draws a distinct
-    posterior sample per run (see modules/actions/bayes_fast_predictors.py,
-    Priority 0). The posterior-sample .npz (posterior_beta_* arrays with their
-    calibrators) ship in models/baseline/, so the 50-run posterior spread is
-    reproduced directly. With FLOODABM_POSTERIOR_IDX unset, runs use the
-    posterior-mean cache in models/baseline_fast/.
+The SFHA assignment, initial FI status, household attributes, flood sequence,
+and depth-sampling RNG seed remain fixed. Runs vary the action-decision RNG seed
+and Bayesian posterior draw only.
+Running both scenarios produces 100 simulations.
 """
 from __future__ import annotations
+
 import argparse
+import json
 import os
-import re
-import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
-sys.stdout.reconfigure(encoding="utf-8")
 
 REPO = Path(__file__).resolve().parents[2]
-YAML_PATH = REPO / "config" / "abm_params.yaml"
-# Seed list is published under data/supplementary/ (tracked). Fall back to the
-# legacy outputs/montecarlo/ location if a local copy is present there.
-SEEDS_CSV = REPO / "data" / "supplementary" / "mc_initpsy_seeds.csv"
-if not SEEDS_CSV.exists():
-    SEEDS_CSV = REPO / "outputs" / "montecarlo" / "mc_initpsy_seeds.csv"
-# Output root is configurable via the FLOODABM_MC_ROOT environment variable and
-# defaults to a repo-relative folder, so the script is portable (this was a
-# hardcoded C:\ path).
-OUT_ROOT = Path(os.environ.get("FLOODABM_MC_ROOT", str(REPO / "outputs" / "mc50")))
+CONFIG_PATH = REPO / "config" / "abm_params.yaml"
+N_RUNS = 50
+N_POSTERIOR_DRAWS = 4800
+FIRST_DECISION_SEED = 90001
+DECISION_SEED_STEP = 37
 
 
-def patch_yaml(text: str, init_seed: int, decision_seed: int) -> str:
-    text = re.sub(
-        r"(insurance_init:\s*\n\s*seed:\s*)\d+",
-        lambda m: f"{m.group(1)}{init_seed}",
-        text,
-        count=1,
-    )
-    text = re.sub(
-        r"^(seed:\s*)\d+",
-        lambda m: f"{m.group(1)}{decision_seed}",
-        text,
-        count=1,
-        flags=re.MULTILINE,
-    )
-    return text
+def decision_seed(run_id: int) -> int:
+    """Return the preregistered decision seed for a one-based run ID."""
+    return FIRST_DECISION_SEED + DECISION_SEED_STEP * (run_id - 1)
 
 
-def run_one(scenario: str, run_id: int, init_seed: int, decision_seed: int,
-            original_yaml: str) -> tuple[bool, float]:
-    run_dir = OUT_ROOT / scenario / f"run_{run_id:02d}"
-    if run_dir.exists():
-        shutil.rmtree(run_dir, ignore_errors=True)
-    run_dir.mkdir(parents=True, exist_ok=True)
+def posterior_index(run_id: int) -> int:
+    """Select evenly spaced posterior draws across the 4,800-sample chain."""
+    return ((run_id - 1) * N_POSTERIOR_DRAWS) // N_RUNS
 
-    patched = patch_yaml(original_yaml, init_seed, decision_seed)
-    YAML_PATH.write_text(patched, encoding="utf-8")
 
-    # Bayesian posterior sampling: each run uses a distinct posterior sample
-    # index so that the 50 MC runs also propagate the regression coefficient
-    # uncertainty (4800 total samples available; we sample every 96-th one).
-    posterior_idx = ((run_id - 1) * 4800) // 50  # uniform stride across chain
-    env = os.environ.copy()
-    env["FLOODABM_POSTERIOR_IDX"] = str(posterior_idx)
+def validate_benchmark_config() -> None:
+    """Fail before running if the active config is not the revised benchmark."""
+    config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    checks = {
+        "SFHA initialization": bool(
+            (config.get("sfha_initialization", {}) or {}).get("enabled", False)
+        ),
+        "grid-depth sampling": (config.get("hazard", {}) or {}).get("depths_mode")
+        == "grid_hist",
+        "renter FI interval": list((config.get("draw_bounds", {}) or {}).get("FI_renter", []))
+        == [0.7, 0.9],
+        "homeowner general FI interval": list(
+            (config.get("draw_bounds", {}) or {}).get("FI", [])
+        )
+        == [0.35, 0.55],
+        "inside-SFHA homeowner FI interval": list(
+            (config.get("sfha_initialization", {}) or {}).get(
+                "fi_draw_bounds_inside", []
+            )
+        )
+        == [0.0, 0.1],
+    }
+    failed = [name for name, passed in checks.items() if not passed]
+    if failed:
+        raise RuntimeError(f"Active config is not the revised benchmark: {failed}")
 
-    t0 = time.time()
-    proc = subprocess.run(
-        [
-            sys.executable, "main.py",
-            "--scenario", scenario,
-            "--output-mode", "summary",
-            "--no-plots",
-            "--out-root", str(run_dir),
-        ],
-        cwd=str(REPO),
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    elapsed = time.time() - t0
 
-    if proc.returncode != 0:
-        log = run_dir / "run_failed.log"
-        log.write_text(
-            f"returncode={proc.returncode}\n\nSTDOUT:\n{proc.stdout[-4000:]}\n\nSTDERR:\n{proc.stderr[-4000:]}",
+def run_one(
+    scenario: str,
+    run_id: int,
+    output_root: Path,
+    *,
+    timeout_seconds: float,
+    reuse: bool,
+) -> dict:
+    """Run one immutable scenario/draw combination and return its audit row."""
+    run_root = output_root / f"run_{run_id:02d}"
+    result_dir = run_root / "baseline" / scenario
+    summary_path = result_dir / "output_summary.json"
+    log_dir = run_root / "logs"
+    log_path = log_dir / f"{scenario}.log"
+    if result_dir.exists():
+        if reuse and summary_path.is_file():
+            return {
+                "scenario": scenario,
+                "run_id": run_id,
+                "decision_seed": decision_seed(run_id),
+                "posterior_index": posterior_index(run_id),
+                "status": "REUSED",
+                "elapsed_s": 0.0,
+                "result_dir": str(result_dir),
+            }
+        raise FileExistsError(
+            f"Refusing to overwrite existing run output: {result_dir}"
+        )
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    seed = decision_seed(run_id)
+    draw = posterior_index(run_id)
+    command = [
+        sys.executable,
+        "main.py",
+        "--scenario",
+        scenario,
+        "--decision-seed",
+        str(seed),
+        "--output-mode",
+        "summary",
+        "--no-plots",
+        "--out-root",
+        str(run_root),
+    ]
+    environment = os.environ.copy()
+    environment["FLOODABM_POSTERIOR_IDX"] = str(draw)
+    started = time.perf_counter()
+    try:
+        process = subprocess.run(
+            command,
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            env=environment,
+            timeout=timeout_seconds,
+            check=False,
+        )
+        status = "PASS" if process.returncode == 0 and summary_path.is_file() else "FAIL"
+        log_path.write_text(
+            "COMMAND\n"
+            + subprocess.list2cmdline(command)
+            + f"\n\nPOSTERIOR_INDEX\n{draw}\n\nSTDOUT\n{process.stdout}"
+            + f"\n\nSTDERR\n{process.stderr}",
             encoding="utf-8",
         )
-        return False, elapsed
+        return_code = process.returncode
+    except subprocess.TimeoutExpired as exc:
+        status = "TIMEOUT"
+        return_code = None
+        log_path.write_text(
+            f"COMMAND\n{subprocess.list2cmdline(command)}\n\nTIMEOUT\n{exc}",
+            encoding="utf-8",
+        )
+    elapsed = time.perf_counter() - started
+    return {
+        "scenario": scenario,
+        "run_id": run_id,
+        "decision_seed": seed,
+        "posterior_index": draw,
+        "status": status,
+        "return_code": return_code,
+        "elapsed_s": round(elapsed, 3),
+        "result_dir": str(result_dir),
+        "log_path": str(log_path),
+    }
 
-    # Drop the huge states/ folder — not needed for any figure.
-    states_dir = run_dir / "baseline" / scenario / "states"
-    if states_dir.exists():
-        shutil.rmtree(states_dir, ignore_errors=True)
 
-    return True, elapsed
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out-root", type=Path, required=True)
+    parser.add_argument(
+        "--scenarios",
+        nargs="+",
+        choices=["baseline", "worst"],
+        default=["baseline", "worst"],
+    )
+    parser.add_argument("--start", type=int, default=1)
+    parser.add_argument("--end", type=int, default=N_RUNS)
+    parser.add_argument("--timeout-minutes", type=float, default=30.0)
+    parser.add_argument("--reuse", action="store_true")
+    args = parser.parse_args()
+    if not 1 <= args.start <= args.end <= N_RUNS:
+        parser.error(f"Require 1 <= start <= end <= {N_RUNS}")
+    if args.timeout_minutes <= 0:
+        parser.error("--timeout-minutes must be positive")
 
+    output_root = args.out_root.resolve()
+    if output_root == REPO or REPO in output_root.parents:
+        parser.error("--out-root must be outside the repository")
+    validate_benchmark_config()
+    output_root.mkdir(parents=True, exist_ok=True)
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--scenarios", nargs="+", default=["baseline", "worst"],
-                    choices=["baseline", "worst"])
-    ap.add_argument("--start", type=int, default=1, help="first run_id (inclusive)")
-    ap.add_argument("--end", type=int, default=50, help="last run_id (inclusive)")
-    args = ap.parse_args()
+    rows: list[dict] = []
+    status_path = output_root / "mc50_status.csv"
+    design_path = output_root / "mc50_design.json"
+    design = {
+        "n_runs": N_RUNS,
+        "scenarios": ["baseline", "worst"],
+        "fixed": [
+            "SFHA assignment",
+            "initial FI status",
+            "household attributes",
+            "historical flood sequence",
+            "depth-sampling RNG seed",
+        ],
+        "varied": ["action-decision RNG seed", "Bayesian posterior draw"],
+        "decision_seed_formula": "90001 + 37 * (run_id - 1)",
+        "posterior_index_formula": "floor((run_id - 1) * 4800 / 50)",
+    }
+    if design_path.exists():
+        saved_design = json.loads(design_path.read_text(encoding="utf-8"))
+        if saved_design != design:
+            raise RuntimeError(f"Existing MC design does not match: {design_path}")
+    else:
+        design_path.write_text(json.dumps(design, indent=2), encoding="utf-8")
 
-    seeds_df = pd.read_csv(SEEDS_CSV)
-    seeds_df.columns = [c.lstrip("\ufeff") for c in seeds_df.columns]
-    seeds_df = seeds_df[(seeds_df["run_id"] >= args.start) & (seeds_df["run_id"] <= args.end)].reset_index(drop=True)
-
-    OUT_ROOT.mkdir(parents=True, exist_ok=True)
-    original_yaml = YAML_PATH.read_text(encoding="utf-8")
-
-    progress_path = OUT_ROOT / "mc100_progress.csv"
-    results = []
-    t_total = time.time()
-    n_total = len(seeds_df) * len(args.scenarios)
-    done = 0
-
-    try:
+    existing_status = (
+        pd.read_csv(status_path) if status_path.exists() else pd.DataFrame()
+    )
+    for run_id in range(args.start, args.end + 1):
         for scenario in args.scenarios:
-            print(f"\n{'='*60}\n[scenario] {scenario}\n{'='*60}")
-            for _, row in seeds_df.iterrows():
-                run_id = int(row["run_id"])
-                init_seed = int(row["init_seed"])
-                decision_seed = int(row["decision_seed"])
-
-                done += 1
-                prefix = f"[{done}/{n_total}] {scenario} run_{run_id:02d} (init={init_seed}, dec={decision_seed})"
-                print(prefix, flush=True)
-                ok, elapsed = run_one(scenario, run_id, init_seed, decision_seed, original_yaml)
-                status = "OK" if ok else "FAIL"
-                print(f"    -> {status} in {elapsed:.1f}s", flush=True)
-
-                results.append({
-                    "scenario": scenario, "run_id": run_id,
-                    "init_seed": init_seed, "decision_seed": decision_seed,
-                    "ok": ok, "elapsed_s": round(elapsed, 2),
-                })
-                pd.DataFrame(results).to_csv(progress_path, index=False, encoding="utf-8-sig")
-    finally:
-        YAML_PATH.write_text(original_yaml, encoding="utf-8")
-        print(f"\n[yaml] restored original to {YAML_PATH}")
-
-    total_min = (time.time() - t_total) / 60.0
-    df = pd.DataFrame(results)
-    n_ok = int(df["ok"].sum()) if len(df) else 0
-    print(f"\n{'='*60}\nDone: {n_ok}/{len(df)} runs OK in {total_min:.1f} min")
-    print(f"Progress log: {progress_path}")
+            row = run_one(
+                scenario,
+                run_id,
+                output_root,
+                timeout_seconds=args.timeout_minutes * 60.0,
+                reuse=args.reuse,
+            )
+            rows.append(row)
+            combined = pd.concat(
+                [existing_status, pd.DataFrame(rows)], ignore_index=True
+            )
+            combined = (
+                combined.drop_duplicates(["scenario", "run_id"], keep="last")
+                .sort_values(["run_id", "scenario"])
+                .reset_index(drop=True)
+            )
+            combined.to_csv(status_path, index=False, encoding="utf-8-sig")
+            print(
+                f"[{len(rows)}] {scenario} run_{run_id:02d}: {row['status']} "
+                f"(seed={row['decision_seed']}, posterior={row['posterior_index']})",
+                flush=True,
+            )
+            if row["status"] not in {"PASS", "REUSED"}:
+                raise RuntimeError(f"Monte Carlo halted after {row['status']}: {row}")
 
 
 if __name__ == "__main__":

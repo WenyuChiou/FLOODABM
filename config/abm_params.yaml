@@ -102,90 +102,6 @@ hazard:
   grid_hist:
     bin_method: uniform
     fallback: exact
-insurance_init:
-  seed: 71001
-  take_rate_by_tract_group:
-    '34013021300':
-      owner: 0.03
-      renter: 0.01
-    '34013021601':
-      owner: 0.25
-      renter: 0.08
-    '34013021602':
-      owner: 0.25
-      renter: 0.08
-    '34013021802':
-      owner: 0.25
-      renter: 0.08
-    '34013021803':
-      owner: 0.03
-      renter: 0.01
-    '34027040101':
-      owner: 0.25
-      renter: 0.08
-    '34027040102':
-      owner: 0.25
-      renter: 0.08
-    '34027040200':
-      owner: 0.25
-      renter: 0.08
-    '34027040301':
-      owner: 0.03
-      renter: 0.01
-    '34027040302':
-      owner: 0.03
-      renter: 0.01
-    '34027040701':
-      owner: 0.03
-      renter: 0.01
-    '34027040801':
-      owner: 0.03
-      renter: 0.01
-    '34027040803':
-      owner: 0.25
-      renter: 0.08
-    '34027040805':
-      owner: 0.25
-      renter: 0.08
-    '34027041704':
-      owner: 0.03
-      renter: 0.01
-    '34031154005':
-      owner: 0.03
-      renter: 0.01
-    '34031154006':
-      owner: 0.25
-      renter: 0.08
-    '34031223802':
-      owner: 0.25
-      renter: 0.08
-    '34031246001':
-      owner: 0.03
-      renter: 0.01
-    '34031246003':
-      owner: 0.25
-      renter: 0.08
-    '34031246102':
-      owner: 0.03
-      renter: 0.01
-    '34031246103':
-      owner: 0.03
-      renter: 0.01
-    '34031246104':
-      owner: 0.03
-      renter: 0.01
-    '34031246201':
-      owner: 0.25
-      renter: 0.08
-    '34031246202':
-      owner: 0.03
-      renter: 0.01
-    '34031246203':
-      owner: 0.03
-      renter: 0.01
-    '34031246300':
-      owner: 0.25
-      renter: 0.08
 owner_share:
   '34013021300': 0.073496
   '34013021601': 0.096306
@@ -239,6 +155,9 @@ decision_threshold: 0.0
 # Set to null for default U(0,1) behavior.
 draw_bounds:
   FI: [0.35, 0.55]
+  # Literature-informed renter-specific interval selected through the
+  # reviewer-response calibration diagnostic.
+  FI_renter: [0.70, 0.90]
   EH: [0.30, 0.60]
   BP: [0.25, 0.65]
   RL: [0.30, 0.95]
@@ -248,7 +167,6 @@ sfha_initialization:
   shares_file: config/sfha_shares.csv
   assignment_seed: 20260817
   fi_draw_bounds_inside: [0.00, 0.10]
-  fi_draw_bounds_outside: [0.35, 0.55]
 seed: 90334
 # ==============================================================================
 # Threat Perception (TP) Configuration

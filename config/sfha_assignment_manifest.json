@@ -18,15 +18,23 @@
     "path": "C:\\Users\\wenyu\\OneDrive - Lehigh University\\Desktop\\Lehigh\\NSF-project\\ABM\\paper\\draft\\mg_sensitivity\\FLOODABM\\config\\households_for_abm_sfha.csv",
     "sha256": "e5dea74f58cd290ba2fd669b7cc58ac95d4f2b938a5f16fc6a76a697c67304c7"
   },
-  "fi_bounds": {
-    "inside_SFHA": [
-      0.0,
-      0.1
-    ],
-    "outside_SFHA": [
-      0.35,
-      0.55
-    ]
+  "fi_decision_threshold_intervals": {
+    "homeowner": {
+      "inside_SFHA": [
+        0.0,
+        0.1
+      ],
+      "outside_SFHA": [
+        0.35,
+        0.55
+      ]
+    },
+    "renter": {
+      "all_SFHA_statuses": [
+        0.7,
+        0.9
+      ]
+    }
   },
   "renter_class_weight": {
     "RES3F": 50.0

@@ -538,38 +538,51 @@ def _load_or_cache_weights(pkl_path: Path, npz_path: Path) -> tuple[np.ndarray, 
     if posterior_idx_env is not None:
         try:
             posterior_idx = int(posterior_idx_env)
-        except ValueError:
-            posterior_idx = None
-        if posterior_idx is not None:
-            # Find the training npz with full posterior samples
-            models_parent = pkl_path.parent.parent
-            model_name = pkl_path.parent.name
-            candidates = [
-                Path(str(models_parent / model_name) + "_fast") / pkl_path.with_suffix(".npz").name,
-                pkl_path.with_suffix(".npz"),
-            ]
-            for cand in candidates:
-                if not cand.exists():
-                    continue
-                try:
-                    data = np.load(cand, allow_pickle=True)
-                except Exception:
-                    continue
-                if not any(k.startswith("posterior_beta_") for k in data.keys()):
-                    continue
-                # All posterior arrays share the same length; wrap idx modulo len.
-                n_samples = int(np.asarray(data["posterior_beta_0"]).shape[0])
-                i = posterior_idx % n_samples
-                weights = []
-                for feat in FEATURES:
-                    key = f"posterior_beta_{feat.lower()}"
-                    if key in data:
-                        weights.append(float(np.asarray(data[key])[i]))
-                    else:
-                        weights.append(0.0)
-                bias = float(np.asarray(data["posterior_beta_0"])[i])
-                return np.array(weights, dtype=np.float32), bias
-            # If no training npz found, fall through to the mean-cache path below.
+        except ValueError as exc:
+            raise RuntimeError("FLOODABM_POSTERIOR_IDX must be an integer") from exc
+
+        candidates = [
+            pkl_path.with_suffix(".npz"),
+            npz_path,
+        ]
+        load_errors: list[str] = []
+        for candidate in candidates:
+            if not candidate.is_file():
+                continue
+            try:
+                with np.load(candidate, allow_pickle=True) as data:
+                    required = ["posterior_beta_0"] + [
+                        f"posterior_beta_{feature.lower()}" for feature in FEATURES
+                    ]
+                    missing = [key for key in required if key not in data]
+                    if missing:
+                        load_errors.append(f"{candidate}: missing {missing}")
+                        continue
+                    arrays = {key: np.asarray(data[key], dtype=float) for key in required}
+                    n_samples = len(arrays["posterior_beta_0"])
+                    if n_samples == 0 or any(array.shape != (n_samples,) for array in arrays.values()):
+                        raise RuntimeError(f"Inconsistent posterior arrays in {candidate}")
+                    if any(not np.isfinite(array).all() for array in arrays.values()):
+                        raise RuntimeError(f"Non-finite posterior coefficients in {candidate}")
+                    if not 0 <= posterior_idx < n_samples:
+                        raise RuntimeError(
+                            f"FLOODABM_POSTERIOR_IDX={posterior_idx} is outside "
+                            f"[0, {n_samples - 1}] for {candidate.name}"
+                        )
+                    weights = np.array(
+                        [arrays[f"posterior_beta_{feature.lower()}"][posterior_idx] for feature in FEATURES],
+                        dtype=np.float32,
+                    )
+                    bias = float(arrays["posterior_beta_0"][posterior_idx])
+                    return weights, bias
+            except RuntimeError:
+                raise
+            except Exception as exc:
+                load_errors.append(f"{candidate}: {exc}")
+        details = "; ".join(load_errors) if load_errors else "no posterior npz found"
+        raise RuntimeError(
+            f"Cannot load posterior draw {posterior_idx} for {pkl_path.stem}: {details}"
+        )
 
     # Priority 1: Check FLOODABM-style cache
     if npz_path.exists():
@@ -597,22 +610,29 @@ def _load_or_cache_weights(pkl_path: Path, npz_path: Path) -> tuple[np.ndarray, 
 
             # Training project format uses 'posterior_xxx' keys
             if any(k.startswith("posterior_") for k in keys):
-                weights = []
-                for feat in FEATURES:
-                    key = f"posterior_beta_{feat.lower()}"
-                    if key in data:
-                        arr = np.asarray(data[key])
-                        weights.append(float(arr.mean()))
-                    else:
-                        weights.append(0.0)
-
-                b0_key = "posterior_beta_0"
-                bias = float(np.asarray(data[b0_key]).mean()) if b0_key in data else 0.0
+                required = ["posterior_beta_0"] + [
+                    f"posterior_beta_{feature.lower()}" for feature in FEATURES
+                ]
+                missing = [key for key in required if key not in data]
+                if missing:
+                    raise RuntimeError(f"Missing posterior coefficients in {npz_file}: {missing}")
+                arrays = {key: np.asarray(data[key], dtype=float) for key in required}
+                if any(array.ndim != 1 or len(array) == 0 for array in arrays.values()):
+                    raise RuntimeError(f"Invalid posterior coefficient arrays in {npz_file}")
+                if any(not np.isfinite(array).all() for array in arrays.values()):
+                    raise RuntimeError(f"Non-finite posterior coefficients in {npz_file}")
+                weights = [
+                    float(arrays[f"posterior_beta_{feature.lower()}"].mean())
+                    for feature in FEATURES
+                ]
+                bias = float(arrays["posterior_beta_0"].mean())
                 cal_extras = _cal_extras_from_npz(data)
 
                 return np.array(weights, dtype=np.float32), bias, cal_extras
+        except RuntimeError:
+            raise
         except Exception:
-            pass
+            return None
         return None
 
     # Priority 1.5: Check _fast sibling directory for training project npz
@@ -683,15 +703,15 @@ def _load_group_models(models_root: Path, group_tag: str, calib_path: Path | Non
     Returns:
         (W, b, calibrators): Weight matrix (4x3), bias vector (4,), calibrator list
     """
-    # Detect model directory structure. A "direct" model directory holds the
-    # per-action model files (.pkl) or their .npz exports (e.g. models/baseline/),
-    # paired with a sibling *_fast cache of posterior-mean weights.
-    _direct = any(
-        (models_root / f"{g}_{a}{ext}").exists()
-        for g in ("owner", "renter") for a in ACTIONS for ext in (".pkl", ".npz")
+    # Detect model directory structure
+    direct_model_exists = any(
+        (models_root / f"{group}_{action}{suffix}").is_file()
+        for group in ("owner", "renter")
+        for action in ACTIONS
+        for suffix in (".pkl", ".npz")
     )
-    if _direct:
-        # Direct model directory (e.g., models/baseline/ or models_optimized/)
+    if direct_model_exists:
+        # Direct model directory (e.g., models_optimized/)
         models_dir = models_root
         cache_dir = Path(str(models_root) + "_fast")
     else:
@@ -709,22 +729,20 @@ def _load_group_models(models_root: Path, group_tag: str, calib_path: Path | Non
     calibrator_map = _load_calibrators(calib_path, group_tag)
     calibrators = [_identity_calibrator] * len(ACTIONS)
 
+    required_actions = {
+        "owner": {"FI", "EH", "BP"},
+        "renter": {"FI", "RL"},
+    }[group_tag]
+
     # Load each action model
     for j, action in enumerate(ACTIONS):
+        if action not in required_actions:
+            continue
         pkl_file = models_dir / f"{group_tag}_{action}.pkl"
         npz_file = cache_dir / f"{group_tag}_{action}.npz"
-        # Proceed when either the pkl model or a cached/exported .npz is present,
-        # so npz-only model directories (no .pkl shipped) load correctly.
-        if not pkl_file.exists() and not npz_file.exists():
-            # EXPECTED for tenure-unavailable actions: owner_RL, renter_EH and
-            # renter_BP are intentionally not shipped (those actions are never
-            # offered to that group in sequential_decision_fast), so the
-            # zero-weight -> sigmoid(0)=0.5 probability here is never consumed.
-            # EXTENDER WARNING: if you add an action to ACTIONS without training
-            # its model file, you will SILENTLY get p=0.5 for it with no error —
-            # train owner_<X>.npz / renter_<X>.npz before adding it to ACTIONS.
-            continue  # no model file -> zero weights (sigmoid(0)=0.5)
-
+        training_npz = models_dir / f"{group_tag}_{action}.npz"
+        if not any(path.is_file() for path in (pkl_file, training_npz, npz_file)):
+            raise FileNotFoundError(f"Missing required model for {group_tag}/{action}")
         W[j, :], b[j] = _load_or_cache_weights(pkl_file, npz_file)
 
         # Priority 1: load calibrator from npz (cache or training)

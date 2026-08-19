@@ -22,6 +22,7 @@ Example:
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -57,6 +58,8 @@ def load_predictors(actions_dir: Path) -> tuple:
     try:
         return build_fast_predictors(actions_dir)
     except Exception as e_fast:
+        if os.environ.get("FLOODABM_POSTERIOR_IDX") is not None:
+            raise
         if _compat_build is None:
             raise
         try:
@@ -219,11 +222,12 @@ def sequential_decision_fast(
         overlay_policy_names: Policy name overrides for FI decisions
         decision_threshold: Minimum probability floor (default 0.0).
             An action can only be adopted if p_a > this floor.
-        draw_bounds: Action-specific bounds for the uniform draw. If
-            ``FI_inside_SFHA`` is present and the state has ``inside_SFHA``,
-            FI uses that interval for inside-SFHA households and ``FI`` for
-            all other households. If None or an action is not in dict,
-            defaults to (0, 1).
+        draw_bounds: Action-specific bounds for the uniform draw.
+            ``FI`` applies to homeowners outside the SFHA,
+            ``FI_inside_SFHA`` applies to homeowners inside the SFHA, and
+            ``FI_renter`` applies to all renters. ``FI_renter`` defaults to
+            ``FI`` for backward compatibility. Other actions use their named
+            bounds, and missing bounds default to (0, 1).
 
     Returns:
         DataFrame with columns: action, ELEV_FT, POLICY_NAME
@@ -261,25 +265,36 @@ def sequential_decision_fast(
     # Monte Carlo draws for each decision step (action-specific bounded ranges)
     if draw_bounds is None:
         draw_bounds = {}
-    fi_lo, fi_hi = draw_bounds.get("FI", (0.0, 1.0))
+    fi_lo, fi_hi = map(float, draw_bounds.get("FI", (0.0, 1.0)))
+    fi_renter_lo, fi_renter_hi = map(
+        float, draw_bounds.get("FI_renter", (fi_lo, fi_hi))
+    )
     eh_lo, eh_hi = draw_bounds.get("EH", (0.0, 1.0))
     bp_lo, bp_hi = draw_bounds.get("BP", (0.0, 1.0))
     rl_lo, rl_hi = draw_bounds.get("RL", (0.0, 1.0))
-    # SFHA-aware FI bounds are a row-level initialization rule, not a change
-    # to calibrated psychological parameters. The outside-SFHA interval stays
-    # equal to the current model interval.
+    for label, low, high in (
+        ("FI", fi_lo, fi_hi),
+        ("FI_renter", fi_renter_lo, fi_renter_hi),
+    ):
+        if not 0.0 <= low < high <= 1.0:
+            raise ValueError(f"{label} bounds must be ordered within [0, 1]")
+
+    # Tenure-specific FI bounds preserve the owner-only SFHA rule while
+    # allowing renter adoption to be calibrated independently.
+    fi_lo_arr = np.where(is_renter, fi_renter_lo, fi_lo)
+    fi_hi_arr = np.where(is_renter, fi_renter_hi, fi_hi)
     fi_inside = draw_bounds.get("FI_inside_SFHA")
     if fi_inside is not None and "inside_SFHA" in state.columns:
         inside = pd.to_numeric(state["inside_SFHA"], errors="raise").to_numpy(dtype=int)
         if not np.isin(inside, [0, 1]).all():
             raise ValueError("inside_SFHA must contain only 0/1 values")
         fi_in_lo, fi_in_hi = map(float, fi_inside)
-        fi_out_lo, fi_out_hi = map(float, (fi_lo, fi_hi))
-        fi_lo_arr = np.where(inside == 1, fi_in_lo, fi_out_lo)
-        fi_hi_arr = np.where(inside == 1, fi_in_hi, fi_out_hi)
-        u_fi = rng.uniform(fi_lo_arr, fi_hi_arr)
-    else:
-        u_fi = rng.uniform(fi_lo, fi_hi, size=N)
+        if not 0.0 <= fi_in_lo < fi_in_hi <= 1.0:
+            raise ValueError("FI_inside_SFHA bounds must be ordered within [0, 1]")
+        use_sfha_owner_bounds = (inside == 1) & is_owner
+        fi_lo_arr = np.where(use_sfha_owner_bounds, fi_in_lo, fi_lo_arr)
+        fi_hi_arr = np.where(use_sfha_owner_bounds, fi_in_hi, fi_hi_arr)
+    u_fi = rng.uniform(fi_lo_arr, fi_hi_arr)
     u_eh = rng.uniform(eh_lo, eh_hi, size=N)
     u_bp = rng.uniform(bp_lo, bp_hi, size=N)
     u_rl = rng.uniform(rl_lo, rl_hi, size=N)

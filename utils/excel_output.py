@@ -356,16 +356,15 @@ def export_fi_takeup_change(
     # Flood events: (baseline_year, flood_year)
     flood_events = [(2013, 2014), (2020, 2021)]
     
-    # Auto-detect flood-prone tracts if not provided
+    # Use the same depth-based 7-of-13 classification as the manuscript.
     if flood_prone_tracts is None:
-        init_file = states_dir / "state_for_vuln_2011.csv"
-        if init_file.exists():
-            init_df = pd.read_csv(init_file, dtype={"tract_geoid": str})
-            init_df['tract'] = init_df['tract_geoid'].astype(str)
-            tract_fi = init_df.groupby('tract')['has_FI'].mean()
-            flood_prone_tracts = tract_fi[tract_fi >= 0.2].index.tolist()
-        else:
-            flood_prone_tracts = []
+        from utils.flood_prone import flood_prone_flags
+
+        flood_file = states_dir.parent / "flood_years_by_tract.csv"
+        flood_frame = pd.read_csv(flood_file, dtype={"tract_geoid": str})
+        tracts = flood_frame["tract_geoid"].astype(str).unique()
+        flags = flood_prone_flags(flood_file, tracts)
+        flood_prone_tracts = flags[flags.eq(1)].index.tolist()
     
     all_rows = []
     
@@ -509,6 +508,15 @@ def export_all_excel(
     """
     if output_dir is None:
         output_dir = base_dir / 'excel'
+
+    if flood_prone_tracts is None:
+        from utils.flood_prone import flood_prone_flags
+
+        flood_file = base_dir / "flood_years_by_tract.csv"
+        flood_frame = pd.read_csv(flood_file, dtype={"tract_geoid": str})
+        tracts = flood_frame["tract_geoid"].astype(str).unique()
+        flags = flood_prone_flags(flood_file, tracts)
+        flood_prone_tracts = flags[flags.eq(1)].index.tolist()
     
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Exporting Excel files to: {output_dir}")

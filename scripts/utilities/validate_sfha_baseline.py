@@ -11,12 +11,14 @@ from pathlib import Path
 import json
 import hashlib
 import pandas as pd
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 OLD = ROOT / "config" / "households_for_abm.csv"
 NEW = ROOT / "config" / "households_for_abm_sfha.csv"
 SHARES = ROOT / "config" / "sfha_shares.csv"
 MANIFEST = ROOT / "config" / "sfha_assignment_manifest.json"
+CONFIG = ROOT / "config" / "abm_params.yaml"
 
 
 def sha256(path: Path) -> str:
@@ -51,6 +53,7 @@ def main() -> None:
     if len(fallback) != 1 or tuple(fallback[["tract_geoid", "_group"]].iloc[0]) != ("34027040302", "renter"):
         raise AssertionError("The documented renter fallback is missing or changed")
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    config = yaml.safe_load(CONFIG.read_text(encoding="utf-8")) or {}
     expected = manifest["household_path"]["sha256"].lower()
     if expected != sha256(NEW):
         raise AssertionError("Assignment manifest does not bind the committed SFHA household file")
@@ -88,6 +91,20 @@ def main() -> None:
         )
     if int(right["has_FI"].sum()) != int(manifest["initial_FI"]["counts"]["total"]):
         raise AssertionError("Initial FI total does not match the manifest")
+    intervals = manifest["fi_decision_threshold_intervals"]
+    configured_intervals = {
+        "homeowner": {
+            "inside_SFHA": list(config["sfha_initialization"]["fi_draw_bounds_inside"]),
+            "outside_SFHA": list(config["draw_bounds"]["FI"]),
+        },
+        "renter": {
+            "all_SFHA_statuses": list(config["draw_bounds"]["FI_renter"]),
+        },
+    }
+    if intervals != configured_intervals:
+        raise AssertionError(
+            "FI decision-threshold intervals differ between config and manifest"
+        )
     print(json.dumps({
         "status": "PASS",
         "n_households": int(len(new)),

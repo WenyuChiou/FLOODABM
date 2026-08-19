@@ -136,65 +136,13 @@ def _year_from_name(p: Path) -> int | None:
 
 # ---------- 場景輸出：EARLY vs LATE（含 owner/renter、baseline/worst、比值與 flood_prone） ----------
 
-def _flood_prone_from_cfg_for(out_tracts: Iterable[str], cfg: Dict[str, Any] | None) -> pd.Series:
-    """
-    用「輸出表 out 的 tract 列表」來標記 flood-prone。
-    規則：只要該 tract 的 owner 初始投保率 == 0.25 → 1，否則 0。
-    支援三種 YAML 結構：
-      1) insurance_init 是數字/字串數字
-      2) insurance_init = {"owner": <數字>} 或 {"owner": {tract: <數字>, ...}}
-      3) insurance_init = {"take_rate_by_tract_group": {tract: {owner: <數字>, ...}, ...}}
-    """
-    tracts = pd.Index([str(t) for t in out_tracts], name="tract_geoid")
-    INS = (cfg or {}).get("insurance_init", {}) or {}
+def _flood_prone_from_flood_years_for(
+    out_tracts: Iterable[str], flood_years_file: Path
+) -> pd.Series:
+    """Classify output tracts from the shared 7-of-13 flood-year rule."""
+    from utils.flood_prone import flood_prone_flags
 
-    def is_025(x) -> bool:
-        try:
-            return abs(float(x) - 0.25) < 1e-12
-        except Exception:
-            return False
-
-    s = pd.Series(0, index=tracts, dtype=int)
-
-    # 1) 直接數值
-    if isinstance(INS, (int, float, str)):
-        if is_025(INS):
-            s[:] = 1
-        return s
-
-    if not isinstance(INS, dict):
-        return s
-
-    # 2) owner: 單值或 per-tract
-    if "owner" in INS:
-        owner_val = INS.get("owner")
-        if isinstance(owner_val, (int, float, str)):
-            if is_025(owner_val):
-                s[:] = 1
-            return s
-        if isinstance(owner_val, dict):
-            for k, v in owner_val.items():
-                if is_025(v):
-                    kk = str(k)
-                    if kk in s.index:
-                        s.loc[kk] = 1
-            return s
-
-    # 3) 你目前使用的形式
-    if "take_rate_by_tract_group" in INS:
-        tr_map = INS.get("take_rate_by_tract_group") or {}
-        for k, v in tr_map.items():
-            try:
-                owner_take = (v or {}).get("owner", None)
-            except Exception:
-                owner_take = None
-            if is_025(owner_take):
-                kk = str(k)
-                if kk in s.index:
-                    s.loc[kk] = 1
-        return s
-
-    return s
+    return flood_prone_flags(flood_years_file, out_tracts)
 
 def export_spatial_inputs_cumrate_perhh(
     out_root: Path,
@@ -214,7 +162,7 @@ def export_spatial_inputs_cumrate_perhh(
       - ratio（baseline / worst）：
           ratio_payout_rate_*_bl_over_wr
           ratio_avg_damage_perhh_*_bl_over_wr
-      - flood_prone（由 YAML 的 insurance_init 判定 owner 初始=0.25）
+      - flood_prone（使用 baseline flood_years_by_tract.csv 的 7-of-13 規則）
     """
 
     out_root = Path(out_root)
@@ -417,8 +365,10 @@ def export_spatial_inputs_cumrate_perhh(
 
     # ---- flood_prone：用 out 表本身的 tract 清單來對應，避免鍵不對 ----
     out["tract_geoid"] = out["tract_geoid"].astype(str)
-    flood_prone_map = _flood_prone_from_cfg_for(out["tract_geoid"].unique(), cfg)
-    out["flood_prone"] = out["tract_geoid"].map(flood_prone_map).fillna(0).astype(int)
+    flood_prone_map = _flood_prone_from_flood_years_for(
+        out["tract_geoid"].unique(), out_root / "baseline" / "flood_years_by_tract.csv"
+    )
+    out["flood_prone"] = out["tract_geoid"].map(flood_prone_map).astype("int8")
 
     # ---- 欄位順序 ----
     ordered_cols = [

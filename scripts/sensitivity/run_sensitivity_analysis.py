@@ -3,7 +3,7 @@
 Unified Sensitivity Analysis Runner for FLOODABM
 ==================================================
 
-Runs four SA experiments:
+Legacy runner for four SA experiments:
   SA1: TP Decay Rate  (tau_inf scale factors)
   SA2: Initial FI Rates  (insurance uptake multipliers)
   SA3: Flood-Prone Threshold  (reclassify tracts)
@@ -14,6 +14,10 @@ Usage:
     python run_sensitivity_analysis.py --sa sa1           # run SA1 only
     python run_sensitivity_analysis.py --sa sa1 --reuse   # skip existing
     python run_sensitivity_analysis.py --dry-run           # preview commands
+
+SA2 and SA3 alter the superseded tract-based FI initialization and are not
+compatible with the SFHA-aware benchmark. They fail before creating outputs
+when SFHA initialization is enabled.
 """
 from __future__ import annotations
 
@@ -113,6 +117,25 @@ def regenerate_households() -> None:
         ],
         cwd=str(ROOT),
     )
+
+
+def require_legacy_initial_fi(experiment: str) -> None:
+    """Reject SA designs that overwrite the SFHA-aware FI initialization."""
+    cfg = load_yaml()
+    if bool((cfg.get("sfha_initialization", {}) or {}).get("enabled", False)):
+        raise RuntimeError(
+            f"{experiment} is a legacy tract-based FI-initialization analysis "
+            "and cannot run with the SFHA-aware benchmark. Use the preassigned "
+            "inside_SFHA and has_FI attributes instead."
+        )
+    rates = (cfg.get("insurance_init", {}) or {}).get(
+        "take_rate_by_tract_group", {}
+    )
+    if not rates:
+        raise RuntimeError(
+            f"{experiment} requires legacy "
+            "insurance_init.take_rate_by_tract_group values"
+        )
 
 
 # ── run dir helpers (from sa_ratio_threshold.py) ─────────────────────────
@@ -336,6 +359,7 @@ def run_sa1(reuse: bool = False, dry_run: bool = False) -> list[dict]:
 
 def run_sa2(reuse: bool = False, dry_run: bool = False) -> list[dict]:
     """SA2: Sweep insurance uptake rate multipliers."""
+    require_legacy_initial_fi("SA2")
     print("\n" + "=" * 60)
     print("SA2: Initial FI Rates (multiplier)")
     print(f"  Multipliers: {SA2_MULTIPLIERS}")
@@ -443,6 +467,7 @@ def classify_tracts(flood_counts: dict[str, int],
 
 def run_sa3(reuse: bool = False, dry_run: bool = False) -> list[dict]:
     """SA3: Sweep flood-prone classification threshold."""
+    require_legacy_initial_fi("SA3")
     print("\n" + "=" * 60)
     print("SA3: Flood-Prone Threshold (years of flooding)")
     print(f"  Thresholds: {SA3_THRESHOLDS}")
@@ -604,6 +629,9 @@ def main():
     ap.add_argument("--dry-run", action="store_true",
                     help="Print commands without running")
     args = ap.parse_args()
+
+    if args.sa in {"sa2", "sa3", "all"}:
+        require_legacy_initial_fi(args.sa.upper())
 
     SA_OUT.mkdir(parents=True, exist_ok=True)
 

@@ -288,6 +288,7 @@ def _attach_hh_flood_damage(
     modules_root: Path,
     ffe_ft: float = 1.0,
     renters_have_structure: bool = False,
+    event_depth_m: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Attach flood damage amounts to household state DataFrame.
     
@@ -329,6 +330,37 @@ def _attach_hh_flood_damage(
     # Calculate losses
     dy = depths_for_year(depths_long, year)
     cat_in = build_cat_input(df, dy, base_ffe_ft=ffe_ft)
+    if event_depth_m is not None:
+        if not {"i", "event_depth_m"}.issubset(event_depth_m.columns):
+            raise ValueError("event_depth_m override must contain i and event_depth_m")
+        override = event_depth_m[["i", "event_depth_m"]].copy()
+        override["i"] = pd.to_numeric(override["i"], errors="raise").astype(int)
+        override["event_depth_m"] = pd.to_numeric(
+            override["event_depth_m"], errors="raise"
+        ).astype(float)
+        invalid = (
+            override["i"].duplicated().any()
+            or not np.isfinite(override["event_depth_m"]).all()
+            or (override["event_depth_m"] < 0).any()
+        )
+        if invalid:
+            raise ValueError("event-depth overrides must be unique, finite, and nonnegative")
+        df = df.drop(columns=["event_depth_m"], errors="ignore").merge(
+            override,
+            on="i",
+            how="left",
+            validate="one_to_one",
+        )
+        if df["event_depth_m"].isna().any():
+            raise ValueError("event-depth override is incomplete")
+        cat_in = cat_in.drop(columns=["depth_m"]).merge(
+            override.rename(columns={"event_depth_m": "depth_m"}),
+            on="i",
+            how="left",
+            validate="one_to_one",
+        )
+        if cat_in["depth_m"].isna().any():
+            raise ValueError("event-depth override is incomplete")
     wl = compute_losses_quick(cat_in, modules_root, FFE_ft=ffe_ft)
     
     # Merge losses back to state

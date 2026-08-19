@@ -23,6 +23,8 @@ import pandas as pd
 
 # ── paths ──────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent.parent  # project root
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 BASE_DIR = ROOT / "outputs" / "baseline" / "baseline"
 WORST_DIR = ROOT / "outputs" / "baseline" / "worst"
 CONFIG = ROOT / "config" / "overall_md_mean_by_tract_2011_2023.json"
@@ -73,11 +75,17 @@ def load_flood_config() -> pd.DataFrame:
         rows.append({
             "tract_geoid": geoid,
             "county": get_county(geoid),
-            "flood_prone": 1 if flood_yrs > 0 else 0,
             "mean_depth_m": round(mean_depth, 4),
             "n_flood_yrs": flood_yrs,
         })
-    return pd.DataFrame(rows)
+    result = pd.DataFrame(rows)
+    from utils.flood_prone import flood_prone_flags
+
+    flags = flood_prone_flags(
+        BASE_DIR / "flood_years_by_tract.csv", result["tract_geoid"]
+    )
+    result["flood_prone"] = result["tract_geoid"].astype(str).map(flags).astype("int8")
+    return result
 
 
 def load_action_shares() -> pd.DataFrame:

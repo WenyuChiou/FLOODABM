@@ -3096,7 +3096,7 @@ def plot_fi_by_flood_prone(decisions_dir: Path, fig_root: Path,
     """
     Plot FI adoption comparison: Flood-prone vs Non-flood-prone areas.
     Includes 4-panel analysis: Homeowner FP/Non-FP, Renter FP/Non-FP with before/after flood markers.
-    Identifies flood-prone tracts as those with ratio_used >= 0.5 in any year.
+    Identifies flood-prone tracts as those flooded in at least 7 simulated years.
     """
     import matplotlib.pyplot as plt
     _set_style()
@@ -3126,28 +3126,11 @@ def plot_fi_by_flood_prone(decisions_dir: Path, fig_root: Path,
     
     dec['tract_geoid'] = dec['tract_geoid'].astype(str)
     
-    # Identify flood-prone tracts from config (owner init rate = 0.25)
-    config_file = decisions_dir.parent.parent.parent / "config" / "abm_params.yaml"
-    if not config_file.exists():
-        config_file = Path("config/abm_params.yaml")
-    
-    high_flood_tracts = []
-    if config_file.exists():
-        import yaml
-        with open(config_file, encoding='utf-8') as f:
-            cfg = yaml.safe_load(f)
-        take_rate = cfg.get('insurance_init', {}).get('take_rate_by_tract_group', {})
-        high_flood_tracts = [str(t) for t, v in take_rate.items() if v.get('owner') == 0.25]
-    
-    if not high_flood_tracts:
-        # Fallback to ratio_used method
-        flood_file = flood_years_file or (decisions_dir.parent / "flood_years_by_tract.csv")
-        if flood_file.exists():
-            flood_df = pd.read_csv(flood_file)
-            flood_df['tract_geoid'] = flood_df['tract_geoid'].astype(str)
-            high_flood_tracts = flood_df[flood_df['ratio_used'] >= 0.5]['tract_geoid'].unique().tolist()
-    
-    dec['flood_prone'] = dec['tract_geoid'].isin(high_flood_tracts)
+    from utils.flood_prone import flood_prone_flags
+
+    flood_file = flood_years_file or (decisions_dir.parent / "flood_years_by_tract.csv")
+    flags = flood_prone_flags(flood_file, dec["tract_geoid"].unique())
+    dec["flood_prone"] = dec["tract_geoid"].map(flags).astype(bool)
     years = sorted(dec['year'].unique())
     
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
@@ -3706,8 +3689,6 @@ def output_flood_impact_csv(decisions_dir: Path, output_dir: Path,
         - delta_fi_renter_y1, delta_fi_renter_y2 (averaged across flood events)
         - Individual flood year deltas
     """
-    import yaml
-    
     # Load decisions
     all_years_file = decisions_dir / "action_share_owner_renter_tract_all_years.csv"
     if not all_years_file.exists():
@@ -3732,20 +3713,16 @@ def output_flood_impact_csv(decisions_dir: Path, output_dir: Path,
     dec['tract_geoid'] = dec['tract_geoid'].astype(str)
     tracts = dec['tract_geoid'].unique()
     
-    # Load flood-prone classification from config
-    config_file = Path("config/abm_params.yaml")
-    fp_tracts = []
-    if config_file.exists():
-        with open(config_file, encoding='utf-8') as f:
-            cfg = yaml.safe_load(f)
-        take_rate = cfg.get('insurance_init', {}).get('take_rate_by_tract_group', {})
-        fp_tracts = [str(t) for t, v in take_rate.items() if v.get('owner') == 0.25]
+    from utils.flood_prone import flood_prone_flags
+
+    flood_file = decisions_dir.parent / "flood_years_by_tract.csv"
+    fp_flags = flood_prone_flags(flood_file, tracts)
     
     # Calculate deltas for each tract
     rows = []
     for tract in tracts:
         t_dec = dec[dec['tract_geoid'] == tract]
-        row = {'tract_geoid': tract, 'flood_prone': 1 if tract in fp_tracts else 0}
+        row = {'tract_geoid': tract, 'flood_prone': int(fp_flags.loc[tract])}
         
         # Calculate for each flood year
         for fy in flood_years:

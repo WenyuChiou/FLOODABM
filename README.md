@@ -26,13 +26,13 @@ Each action modifies exposure or vulnerability in the catastrophe flood model. S
 ```
 FLOODABM/
 ├── main.py                      # Single-run simulation (2011-2023)
-├── main_mc.py                   # Monte Carlo batch runner
+├── main_mc.py                   # Legacy Monte Carlo runner; formal ensemble uses scripts/utilities/run_mc100_local.py
 ├── generate_paper_figures.py    # Unified paper figure pipeline (see Reproducing Paper Figures)
 ├── requirements.txt
 │
 ├── config/                      # Configuration and input data
 │   ├── abm_params.yaml          # All simulation parameters
-│   ├── households_for_abm.csv   # Household inventory (52,141 households)
+│   ├── households_for_abm_sfha.csv  # Household inventory with inside_SFHA and initial FI status
 │   └── overall_md_mean_by_tract_2011_2023.json  # Flood depths by tract-year
 │
 ├── core/                        # Framework infrastructure
@@ -61,7 +61,7 @@ FLOODABM/
     ├── examples/                # Example helper scripts (e.g. future-depth generator)
     ├── sensitivity/             # Sensitivity analysis runners
     ├── validation/              # NFIP validation
-    ├── utilities/               # One-time data generation and export tools
+    ├── utilities/               # Data tools + formal run_mc100_local.py ensemble runner
     └── legacy_plots/            # Superseded figure scripts (kept for reference)
 ```
 
@@ -120,8 +120,8 @@ A baseline run takes ~2 minutes and writes results under `outputs/baseline/`:
 ### Monte Carlo and Sensitivity Analysis
 
 ```bash
-# Local Monte Carlo ensemble used for the paper figures
-python scripts/utilities/run_mc100_local.py --scenarios baseline worst
+# Local 50-run ensemble used for the paper figures (100 scenario runs)
+python scripts/utilities/run_mc100_local.py --out-root ../FLOODABM_mc50 --scenarios baseline worst
 
 # Sensitivity analysis
 python scripts/sensitivity/sa_ratio_threshold.py
@@ -150,7 +150,7 @@ All parameters are defined in `config/abm_params.yaml`, organized into:
 - **Action dynamics** -- elevation caps, buyout/relocation toggles, draw bounds
 - **Finance** -- NFIP premium rates, deductibles, coverage limits by homeownership status
 - **Insurance initialization** -- take-up rates by homeowner/renter group and SFHA status
-- **SFHA initialization** -- NSI-based tract and homeowner/renter shares. Initial FI rates are 30% for homeowners inside the SFHA, 3% for homeowners outside, 8% for renters inside, and 2% for renters outside. Inside-SFHA households use FI draw bounds U(0, 0.10), while outside-SFHA households use U(0.35, 0.55).
+- **SFHA initialization** -- NSI-based tract and homeowner/renter shares. Initial FI rates are 30% for homeowners inside the SFHA, 3% for homeowners outside, 8% for renters inside, and 2% for renters outside. Homeowners use FI draw bounds U(0, 0.10) inside the SFHA and U(0.35, 0.55) outside; renters use U(0.70, 0.90) regardless of SFHA status.
 - **Flood hazard** -- depth thresholds, event masking
 
 `main_mc.py` is retained as a legacy implementation and exits when the
@@ -204,11 +204,11 @@ Adaptation-trajectory (Fig 8), threat-perception distribution, ratio-threshold s
 
 Prepared outside this pipeline: the study-area map (Fig 1), the Bayesian-procedure diagram (Fig 2), the framework flowchart (Fig 3), and the flood-model diagnostics (Fig 4). The spatial flood-insurance maps (Fig 10) and the supporting population-change maps (SI Fig S4) are drawn in ArcGIS from the tract-level CSVs written by `scripts/utilities/gen_spatial_fi_delta_mc50.py` and `gen_spatial_pop_delta_mc50.py`.
 
-> Note: the Monte Carlo driver (`scripts/utilities/run_mc100_local.py`) writes under `FLOODABM_MC_ROOT` (default `outputs/mc50/`); set that variable to relocate the output tree, which the figure scripts then read. The 50-run seed list is published at `data/supplementary/mc_initpsy_seeds.csv`. Each run draws a distinct Bayesian posterior sample (the posterior `.npz` ship in `models/baseline/`), so the 50-run posterior spread is reproduced directly; single runs use the posterior-mean cache in `models/baseline_fast/`.
+> Note: the formal Monte Carlo driver requires `--out-root` to point outside the repository. Across the 50 runs, it varies the action-decision seed and Bayesian posterior draw while keeping the SFHA assignment, initial FI status, household attributes, flood sequence, and flood-depth sampling seed fixed. The posterior `.npz` files are stored in `models/baseline/`; single runs use the posterior-mean cache in `models/baseline_fast/`.
 
 ## Runtime
 
-A single baseline run (2011–2023) completes in approximately 2 minutes on a standard laptop. A 50-run Monte Carlo batch scales roughly linearly with the number of runs.
+A single baseline run covers 2011–2023. The formal ensemble uses 50 draws per scenario (100 simulations when both baseline and worst are run); runtime depends on hardware and output mode.
 
 ## Citing
 

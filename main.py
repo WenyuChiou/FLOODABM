@@ -52,10 +52,20 @@ tp_config:
                       'additive'   = TP += flood_ratio
                       'toward_one' = TP moves toward 1.0 asymptotically
 
-insurance_init:
-    take_rate_by_tract_group : Initial insurance uptake by tract
-                      owner: 0.25 → Flood-prone tract
-                      owner: 0.03 → Non-flood-prone tract
+initial FI:
+    The SFHA-aware benchmark reads preassigned has_FI values from the
+    household file: homeowners 30%/3% and renters 8%/2% inside/outside SFHA.
+    Legacy YAML initialization is available only when SFHA mode is disabled.
+
+sfha_initialization:
+    inside_SFHA       : NSI 2022 tract-by-tenure composition attribute
+    homeowner FI draw: U(0.00,0.10) inside SFHA; U(0.35,0.55) outside
+    renter FI draw    : U(0.70,0.90)
+
+depth_distribution_by_tract_year.csv:
+    Household event depths are sampled in meters from the PRB raster-cell
+    distribution for the current tract and year. The tract mean remains the
+    calibrated input for tract-level TP shock and flood-prone classification.
 
 flood:
     ratio_threshold_owner  : Flood ratio trigger for owner group (default: 0.5)
@@ -82,6 +92,7 @@ See config/abm_params.yaml for all configurable parameters.
 from __future__ import annotations
 from pathlib import Path
 import argparse
+import json
 import os
 import sys
 import numpy as np
@@ -129,6 +140,103 @@ from utils.sa_output_manager import SAOutputManager
 from utils.finalize import finalize_and_plot
 
 
+def load_depth_distributions(path: Path) -> dict[tuple[int, str], np.ndarray]:
+    """Load PRB tract-year cell-depth distributions in meters."""
+    frame = pd.read_csv(path, dtype={"tract_geoid": str})
+    required = {"year", "tract_geoid", "depth_values_m"}
+    missing = sorted(required - set(frame.columns))
+    if missing or frame[["year", "tract_geoid"]].duplicated().any():
+        raise ValueError(f"Invalid depth-distribution table: missing={missing}")
+    out: dict[tuple[int, str], np.ndarray] = {}
+    for row in frame.itertuples(index=False):
+        values = np.asarray(json.loads(row.depth_values_m), dtype=float)
+        if len(values) == 0 or not np.isfinite(values).all() or (values < 0).any():
+            raise ValueError(f"Invalid PRB depth distribution for {row.tract_geoid}-{row.year}")
+        out[(int(row.year), str(row.tract_geoid))] = values
+    return out
+
+
+def sample_event_depths(
+    state: pd.DataFrame,
+    year: int,
+    distributions: dict[tuple[int, str], np.ndarray],
+    rng: np.random.RandomState,
+) -> pd.DataFrame:
+    """Draw one PRB cell depth for each household in its current tract."""
+    result = state[["i", "tract_geoid"]].copy()
+    result["tract_geoid"] = result["tract_geoid"].astype(str)
+    result["event_depth_m"] = np.nan
+    for tract, index in result.groupby("tract_geoid", sort=True).groups.items():
+        values = distributions.get((int(year), str(tract)))
+        if values is None:
+            raise KeyError(f"No PRB depth distribution for {year}-{tract}")
+        result.loc[index, "event_depth_m"] = rng.choice(values, size=len(index), replace=True)
+    if result["event_depth_m"].isna().any():
+        raise ValueError(f"Incomplete household depth sample in {year}")
+    return result[["i", "event_depth_m"]]
+
+
+def _prepare_initial_fi(
+    state: pd.DataFrame,
+    ins_cfg: dict,
+    *,
+    sfha_enabled: bool,
+    seed: int,
+) -> pd.DataFrame:
+    """Load validated preassigned FI status or use the legacy non-SFHA fallback."""
+    if "has_FI" in state.columns:
+        values = pd.to_numeric(state["has_FI"], errors="raise")
+        if values.isna().any() or not values.isin([0, 1]).all():
+            raise ValueError("has_FI must contain only 0/1 values")
+        out = state.copy()
+        out["has_FI"] = values.astype("int8")
+        return out
+
+    if sfha_enabled:
+        raise ValueError(
+            "SFHA-aware configuration requires preassigned has_FI values "
+            "in the household file"
+        )
+
+    supported_rate_keys = (
+        "take_rate_by_tract_group",
+        "take_rate_by_state",
+        "take_rate_by_group",
+    )
+    has_grouped_rates = any(
+        isinstance(ins_cfg.get(key), dict) and bool(ins_cfg[key])
+        for key in supported_rate_keys
+    )
+    has_overall_rate = (
+        "take_rate_overall" in ins_cfg and ins_cfg["take_rate_overall"] is not None
+    )
+    if not has_grouped_rates and not has_overall_rate:
+        raise ValueError(
+            "Legacy non-SFHA initialization requires a supported insurance_init "
+            "rate; refusing to create an all-zero has_FI column"
+        )
+
+    return _init_fi_flags_from_yaml(
+        state,
+        ins_cfg,
+        group_col="identity",
+        tract_col="tract_geoid",
+        seed=ins_cfg.get("seed", seed),
+        overwrite=True,
+    )
+
+
+def _resolve_simulation_seeds(
+    config_seed: int, decision_seed_override: int | None
+) -> tuple[int, int]:
+    """Return independent depth-sampling and decision RNG seeds."""
+    depth_seed = int(config_seed)
+    decision_seed = (
+        depth_seed if decision_seed_override is None else int(decision_seed_override)
+    )
+    return depth_seed, decision_seed
+
+
 def _refresh_sfha_after_relocation(
     state_before: pd.DataFrame,
     state_next: pd.DataFrame,
@@ -137,11 +245,12 @@ def _refresh_sfha_after_relocation(
     seed: int,
     year: int,
 ) -> pd.DataFrame:
-    """Update inside_SFHA for relocated or newly created households only.
+    """Update inside_SFHA only for relocated or newly created households.
 
-    Households that remain in their tract retain their assigned attribute.
-    Relocated or backfilled households receive a deterministic Bernoulli draw
-    from the destination tract/tenure SFHA share.
+    Existing households retain their assigned attribute when they stay in the
+    same tract. A destination tract share is used for RL destinations and for
+    backfilled households; this keeps the attribute location-based without
+    remapping every household each year.
     """
     out = state_next.copy()
     if "inside_SFHA" not in out.columns:
@@ -150,20 +259,21 @@ def _refresh_sfha_after_relocation(
     old_tract = old_tract[~old_tract.index.duplicated(keep="last")]
     old_for_next = out["i"].map(old_tract)
     new_location = old_for_next.isna() | (old_for_next.astype(str) != out["tract_geoid"].astype(str))
-    if new_location.any():
-        new_rows = out.loc[new_location].copy()
-        new_rows["tract_geoid"] = new_rows["tract_geoid"].astype(str)
-        new_rows["group"] = new_rows["group"].astype(str).str.lower()
-        for (tract, group), idx in new_rows.groupby(["tract_geoid", "group"]).groups.items():
-            share = float(sfha_share_map.get((str(tract), str(group)), 0.0))
-            if not 0.0 <= share <= 1.0:
-                raise ValueError(f"Invalid destination SFHA share for {tract}/{group}: {share}")
-            stream_seed = int(seed) + int(year) * 1009 + int(str(tract)[-6:]) * 17 + (1 if group == "renter" else 0)
-            rng = np.random.default_rng(stream_seed)
-            out.loc[idx, "inside_SFHA"] = (rng.random(len(idx)) < share).astype("int8")
-    out["inside_SFHA"] = pd.to_numeric(out["inside_SFHA"], errors="raise").fillna(0).astype("int8")
-    if not out["inside_SFHA"].isin([0, 1]).all():
-        raise ValueError("inside_SFHA must contain only 0/1 values")
+    if not new_location.any():
+        return out
+    for (tract, group), idx in out.loc[new_location].groupby(
+        [
+            out.loc[new_location, "tract_geoid"].astype(str),
+            out.loc[new_location, "group"].astype(str).str.lower(),
+        ]
+    ).groups.items():
+        share = float(sfha_share_map[(str(tract), str(group))])
+        if not 0.0 <= share <= 1.0:
+            raise ValueError(f"Invalid destination SFHA share for {tract}/{group}: {share}")
+        stream_seed = int(seed) + int(year) * 1009 + int(str(tract)[-6:]) * 17 + (1 if group == "renter" else 0)
+        rng = np.random.default_rng(stream_seed)
+        out.loc[idx, "inside_SFHA"] = (rng.random(len(idx)) < share).astype("int8")
+    out["inside_SFHA"] = pd.to_numeric(out["inside_SFHA"], errors="raise").astype("int8")
     return out
 
 
@@ -222,6 +332,11 @@ def run_single_scenario(
                     help="Comma-separated severe years to shade, e.g. '2011,2014,2021'.")
     ap.add_argument("--no-plots", action="store_true", help="Skip all plotting (override YAML output.enable_plots).")
     ap.add_argument("--deterministic", action="store_true", help="Use fixed RNG each year (no SEED+year offset) for reproducibility.")
+    ap.add_argument(
+        "--decision-seed",
+        type=int,
+        help="Override action-decision RNG only; depth-sampling seed remains fixed.",
+    )
     ap.add_argument("--output-mode", choices=["full", "summary", "minimal"], default=None,
                     help="Output storage mode: full (all files ~250MB), summary (~60MB), minimal (~10MB)")
     ap.add_argument("--model-dir", choices=available_models, default="baseline",
@@ -234,6 +349,10 @@ def run_single_scenario(
                     help="Limit simulation to first N years (for testing)")
     ap.add_argument("--decision-threshold", type=float, default=None,
                     help="Override decision_threshold (default 0.5). Action adopted if p > threshold.")
+    ap.add_argument(
+        "--fi-renter-bounds", type=float, nargs=2, metavar=("LOW", "HIGH"),
+        help="Override draw_bounds.FI_renter without changing homeowner FI bounds.",
+    )
     args = ap.parse_args(argv)
     
     # Override scenario if specified (for batch run)
@@ -250,6 +369,11 @@ def run_single_scenario(
         CFG.setdefault("flood", {})["ratio_threshold_renter"] = float(args.thr_renter)
     if args.decision_threshold is not None:
         CFG["decision_threshold"] = float(args.decision_threshold)
+    if args.fi_renter_bounds is not None:
+        low, high = map(float, args.fi_renter_bounds)
+        if not 0.0 <= low < high <= 1.0:
+            ap.error("--fi-renter-bounds must be ordered within [0, 1]")
+        CFG.setdefault("draw_bounds", {})["FI_renter"] = [low, high]
     # Shock scale overrides for TP configuration
     if args.shock_owner is not None:
         CFG.setdefault("tp_config", {})["shock_scale_owner"] = float(args.shock_owner)
@@ -305,7 +429,13 @@ def run_single_scenario(
     # Trust in Policymaker (TP) configuration
     TP_CFG_JSON = CFG.get("tp_config", {}) or {}
     FLOOD_JSON = CFG.get("flood", {}) or {}
-    SEED = int(CFG.get("seed", 12345))
+    SEED, DECISION_SEED = _resolve_simulation_seeds(
+        int(CFG.get("seed", 12345)), args.decision_seed
+    )
+    print(f"[cfg] depth_seed={SEED} | decision_seed={DECISION_SEED}")
+    posterior_idx = os.environ.get("FLOODABM_POSTERIOR_IDX")
+    if posterior_idx is not None:
+        print(f"[cfg] Bayesian posterior draw index={posterior_idx}")
     rng = np.random.RandomState(SEED)
     YEARS_STEP = float(CFG.get("years_step", 1.0))
     DYN = CFG.get("action_dynamics") or {}
@@ -373,6 +503,13 @@ def run_single_scenario(
     # =========================================================================
     # Load flood depth data (long format: tract × year × depth_m)
     DEPTHS_LONG = load_depths_legacy(PATH_DEPTHS)
+    DEPTH_DISTRIBUTION_PATH = CONFIG_DIR / "depth_distribution_by_tract_year.csv"
+    if not DEPTH_DISTRIBUTION_PATH.is_file():
+        raise FileNotFoundError(
+            "The SFHA-aware baseline requires config/depth_distribution_by_tract_year.csv"
+        )
+    DEPTH_DISTRIBUTIONS = load_depth_distributions(DEPTH_DISTRIBUTION_PATH)
+    print(f"[info] Using PRB depth distributions: {len(DEPTH_DISTRIBUTIONS)} tract-years")
     YEARS = years_from_cfg(CFG, DEPTHS_LONG["year"].unique(), PATH_EVENTS)
     if args.years:
         YEARS = sorted(YEARS)[:args.years]
@@ -407,28 +544,23 @@ def run_single_scenario(
             (str(tract), str(group)): float(share)
             for tract, group, share in share_df[["tract_geoid", "_group", "sfha_share"]].itertuples(index=False, name=None)
         }
-        outside_bounds = tuple(map(float, SFHA_CFG.get("fi_draw_bounds_outside", CFG.get("draw_bounds", {}).get("FI", (0.35, 0.55)))))
-        model_bounds = tuple(map(float, CFG.get("draw_bounds", {}).get("FI", (0.0, 1.0))))
-        if outside_bounds != model_bounds:
-            raise ValueError("fi_draw_bounds_outside must equal draw_bounds.FI")
-        inside_bounds = tuple(map(float, SFHA_CFG.get("fi_draw_bounds_inside", (0.0, 0.1))))
-        if len(inside_bounds) != 2 or not (0.0 <= inside_bounds[0] < inside_bounds[1] <= 1.0):
-            raise ValueError("fi_draw_bounds_inside must be an ordered interval within [0, 1]")
+        expected_share_keys = {
+            (str(tract), str(group).lower())
+            for tract, group in STATE[["tract_geoid", "group"]].drop_duplicates().itertuples(index=False, name=None)
+        }
+        missing_share_keys = sorted(expected_share_keys - set(SFHA_SHARE_MAP))
+        if missing_share_keys:
+            raise ValueError(f"SFHA shares are missing tract/tenure pairs: {missing_share_keys}")
         print(f"[info] inside_SFHA households: {int(STATE['inside_SFHA'].sum()):,}")
-    if "has_FI" in STATE.columns:
-        STATE["has_FI"] = pd.to_numeric(STATE["has_FI"], errors="coerce").fillna(0).astype("int8")
-        print(f"[info] has_FI from CSV: {STATE['has_FI'].sum():,} households")
-    else:
-        # Fallback: runtime initialization (legacy path)
-        STATE = _init_fi_flags_from_yaml(
-            STATE,
-            INS_JSON,
-            group_col="identity",
-            tract_col="tract_geoid",
-            seed=INS_JSON.get("seed", CFG.get("seed", 42)),
-            overwrite=True,
-        )
-        print(f"[info] Initial has_FI (runtime): {STATE['has_FI'].sum():,} households")
+    had_preassigned_fi = "has_FI" in STATE.columns
+    STATE = _prepare_initial_fi(
+        STATE,
+        INS_JSON,
+        sfha_enabled=bool(SFHA_CFG.get("enabled", False)),
+        seed=int(CFG.get("seed", 42)),
+    )
+    source_label = "household file" if had_preassigned_fi else "legacy YAML fallback"
+    print(f"[info] Initial has_FI from {source_label}: {STATE['has_FI'].sum():,} households")
 
     # =========================================================================
     # SECTION 6: PSYCHOLOGY INITIALIZATION
@@ -503,6 +635,14 @@ def run_single_scenario(
         # -----------------------------------------------------------------------
         depths_y = depths_for_year(DEPTHS_LONG, y)
         dmap = dict(zip(depths_y["tract_geoid"].astype(str), depths_y["depth_m"].astype(float)))
+        # Use a separate deterministic stream so the calibrated behavioral
+        # draws are unchanged by household-level exposure sampling.
+        sampled_depths = sample_event_depths(
+            STATE_V,
+            y,
+            DEPTH_DISTRIBUTIONS,
+            np.random.RandomState(SEED + 100_000 + int(y)),
+        )
 
         # -----------------------------------------------------------------------
         # STEP 7.3: Calculate flood damage using vulnerability curves
@@ -511,6 +651,7 @@ def run_single_scenario(
         STATE_V_WITH_DMG = _attach_hh_flood_damage(
             state_df=STATE_V.copy(), year=y, depths_long=DEPTHS_LONG,
             modules_root=ROOT / "modules", ffe_ft=FFE_FT,
+            event_depth_m=sampled_depths,
         )
         _export_tract_flood_damage(state_with_damage=STATE_V_WITH_DMG, year=y, out_root=OUTPUT_DIR)
 
@@ -578,8 +719,12 @@ def run_single_scenario(
             # Uses Bayesian predictors to determine actions, updates TP
             # -------------------------------------------------------------------
             from modules.actions.pipeline import run_one_year_mgmix_fast
-            # RNG: If --deterministic flag is true, use the same SEED every year (no +y offset)
-            _year_seed = SEED if getattr(args, "deterministic", False) else (SEED + y)
+            # Decision RNG only; flood-depth sampling uses the fixed depth seed above.
+            _year_seed = (
+                DECISION_SEED
+                if getattr(args, "deterministic", False)
+                else (DECISION_SEED + y)
+            )
             dec, STATE_NEXT_NO_EH, CHG = run_one_year_mgmix_fast(
                 year=y, state=STATE,
                 predictor_owner=predictor_owner, predictor_renter=predictor_renter,

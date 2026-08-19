@@ -115,27 +115,6 @@ def run_finance_for_year(
     # ---- Aggregate to tract level ----
     FIN_TRACT = aggregate_by_tract(FIN_HH, tract_col=tract_col)
 
-    # ---- Save CSV outputs ----
-    if save_csv and output_dir is not None:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        out_hh = FIN_HH.copy()
-        if compact_output:
-            # Drop redundant *_usd columns (can be derived from *_kUSD)
-            usd_cols = [c for c in out_hh.columns if c.endswith("_usd") or c.endswith("_USD")]
-            # Also drop duplicated identity/loss columns if they exist
-            redundant = [
-                "identity_norm", "identity_dec", 
-                "gross_structure_loss", "gross_contents_loss",
-                "event_depth_m", "event_tract_geoid", "event_year" # often redundant with state
-            ]
-            cols_to_drop = set(usd_cols + redundant)
-            out_hh = out_hh.drop(columns=[c for c in cols_to_drop if c in out_hh.columns])
-            
-        out_hh.to_csv(output_dir / f"finance_households_{year}.csv", index=False, encoding="utf-8-sig")
-        FIN_TRACT.to_csv(output_dir / f"finance_tract_{year}.csv", index=False, encoding="utf-8-sig")
-
     # ---- Tract-level premium breakdown ----
     tmp = FIN_HH.copy()
     tmp["identity"] = tmp["identity"].astype(str).str.lower()
@@ -180,5 +159,24 @@ def run_finance_for_year(
     prem_tract["renter_premium_total_usd"] = prem_tract["renter_premium_contents_usd"]
 
     FIN_TRACT = FIN_TRACT.merge(prem_tract, on="tract_geoid", how="left")
+
+    # ---- Save complete CSV outputs ----
+    if save_csv and output_dir is not None:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        out_hh = FIN_HH.copy()
+        if compact_output:
+            usd_cols = [c for c in out_hh.columns if c.endswith("_usd") or c.endswith("_USD")]
+            redundant = [
+                "identity_norm", "identity_dec",
+                "gross_structure_loss", "gross_contents_loss",
+                "event_depth_m", "event_tract_geoid", "event_year",
+            ]
+            cols_to_drop = set(usd_cols + redundant)
+            out_hh = out_hh.drop(columns=[c for c in cols_to_drop if c in out_hh.columns])
+
+        out_hh.to_csv(output_dir / f"finance_households_{year}.csv", index=False, encoding="utf-8-sig")
+        FIN_TRACT.to_csv(output_dir / f"finance_tract_{year}.csv", index=False, encoding="utf-8-sig")
 
     return FIN_HH, FIN_TRACT

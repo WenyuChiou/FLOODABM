@@ -15,5 +15,8 @@ openpyxl>=3.1,<4
 joblib>=1.3,<2
 tqdm>=4.66,<5
 
+# Raster-to-tract depth-distribution utility
+geopandas>=0.14,<2
+
 # Windows fonts (optional)
 # fonttools>=4.39,<5

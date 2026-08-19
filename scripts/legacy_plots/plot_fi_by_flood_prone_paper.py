@@ -49,10 +49,15 @@ def load_decisions() -> pd.DataFrame:
 
 
 def get_flood_prone_tracts() -> list[str]:
-    """Identify flood-prone tracts (owner init rate = 0.25 in config)."""
+    """Identify tracts using the superseded owner initial-FI convention."""
     with open(CONFIG, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     rates = cfg.get("insurance_init", {}).get("take_rate_by_tract_group", {})
+    if not rates:
+        raise RuntimeError(
+            "This legacy plot requires the superseded tract-based FI "
+            "initialization. It cannot represent the SFHA-aware benchmark."
+        )
     return [str(t) for t, v in rates.items() if v.get("owner") == 0.25]
 
 

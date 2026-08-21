@@ -27,8 +27,8 @@ live config path is the inline YAML read in `main.py` / `main_mc.py` via
 | Surface | Status | Live source instead |
 |---|---|---|
 | `core/config.py`, `core/cli.py`, `utils/config_loader.py` | **Not imported at runtime.** A typed-dataclass loader + a second CLI parser that the live runners never call. | `main.py` builds its own inline argparse parser; YAML via `utils._helpers.load_yaml_cfg`. |
-| `abm_params.yaml: beta_parameters` block | **Dead.** Editing it has no effect. | Live initial-psychology Beta shapes are in `modules/actions/tp.py` (`BETA_PARAMS_OWNER_DEFAULT` / `BETA_PARAMS_RENTER_DEFAULT`) and pre-baked into `config/households_for_abm.csv`. See [PARAMETERS.md](PARAMETERS.md). |
-| `abm_params.yaml: hazard` block, `flood.events_mode`, `flood.min_trigger`, `files.grid_depths_yaml` | **No live consumer.** | Depths load from `files.depths_overall`. |
+| `abm_params.yaml: beta_parameters` block | **Dead.** Editing it has no effect. | Live initial-psychology Beta shapes are in `modules/actions/tp.py` (`BETA_PARAMS_OWNER_DEFAULT` / `BETA_PARAMS_RENTER_DEFAULT`) and pre-baked into `config/households_for_abm_sfha.csv`. See [PARAMETERS.md](PARAMETERS.md). |
+| `abm_params.yaml: hazard` block, `flood.events_mode`, `flood.min_trigger`, `files.grid_depths_yaml` | **No live consumer.** | Tract means load from `files.depths_overall`; household depths load from `files.depth_distributions`. |
 
 Practical effect: do not wire a new tool to `core/config.py` or `core/cli.py`, and
 do not expect edits to the keys above to change a run.
@@ -120,16 +120,12 @@ if you extend the model without knowing them:
   action added to `ACTIONS` without a trained model silently adopts at ~50%.
 - **New household column dropped at load.** `utils/_helpers.py` `load_households_csv`
   keeps a whitelist of psychology columns (`TP_init … PA_init`, `has_FI`); any other
-  per-household column you add to `households_for_abm.csv` is silently discarded
+  per-household column you add to `households_for_abm_sfha.csv` is silently discarded
   before it reaches the simulation.
 - **Unmapped action dropped from outputs.** The output tallies (e.g. `main_mc.py`
   and `utils/` writers) map a fixed set of action strings; an action not in the map
   becomes `NaN` and disappears from summaries, Excel exports, and figures, even if it
   was simulated.
-- **GEOID mismatch dropped silently.** Tracts present in one input but not another
-  (depths file / household file / `owner_share` / `insurance_init`) are dropped with
-  no error. See [DATA_FORMATS.md](DATA_FORMATS.md).
-
 ---
 
 ## 6. Modeling settings that live in code, not config

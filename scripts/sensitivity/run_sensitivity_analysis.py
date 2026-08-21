@@ -68,7 +68,7 @@ def configured_households_path() -> Path:
     """Resolve the active household input selected by the YAML config."""
     cfg = load_yaml()
     raw_path = (cfg.get("files", {}) or {}).get(
-        "households", "config/households_for_abm.csv"
+        "households", "config/households_for_abm_sfha.csv"
     )
     path = Path(raw_path)
     return path if path.is_absolute() else ROOT / path

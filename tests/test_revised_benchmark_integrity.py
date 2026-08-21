@@ -12,12 +12,15 @@ from main import (
     _refresh_sfha_after_relocation,
     _resolve_simulation_seeds,
     sample_event_depths,
+    validate_depth_distribution_alignment,
 )
 from modules.actions.bayes_fast_predictors import build_fast_predictors
 from modules.actions import vuln_for_tp
 from scripts.sensitivity.run_sensitivity_analysis import require_legacy_initial_fi
 from scripts.utilities.generate_household_psych import generate_initial_conditions
 from scripts.utilities.run_mc100_local import (
+    _sha256_files,
+    build_design,
     decision_seed,
     posterior_index,
     validate_benchmark_config,
@@ -72,6 +75,23 @@ def test_depth_distribution_contract_and_deterministic_sampling() -> None:
     first = sample_event_depths(state, 2011, distributions, np.random.RandomState(7))
     second = sample_event_depths(state, 2011, distributions, np.random.RandomState(7))
     pd.testing.assert_frame_equal(first, second)
+
+
+def test_depth_distribution_must_match_mean_depth_hazard() -> None:
+    means = pd.DataFrame(
+        {"year": [2011], "tract_geoid": ["a"], "depth_m": [0.5]}
+    )
+    validate_depth_distribution_alignment(
+        means, {(2011, "a"): np.array([0.0, 1.0])}
+    )
+    with pytest.raises(ValueError, match="different hazards"):
+        validate_depth_distribution_alignment(
+            means, {(2011, "a"): np.array([1.0, 2.0])}
+        )
+    with pytest.raises(ValueError, match="matching tract-year coverage"):
+        validate_depth_distribution_alignment(
+            means, {(2012, "a"): np.array([0.0, 1.0])}
+        )
 
 
 def test_event_depth_override_is_retained(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -198,3 +218,20 @@ def test_mc50_design_is_fixed_and_matches_active_benchmark() -> None:
     assert _resolve_simulation_seeds(90334, None) == (90334, 90334)
     assert _resolve_simulation_seeds(90334, 90001) == (90334, 90001)
     validate_benchmark_config()
+    design = build_design()
+    assert design["fingerprints"]["code"]["n_files"] > 1
+    assert design["fingerprints"]["posterior_models"]["n_files"] >= 5
+    assert set(design["fingerprints"]["inputs"]) >= {
+        "config",
+        "households",
+        "mean_depths",
+        "depth_distributions",
+    }
+
+
+def test_mc_fingerprint_accepts_external_inputs(tmp_path: Path) -> None:
+    external = tmp_path / "custom_depths.csv"
+    external.write_text("year,tract_geoid,depth_values_m\n", encoding="utf-8")
+    result = _sha256_files([external])
+    assert result["n_files"] == 1
+    assert len(result["sha256"]) == 64

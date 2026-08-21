@@ -1,21 +1,21 @@
 {
   "seed": 20260817,
-  "nsi_paths": [
+  "nsi_sources": [
     {
-      "path": "C:\\Users\\wenyu\\WRR_reviewer_response_analysis\\06_sfha_initialization\\raw\\nsi_2022_34_study_bbox.gpkg",
+      "source_id": "USACE National Structure Inventory 2022, New Jersey study-area extract",
       "sha256": "e0ded1985b299ff55d802ddc35409ffd834a471af843c4948f5a4ab2cdcea837"
     }
   ],
-  "sfha_path": {
-    "path": "C:\\Users\\wenyu\\WRR_reviewer_response_analysis\\06_sfha_initialization\\raw\\nj_nfhl_sfha_study_tracts.geojson",
+  "sfha_source": {
+    "source_id": "FEMA National Flood Hazard Layer SFHA study-tract extract",
     "sha256": "9bb2422c77a91ac9c7abf5e3358b2753aaafc2e1cb7ebda4f2a372de6664dfc0"
   },
-  "tract_path": {
-    "path": "C:\\Users\\wenyu\\WRR_reviewer_response_analysis\\06_sfha_initialization\\raw\\study_tracts_svi.gpkg",
+  "tract_source": {
+    "source_id": "27 study census tracts with SVI attributes",
     "sha256": "07ac664f8c171459e8625fd12a0b065c3f7aad6ecf4ad907c2f5d2d9e808d3b1"
   },
   "household_path": {
-    "path": "C:\\Users\\wenyu\\OneDrive - Lehigh University\\Desktop\\Lehigh\\NSF-project\\ABM\\paper\\draft\\mg_sensitivity\\FLOODABM\\config\\households_for_abm_sfha.csv",
+    "path": "config/households_for_abm_sfha.csv",
     "sha256": "e5dea74f58cd290ba2fd669b7cc58ac95d4f2b938a5f16fc6a76a697c67304c7"
   },
   "fi_decision_threshold_intervals": {

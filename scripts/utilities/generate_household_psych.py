@@ -12,15 +12,20 @@ For the SFHA-aware benchmark, the existing inside_SFHA and has_FI columns are
 validated and preserved; this utility never regenerates its FI initialization.
 
 Usage:
-    python generate_household_psych.py [--seed 2025] [--csv path/to/households.csv]
+    python scripts/utilities/generate_household_psych.py [--seed 2025] [--csv path/to/households.csv]
 """
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
 import numpy as np
 import pandas as pd
 import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from modules.actions.tp import (
     BETA_PARAMS_OWNER_DEFAULT,
@@ -93,7 +98,7 @@ def generate_initial_conditions(
     """Read households CSV, add psych + has_FI columns, write back.
 
     Args:
-        csv_path: Path to households_for_abm.csv
+        csv_path: Path to the configured household CSV
         yaml_path: Path to abm_params.yaml (for insurance rates)
         seed: Random seed for reproducibility
         beta_owner: Beta(a,b) params per variable for owners
@@ -172,9 +177,18 @@ def main():
     ap.add_argument("--yaml", type=str, default=None)
     args = ap.parse_args()
 
-    root = Path(__file__).resolve().parent.parent.parent  # project root
-    csv_path = Path(args.csv) if args.csv else root / "config" / "households_for_abm.csv"
+    root = PROJECT_ROOT
     yaml_path = Path(args.yaml) if args.yaml else root / "config" / "abm_params.yaml"
+    if args.csv:
+        csv_path = Path(args.csv)
+    else:
+        cfg = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
+        configured_csv = (cfg.get("files", {}) or {}).get("households")
+        if not configured_csv:
+            raise ValueError(f"files.households is not configured in {yaml_path}")
+        csv_path = Path(configured_csv)
+        if not csv_path.is_absolute():
+            csv_path = root / csv_path
     if not csv_path.exists():
         raise FileNotFoundError(f"CSV not found: {csv_path}")
 

@@ -1,9 +1,10 @@
 # Running FLOODABM beyond 2023 (future-behavior + CAT simulation)
 
 The model is not hardwired to 2011–2023. The simulated years are **derived from
-the flood-depth file** (`utils/_helpers.py:years_from_cfg`), so a future-climate
-run is: supply future flood depths, then select the future years. The behavioral
-model and parameters are reused unchanged.
+the aggregate flood-depth file** (`utils/_helpers.py:years_from_cfg`), so a
+future-climate run is: supply matching aggregate and within-tract depth inputs,
+then select the future years. The behavioral model and parameters are reused
+unchanged.
 
 There is one trap that fails **silently**. Read §1 before running.
 
@@ -28,20 +29,23 @@ There is one trap that fails **silently**. Read §1 before running.
 
 ## 2. Recipe — a 2024–2050 climate run
 
-1. **Build a future depths file.** Same schema as
+1. **Build both future depth inputs.** The aggregate file uses the same schema as
    `config/overall_md_mean_by_tract_2011_2023.json`
    (see [DATA_FORMATS.md](DATA_FORMATS.md#flood-depth-file)): one record per tract,
    with `YY_mean` columns for every future year — `24_mean`, `25_mean`, … `50_mean`
    (years are decoded as `2000 + YY`, so two-digit years cover 2000–2099). Depths in
    meters, from your CAT model under the chosen RCP/SSP pathway. Keep the same
-   `CensusTract` GEOIDs as the household file (see the GEOID-alignment warning in
-   [SCENARIOS.md](SCENARIOS.md#2-injecting-a-climate--cat-flood-scenario-the-flood-depth-file)).
+   `CensusTract` GEOIDs as the household file. Also provide a matching
+   `files.depth_distributions` CSV with `year`, `tract_geoid`, and
+   `depth_values_m` for every tract-year (see the GEOID-alignment warning in
+   [SCENARIOS.md](SCENARIOS.md#2-injecting-a-climate--cat-flood-scenario-the-flood-depth-files)).
    - A starter helper that scales the historical depths into a future file is in
      [`scripts/examples/make_future_depths.py`](../scripts/examples/make_future_depths.py).
 2. **Point the model at it** in `config/abm_params.yaml`:
    ```yaml
    files:
      depths_overall: config/your_future_depths.json
+     depth_distributions: config/your_future_depth_distributions.csv
    ```
 3. **Select the years explicitly** (the safe path):
    ```yaml
@@ -58,7 +62,7 @@ There is one trap that fails **silently**. Read §1 before running.
 
 ## 3. What carries the trajectory into the future
 
-- **Initial state** comes from `config/households_for_abm.csv` (`TP_init`,
+- **Initial state** comes from `config/households_for_abm_sfha.csv` (`TP_init`,
   `has_FI`, `rcv_kUSD`, …). For a true future run that continues from a past run,
   seed the initial state from the last historical year's `states/` output (or set
   the initial columns accordingly).

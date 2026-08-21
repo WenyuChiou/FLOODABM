@@ -29,7 +29,7 @@ One-time data generation, export, and analysis scripts. Run as needed.
 
 | Script | Purpose |
 |--------|---------|
-| `generate_household_psych.py` | Generate household psychometric parameters for `config/households_for_abm.csv` |
+| `generate_household_psych.py` | Generate household psychometric parameters for the household file configured by `files.households` |
 | `export_arcgis_excel.py` | Export tract-level data to Excel for ArcGIS Pro |
 | `generate_tract_summary_excel.py` | Create comprehensive tract summary table |
 | `gen_zscore_validation.py` | Generate z-score validation figure (internal) |

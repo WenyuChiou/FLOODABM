@@ -18,14 +18,14 @@ Changing these without recalibrating silently invalidates the published results.
 | Psychology Beta shapes (`beta_parameters`) | Phase-1 survey fit (N = 557 owner / 379 renter) | Population property. **See the warning below — the YAML block is not the live source.** |
 | `tp_decay_params` (per-tenure α, β, tau0, tau_inf, k) | Phase-3 grid search | Empirical threat-perception decay (shipped truth: owner `tau_inf=33.2589`, renter `46.0431`) |
 | `finance` premium rates, `reserve` (1.15), `owner_contents_ratio` (0.57) | NFIP actuarial | Rescale every premium, affordability, and CAT damage result |
-| `insurance_init.take_rate_by_tract_group` | Empirical NFIP penetration | Sets initial insurance; **also acts as the de-facto flood-prone classifier** (some plots key off the literal `owner == 0.25` value), so editing it can relabel headline figures |
+| Preassigned `inside_SFHA` and `has_FI` in `households_for_abm_sfha.csv`; `sfha_shares.csv` | NSI-SFHA overlay and literature-informed initial FI rates | Defines the published agent initialization and must remain fixed for reproduction |
 | `owner_share` | ACS tenure split | Sets the owner/renter agent counts per tract |
 | `flood.FFE_ft` (1.0), `files.*` | Data bindings / first-floor-elevation assumption | Calibration constants |
 
 > **`beta_parameters` is effectively dead config.** The live psychology Beta
 > shapes are in `modules/actions/tp.py` (`BETA_PARAMS_OWNER_DEFAULT` /
 > `BETA_PARAMS_RENTER_DEFAULT`), and the per-household initial values are already
-> baked into `config/households_for_abm.csv`. Editing the `beta_parameters` YAML
+> baked into `config/households_for_abm_sfha.csv`. Editing the `beta_parameters` YAML
 > block alone will **not** change a run. To change the psychology distribution you
 > must edit `tp.py` and regenerate the household file (see §3).
 
@@ -46,8 +46,8 @@ recalibration.
 | `draw_bounds` (FI/EH/BP/RL), `decision_threshold` | YAML / `--decision-threshold` | Adoption acceptance window / stochasticity |
 | `policy` (deductibles, limits, coinsurance) | YAML | The insurance design you sweep |
 | `action_dynamics` toggles, `eh_*` elevation policy | YAML | Which actions are active / elevation rules |
-| `hazard.*` method choices | YAML | Hazard-to-damage method options |
-| `seed`, `insurance_init.seed` | YAML | New Monte Carlo realization (distribution preserved) |
+| `files.depths_overall`, `files.depth_distributions` | YAML | A matched alternative flood hazard for a scenario analysis |
+| Action-decision seed and Bayesian posterior draw | `scripts/utilities/run_mc100_local.py` | Formal 50-draw ensemble; initialization and flood-depth seed remain fixed |
 | `years` | YAML | Simulated years — **only with matching depth columns** ([FUTURE_SIMULATION.md](FUTURE_SIMULATION.md)) |
 
 ## 3. Reuse vs recalibrate
@@ -62,7 +62,7 @@ region/basin, population demographics, or survey instrument. Three plug-in tiers
 1. **Own numbers, no rerun.** Overwrite `tp_decay_params` in the YAML and drop
    replacement `.npz` model files into `models/baseline/` (and `models/baseline_fast/`).
    For the psychology Beta shapes, edit `modules/actions/tp.py`
-   (`BETA_PARAMS_*_DEFAULT`) and regenerate `config/households_for_abm.csv` via
+   (`BETA_PARAMS_*_DEFAULT`) and regenerate `config/households_for_abm_sfha.csv` via
    `scripts/utilities/generate_household_psych.py` — editing the YAML alone does
    nothing (§1).
 2. **Own survey, reuse Phase 2/3.** Build `data.xlsx` (sheets `owner_variable` /

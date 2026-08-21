@@ -1,7 +1,8 @@
 # Input data formats
 
 To run FLOODABM on a new hazard scenario, future years, or a new study area, you
-replace one or both of these inputs. All paths are set in `config/abm_params.yaml`.
+replace the hazard inputs and, when needed, the household input. All paths are set
+in `config/abm_params.yaml`.
 
 ## Flood-depth file
 
@@ -35,10 +36,20 @@ Set by `files.depths_overall` in `config/abm_params.yaml`. Shipped example:
 A CSV with columns `tract_geoid, year, depth_m` is also accepted by the legacy
 loader path; the JSON wide format above is the canonical, tested one.
 
+## Flood-depth distribution file
+
+Set by `files.depth_distributions` in `config/abm_params.yaml`. This CSV supplies
+the within-tract grid-cell depths sampled by household agents. It contains one row
+per tract-year with columns `year`, `tract_geoid`, and `depth_values_m`; the last
+field is a JSON array of nonnegative depths in meters.
+
+Every custom hazard scenario must provide both `files.depths_overall` and
+`files.depth_distributions`, with matching census-tract GEOIDs and year coverage.
+
 ## Household file
 
 Set by the household-inventory path in `config/abm_params.yaml`. Shipped:
-`config/households_for_abm.csv`. One row per household agent.
+`config/households_for_abm_sfha.csv`. One row per household agent.
 
 | Column | Type | Units / range | Meaning |
 |---|---|---|---|
@@ -61,17 +72,18 @@ Set by the household-inventory path in `config/abm_params.yaml`. Shipped:
 For a continued future run, seed these from the last historical year's `states/`
 output (see [FUTURE_SIMULATION.md](FUTURE_SIMULATION.md)).
 
-## GEOID alignment (required, unchecked)
+## GEOID alignment
 
 The census-tract GEOIDs must be consistent across **all** of:
 
 - the depths file (`CensusTract`),
-- `config/households_for_abm.csv` (`tract_geoid`),
-- `owner_share` and `insurance_init.take_rate_by_tract_group` in `config/abm_params.yaml`.
+- the depth-distribution file (`tract_geoid`),
+- `config/households_for_abm_sfha.csv` (`tract_geoid`),
+- `config/sfha_shares.csv` and the preassigned `inside_SFHA` and `has_FI` columns.
 
-Tracts that appear in one input but not another are **silently dropped** — the
-model does not raise an error. When swapping in a new study area or scenario,
-verify the tract sets match before trusting the results.
+The model checks that the two flood-depth inputs have identical tract-year
+coverage and consistent tract means. A mismatch stops the run before simulation.
+Household GEOIDs should still be checked before any new-area run.
 
 ## See also
 - [SCENARIOS.md](SCENARIOS.md) · [FUTURE_SIMULATION.md](FUTURE_SIMULATION.md) · [PARAMETERS.md](PARAMETERS.md)

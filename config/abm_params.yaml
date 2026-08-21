@@ -12,7 +12,7 @@ action_dynamics:
 # DEAD CONFIG (verified 2026-06): this entire `beta_parameters` block is NOT read
 # at runtime. The live initial-psychology Beta shapes are hardcoded in
 # modules/actions/tp.py (BETA_PARAMS_OWNER_DEFAULT / BETA_PARAMS_RENTER_DEFAULT)
-# and the per-household draws are pre-baked into config/households_for_abm.csv.
+# and the per-household draws are pre-baked into config/households_for_abm_sfha.csv.
 # Editing the values below has NO effect on a run — see docs/PARAMETERS.md.
 beta_parameters:
   CP_mean:
@@ -66,6 +66,7 @@ beta_parameters:
     - 0.0
     - 1.0
 files:
+  depth_distributions: config/depth_distribution_by_tract_year.csv
   depths_overall: config/overall_md_mean_by_tract_2011_2023.json
   flood_events: vulnerability/data/flood_events.csv
   grid_depths_yaml: config/grid_depths_hist.yaml  # DEAD CONFIG: no live consumer (depths load from depths_overall)
@@ -96,7 +97,8 @@ flood:
   ratio_threshold_owner: 0.10
   ratio_threshold_renter: 0.10
 # DEAD CONFIG (verified 2026-06): the entire `hazard` block has no live consumer.
-# Flood depths are loaded from files.depths_overall, not via these keys.
+# Flood depths are loaded from files.depths_overall and files.depth_distributions,
+# not via these keys.
 hazard:
   depths_mode: grid_hist
   grid_hist:

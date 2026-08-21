@@ -141,7 +141,7 @@ from utils.finalize import finalize_and_plot
 
 
 def load_depth_distributions(path: Path) -> dict[tuple[int, str], np.ndarray]:
-    """Load PRB tract-year cell-depth distributions in meters."""
+    """Load tract-year grid-cell depth distributions in meters."""
     frame = pd.read_csv(path, dtype={"tract_geoid": str})
     required = {"year", "tract_geoid", "depth_values_m"}
     missing = sorted(required - set(frame.columns))
@@ -151,9 +151,39 @@ def load_depth_distributions(path: Path) -> dict[tuple[int, str], np.ndarray]:
     for row in frame.itertuples(index=False):
         values = np.asarray(json.loads(row.depth_values_m), dtype=float)
         if len(values) == 0 or not np.isfinite(values).all() or (values < 0).any():
-            raise ValueError(f"Invalid PRB depth distribution for {row.tract_geoid}-{row.year}")
+            raise ValueError(f"Invalid depth distribution for {row.tract_geoid}-{row.year}")
         out[(int(row.year), str(row.tract_geoid))] = values
     return out
+
+
+def validate_depth_distribution_alignment(
+    depths_long: pd.DataFrame,
+    distributions: dict[tuple[int, str], np.ndarray],
+    *,
+    mean_tolerance_m: float = 0.05,
+) -> None:
+    """Require the tract means and grid-cell distributions to describe one hazard."""
+    expected = {
+        (int(row.year), str(row.tract_geoid)): float(row.depth_m)
+        for row in depths_long.itertuples(index=False)
+    }
+    if set(distributions) != set(expected):
+        missing = sorted(set(expected) - set(distributions))[:5]
+        extra = sorted(set(distributions) - set(expected))[:5]
+        raise ValueError(
+            "files.depths_overall and files.depth_distributions must have matching "
+            f"tract-year coverage; missing={missing}, extra={extra}"
+        )
+    mismatched = [
+        (year, tract, expected[(year, tract)], float(values.mean()))
+        for (year, tract), values in distributions.items()
+        if abs(float(values.mean()) - expected[(year, tract)]) > mean_tolerance_m
+    ]
+    if mismatched:
+        raise ValueError(
+            "files.depths_overall and files.depth_distributions describe different "
+            f"hazards; mean-depth mismatch exceeds {mean_tolerance_m} m: {mismatched[:5]}"
+        )
 
 
 def sample_event_depths(
@@ -414,12 +444,20 @@ def run_single_scenario(
     # Resolve paths relative to actions directory or absolute from YAML
     FILES = CFG.get("files", {}) or {}
     PATH_DEPTHS = resolve_path(ACTIONS_DIR, FILES.get("depths_overall"), MODULES_ROOT)
+    PATH_DEPTH_DISTRIBUTIONS = resolve_path(
+        ACTIONS_DIR, FILES.get("depth_distributions"), MODULES_ROOT
+    )
     PATH_EVENTS = resolve_path(ACTIONS_DIR, FILES.get("flood_events"), MODULES_ROOT)
     PATH_HOUSEHOLDS = resolve_path(ACTIONS_DIR, FILES.get("households"), MODULES_ROOT)
     if not PATH_HOUSEHOLDS or not PATH_HOUSEHOLDS.exists():
         raise FileNotFoundError("Households exposure DB is required. Set files.households (CSV) in YAML.")
     if not PATH_DEPTHS or not PATH_DEPTHS.exists():
         raise FileNotFoundError("Depths file is required. Set files.depths_overall in YAML (JSON/CSV supported).")
+    if not PATH_DEPTH_DISTRIBUTIONS or not PATH_DEPTH_DISTRIBUTIONS.exists():
+        raise FileNotFoundError(
+            "Grid-cell depth distributions are required. Set files.depth_distributions "
+            "in YAML to the matching tract-year CSV."
+        )
     print(f"[info] Using households CSV: {PATH_HOUSEHOLDS}")
     print(f"[info] Using depths file:   {PATH_DEPTHS}")
 
@@ -503,13 +541,9 @@ def run_single_scenario(
     # =========================================================================
     # Load flood depth data (long format: tract × year × depth_m)
     DEPTHS_LONG = load_depths_legacy(PATH_DEPTHS)
-    DEPTH_DISTRIBUTION_PATH = CONFIG_DIR / "depth_distribution_by_tract_year.csv"
-    if not DEPTH_DISTRIBUTION_PATH.is_file():
-        raise FileNotFoundError(
-            "The SFHA-aware baseline requires config/depth_distribution_by_tract_year.csv"
-        )
-    DEPTH_DISTRIBUTIONS = load_depth_distributions(DEPTH_DISTRIBUTION_PATH)
-    print(f"[info] Using PRB depth distributions: {len(DEPTH_DISTRIBUTIONS)} tract-years")
+    DEPTH_DISTRIBUTIONS = load_depth_distributions(PATH_DEPTH_DISTRIBUTIONS)
+    validate_depth_distribution_alignment(DEPTHS_LONG, DEPTH_DISTRIBUTIONS)
+    print(f"[info] Using depth distributions: {len(DEPTH_DISTRIBUTIONS)} tract-years")
     YEARS = years_from_cfg(CFG, DEPTHS_LONG["year"].unique(), PATH_EVENTS)
     if args.years:
         YEARS = sorted(YEARS)[:args.years]

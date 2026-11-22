@@ -159,7 +159,7 @@ scenarios with the fixed revised design. See the [reproduction guide](docs/REPRO
 
 ## Outputs
 
-Results are saved under `outputs/<scenario>/`:
+By default, results are saved under `outputs/<model>/<scenario>/`:
 
 | Directory | Contents |
 |-----------|----------|

@@ -1,18 +1,23 @@
 # Checking reproduced WRR figures
 
 The figure reference uses the final high-resolution reviewer-revision PNGs, not
-the copies embedded in Word. Render or export figures at the same resolution
-and name them `Figure_01.png` through `Figure_11.png`. To compare them:
+the copies embedded in Word. The clone-only result plots are Figures 5–9 and
+11 and Supporting Figures S4–S6. The standard workflow skips maps and
+manuscript illustrations. The archive sections document optional checks for
+previously produced material, including Figure 4's map and hydrograph panels.
+
+Use the direct render instructions below. To verify the six main result plots
+at the same resolution and with their original figure numbers:
 
 ```sh
-python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-rendered
+python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-rendered --figures 5 6 7 8 9 11
 ```
 
 The checker accepts only static PNGs. It compares their decoded RGBA pixels and
 dimensions, ignoring lossless encoding differences, color profiles, and other
-metadata. By default it requires every figure. To check a subset, add
-`--figures 6 7 11`. This command does not regenerate figures. Matching pixels
-do not establish the provenance of the candidate image.
+metadata. By default it requires every main figure. Keep the explicit selection
+when checking just the result plots. This command verifies existing images;
+matching pixels do not establish their provenance.
 
 Use the direct PNG routes below for new runs. They do not write PDF files.
 The optional historical PDF replay reads existing archive components only;
@@ -112,14 +117,14 @@ Use Python 3.14.0, Pillow 12.0.0 (pinned in `requirements-benchmark.txt`), and
 the installed Windows Arial regular and bold fonts.
 
 ```sh
-python scripts/utilities/render_wrr_supporting_raster.py --components ../wrr-raster-components --figure-dir ../wrr-rendered
+python scripts/utilities/render_wrr_supporting_raster.py --components ../wrr-raster-components --figure-dir ../wrr-rendered --figures 1
 ```
 
-The command redraws only the approved label regions and checks that all three
-PNGs match the final standalone supporting exports exactly. It preserves the
-prior bootstrap curves and flood maps. It does not recompute the calibration
-intervals or simulate flood depths, and it does not recreate Word's embedded
-JPEG for S3. Use `--figures 2 3` to redraw only S2 and S3.
+The command redraws only the approved label regions and checks the S1 PNG
+against the final standalone supporting export. It preserves the prior
+bootstrap curves; it does not recompute the calibration intervals. For an
+optional archive check, `--figures 2 3` replays the corresponding map edits.
+It does not simulate flood depths or recreate Word's embedded JPEG for S3.
 
 Rebuilding these figures from their scientific inputs would require additional
 sources. This checkout does not include the matching inputs and plotting
@@ -161,8 +166,9 @@ python scripts/utilities/render_wrr_supporting_raster.py --main-map 10 --compone
 
 The renderer checks the archived source, trims the full page, and adds the
 94-pixel border to reproduce the accepted `Figure_10.png` exactly. The
-[main figure checker](#checking-reproduced-wrr-figures) also accepts that PNG
-by its decoded pixels. This replay starts from the archived GIS map export;
+[main figure checker](#checking-reproduced-wrr-figures) accepts that PNG
+by its decoded pixels when run with `--figures 10`. This replay starts from
+the archived GIS map export;
 the [map data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps)
 verifies the underlying insurance data separately.
 
@@ -288,7 +294,8 @@ render with the online basemap turned off and the other layers unchanged.
 The [Esri World Topographic Map style](https://r.esri.com/arcgisutils/reference/arc_portal_urls.html)
 is an online dependency of the detail frame. The live ArcGIS re-export does not
 match the revised PNG. For exact image verification, supply the archived revised
-`Figure_01.png` to the [figure checker](#checking-reproduced-wrr-figures).
+`Figure_01.png` to the [figure checker](#checking-reproduced-wrr-figures)
+with `--figures 1`.
 
 ## Final revision sources and current reproduction coverage
 

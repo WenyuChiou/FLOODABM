@@ -184,8 +184,10 @@ python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-png --figures
 
 Figure 9 and Supporting Figures S4–S6 also redraw from bundled results in
 their separate pinned environment. The [figure guide](docs/WRR_FIGURE_CHECKS.md)
-distinguishes these clone-only commands from the figures that still require
-separately archived source material. The figure commands write PNGs only.
+lists the PNG-only commands and distinguishes these plots from archive checks.
+The standard workflow does not regenerate maps or manuscript illustrations
+and requires no GIS software. The simulation still uses the bundled tract
+flood depths and special flood hazard area (SFHA) shares.
 Use the [benchmark instructions](docs/REPRODUCIBILITY.md) to rerun the underlying simulations.
 
 > Note: the formal Monte Carlo driver requires `--out-root` to point outside the repository. Across the 50 runs, it varies the action-decision seed and Bayesian posterior draw while keeping the SFHA assignment, initial FI status, household attributes, flood sequence, and flood-depth sampling seed fixed. The posterior `.npz` files are stored in `models/baseline/`; single runs use the posterior-mean cache in `models/baseline_fast/`.

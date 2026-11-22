@@ -69,9 +69,24 @@ for the bundled route.
 ## Redraw adoption and threat-perception trajectories
 
 Follow the [PNG commands](WRR_FIGURE_CHECKS.md#render-from-the-bundled-data)
-to redraw Figures 8 and 9 from the bundled aggregate series. This verifies
-the figures against the saved results; this distribution does not include a
-command to rebuild those aggregates from individual household decisions.
+to redraw Figures 8 and 9 from the bundled aggregate series. Figure 8 uses
+the saved series. To recompute Figure 9 from the complete ensemble above
+and verify the PNG, use new series and image directories. Run each command
+only after the previous one succeeds:
+
+```sh
+python scripts/utilities/rebuild_wrr_tp_series.py --mc-root ../wrr-ensemble --out-dir ../wrr-tp
+conda run -n wrr-figure9 python scripts/utilities/render_wrr_figures.py --series-dir ../wrr-tp --figure-dir ../wrr-tp-png --figures 9
+python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-tp-png --figures 9
+```
+
+For each draw and year, the rebuild weights each tract's post-action threat
+perception by the household counts in that year's decision file, separately
+by tenure and flood-prone status. It then takes the median and quartiles
+across draws. The revised series uses 49 valid draws for renters in
+flood-prone tracts in 2023 (draw 37 has a missing value), and 50 elsewhere.
+The rebuild checks all 52 rows against the bundled Figure 9 series before
+writing the CSV.
 
 ## Recompute the data for the spatial maps
 

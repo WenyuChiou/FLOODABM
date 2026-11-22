@@ -156,6 +156,35 @@ by its decoded pixels. This replay starts from the archived GIS map export;
 the [map data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps)
 verifies the underlying insurance data separately.
 
+### Both spatial maps from public GIS data
+
+Use this route if you have the two verified layout-only `.pagx` files. They
+are not bundled in this checkout. The command needs their approved bytes
+(names may differ), the two CSVs rebuilt by the
+[spatial data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps),
+and a licensed ArcGIS Pro Python environment. The verified setup uses Windows,
+ArcGIS Pro 3.2, and separate Python 3.14.0 with
+`requirements-sfha-areas.txt` and Pillow 12.0.0. Use the blank project provided
+by ArcGIS Pro 3.2 at `Resources/ArcToolBox/Services/routingservices/data/Blank.aprx`
+within its installation. The command verifies that exact stock template and
+checks the ArcGIS Pro 3.2 / Python 3.9 worker versions before opening a project.
+
+```sh
+python scripts/utilities/render_wrr_public_maps.py --series-dir ../wrr-spatial-data --figure10-layout /path/to/Figure10.pagx --s7-layout /path/to/FigureS7.pagx --arcgis-python /path/to/ArcGIS/python.exe --blank-project /path/to/Blank.aprx --output-dir ../wrr-spatial-png
+```
+
+The command rebuilds the tract, river and marker layers from public FEMA and
+2022 Census TIGER/Line sources without opening the archived study geodatabase
+or projects. It writes `Figure_10.png` and `FigS07_population_change.png` only
+after all 324 plotted values and both revised PNG hashes match. The output
+directory must be new; no PDF or GIS workspace is retained there.
+
+To use a prepared offline cache, pass `--public-source-dir` containing
+`fema_tracts.geojson`, `tl_2022_34_tract.zip`, and the
+`tl_2022_<county>_<type>.zip` files for `34013`, `34027`, and `34031`,
+with type `areawater` and `linearwater`. Both the online and cache routes
+verify the revision's source identities.
+
 ### Main Figure 10 from the editable ArcGIS project
 
 If you have the study archive's `Sources/maps/Figure10/Figure10_ready.aprx`
@@ -256,8 +285,10 @@ finance series from simulation CSVs.
 The [simulation benchmark](REPRODUCIBILITY.md) and this image check are
 separate. A clone contains the simulation inputs, figure reference checksums,
 and the sources needed to redraw Figures 5–9 and 11. Figures 1, 4, 10 and S7
-require separately archived materials for the checks described above. The
-native GIS and hydrologic modeling projects are not included in the clone.
+require separately supplied materials for the checks described above. The
+public GIS route for Figures 10 and S7 needs only their layout files, rebuilt
+series, and public GIS inputs. The layouts, native GIS projects, and
+hydrologic modeling projects are not included in the clone.
 
 The same spatial builder reconstructs the six percentage-change fields
 plotted in Supporting Figure S7. The original GIS inputs contain ancillary

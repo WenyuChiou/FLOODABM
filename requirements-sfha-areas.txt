@@ -1,0 +1,8 @@
+# Optional Windows x64 CPython 3.14.0 environment for the archived SFHA overlay.
+# These packages are not needed to run the published simulation.
+numpy==2.4.2
+pandas==2.3.3
+geopandas==1.1.2
+pyogrio==0.12.1
+shapely==2.1.2
+pyproj==3.7.2

@@ -60,6 +60,7 @@ def build(
     *,
     sfha_seed: int = SFHA_ASSIGNMENT_SEED,
     initial_fi_seed: int = INITIAL_FI_SEED,
+    replay: bool = False,
 ) -> dict:
     households_path = households_path.resolve()
     area_shares_path = area_shares_path.resolve()
@@ -71,9 +72,16 @@ def build(
         raise FileExistsError(f"Refusing to overwrite existing directory: {output_dir}")
     output_dir.mkdir(parents=True)
 
-    households = pd.read_csv(households_path, dtype={"tract_geoid": "string"})
+    if replay:
+        # Keep the published numeric text of the base attributes unchanged.
+        # The existing SFHA and FI columns are replaced by seeded assignments.
+        households = pd.read_csv(households_path, dtype=str, keep_default_na=False)
+    else:
+        households = pd.read_csv(households_path, dtype={"tract_geoid": "string"})
     shares = pd.read_csv(area_shares_path, dtype={"tract_geoid": "string"})
     required_household = {"i", "tract_geoid", "group", "has_FI"}
+    if replay:
+        required_household.update({"sfha_share", "inside_SFHA"})
     required_share = {"tract_geoid", "tract_area_m2", "sfha_area_m2", "sfha_area_share"}
     if missing := required_household - set(households.columns):
         raise ValueError(f"Household file missing columns: {sorted(missing)}")
@@ -159,7 +167,7 @@ def build(
     pd.DataFrame(fi_summary).to_csv(fi_output, index=False)
 
     manifest = {
-        "schema_version": "2.0",
+        "schema_version": "2.1",
         "design": "tract SFHA area share applied equally to homeowners and renters",
         "sfha_assignment_method": (
             "inside_SFHA = 1 when the stable uniform draw for tract|group|agent-ID "
@@ -171,6 +179,7 @@ def build(
             f"{group}|inside_SFHA={inside}": rate
             for (group, inside), rate in INITIAL_FI_RATES.items()
         },
+        "household_input_mode": "replay" if replay else "unassigned",
         "source_households": source_record(households_path),
         "source_area_shares": source_record(area_shares_path),
         "outputs": {
@@ -196,6 +205,10 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--sfha-seed", type=int, default=SFHA_ASSIGNMENT_SEED)
     parser.add_argument("--initial-fi-seed", type=int, default=INITIAL_FI_SEED)
+    parser.add_argument(
+        "--replay", action="store_true",
+        help="Recalculate the assignments from the published household CSV without changing its base attributes.",
+    )
     args = parser.parse_args()
     build(
         args.households,
@@ -203,6 +216,7 @@ def main() -> None:
         args.output_dir,
         sfha_seed=args.sfha_seed,
         initial_fi_seed=args.initial_fi_seed,
+        replay=args.replay,
     )
 
 

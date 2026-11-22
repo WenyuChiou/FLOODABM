@@ -1,1 +1,5 @@
 config/households_for_abm_sfha.csv text eol=lf
+data/supplementary/Table_S_MC_variance.csv text eol=lf
+data/figures/FigureS4_action_threshold_intervals.csv text eol=lf
+data/figures/FigureS5_gul_ratio_threshold.csv text eol=lf
+data/figures/FigureS6_flood_event_sequence.csv text eol=lf

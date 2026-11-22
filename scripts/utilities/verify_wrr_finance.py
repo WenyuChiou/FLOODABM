@@ -21,13 +21,18 @@ def finance_digest(output: Path, run_id: int, scenario: str) -> str:
     return digest.hexdigest()
 
 
-def verify(output: Path, reference: Path, start: int, end: int) -> int:
+def reference_hashes(reference: Path) -> dict[tuple[int, str], str]:
     with reference.open(encoding="utf-8", newline="") as stream:
         rows = list(csv.DictReader(stream))
     expected = {(int(r["run_id"]), r["scenario"]): r["finance_sha256"] for r in rows}
     keys = {(i, scenario) for i in range(1, N_RUNS + 1) for scenario in SCENARIOS}
     if len(rows) != len(keys) or expected.keys() != keys:
         raise ValueError("Reference must contain each run and scenario exactly once")
+    return expected
+
+
+def verify(output: Path, reference: Path, start: int, end: int) -> int:
+    expected = reference_hashes(reference)
     checked = 0
     for run_id in range(start, end + 1):
         for scenario in SCENARIOS:

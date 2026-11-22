@@ -7,6 +7,8 @@ cache/
 
 # Published supplementary data (cited in the Supporting Information)
 !data/supplementary/
+!data/figures/
+data/figures/*
 
 # Keep folder markers
 !outputs/.gitkeep
@@ -49,31 +51,42 @@ Thumbs.db
 
 # Large data files
 *.csv
-!config/households_for_abm.csv
 !config/sfha_area_share_by_tract.csv
 !config/initial_fi_summary.csv
 !data/supplementary/*.csv
+!data/figures/Figure8_adaptation_trajectories.csv
+!data/figures/Figure11_income_aep.csv
+!data/figures/Figure5_metrics_corrected_county_labels.csv
+!data/figures/Figure5_nfip_validation_corrected_county_labels.csv
+!data/figures/Figure6_cumulative_loss.csv
+!data/figures/Figure6_annual_finance.csv
+!data/figures/Figure7_aep.csv
+!data/figures/Figure9_tp_by_prone.csv
+!data/figures/FigureS4_action_threshold_intervals.csv
+!data/figures/FigureS5_gul_ratio_threshold.csv
+!data/figures/FigureS6_flood_event_sequence.csv
 *.parquet
 *.pkl
 *.h5
 *.feather
 
-# Calibration pipeline: allow code and model weights; ignore regenerable outputs
+# Calibration provenance and fitted models; ignore local outputs and survey inputs
 !calibration/
 !calibration/**
 # Local survey workbooks are optional calibration inputs, not benchmark inputs.
 calibration/data/*.xls*
-# phase1 outputs (regenerable via plot_action_distributions.py + generate_report.py)
+# Historical Phase 1 outputs (not distributed)
 calibration/phase1_tenure_distributions/*.png
 calibration/phase1_tenure_distributions/*.csv
 calibration/phase1_tenure_distributions/*.docx
-# phase2 outputs (regenerable via bayesian_engine); keep models/*.npz
+# Local Phase 2 outputs; the shipped posteriors are in models/baseline/
+calibration/phase2_bayesian_regression/models/*.npz
 calibration/phase2_bayesian_regression/*.png
 calibration/phase2_bayesian_regression/*.xlsx
 calibration/phase2_bayesian_regression/owner_group/**/*.xlsx
 calibration/phase2_bayesian_regression/renter_group/**/*.xlsx
 # phase3 outputs (regenerable via run_calibration.py + core/visualizer.py)
-# keep: tp_decay_params_for_abm.json (ABM needs it)
+# Keep tp_decay_params_for_abm.json as calibration provenance.
 calibration/phase3_tp_decay/outputs/*.png
 calibration/phase3_tp_decay/outputs/*.xlsx
 calibration/phase3_tp_decay/outputs/*.csv

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Tuple, Dict, Any, Iterable
+from typing import Any
 import yaml
 import numpy as np
 import pandas as pd
@@ -25,41 +25,18 @@ def resolve_path(base: Path, rel_or_abs: str | None, modules_root: Path) -> Path
             return cand
     return Path(rel_or_abs)
 
-# ---------- inline owner_share / policy ----------
-def load_inline_owner_share_policy(cfg: dict) -> Tuple[Dict[str,float], Dict[str,Any]]:
-    """Load owner share by tract and policy config from YAML.
-
-    Supports both 'owner_share' (new) and 'mg_share' (legacy) keys.
-    """
-    policy = cfg.get("policy") or {}
-    raw = cfg.get("owner_share") or cfg.get("mg_share")
-    if not raw:
-        raise FileNotFoundError("Inline 'owner_share' not found in YAML. Add owner_share: {tract_geoid: share}.")
-    if isinstance(raw, dict):
-        shares = {str(k): float(v) for k, v in raw.items()}
-    elif isinstance(raw, list):
-        tmp = {}
-        for row in raw:
-            if not isinstance(row, dict):
-                continue
-            t = row.get("tract_geoid") or row.get("tract") or row.get("geoid")
-            s = row.get("share") or row.get("owner_share") or row.get("mg_share")
-            if t is not None and s is not None:
-                tmp[str(t)] = float(s)
-        shares = tmp
-    else:
-        raise ValueError("Unsupported owner_share format in YAML.")
-    if not policy:
-        policy = {
-            "limit_structure_kUSD": 250.0,
-            "deductible_structure_kUSD": 1.0,
-            "limit_contents_kUSD": 100.0,
-            "deductible_contents_kUSD": 1.0,
-            "owner":  {"deductible_structure_kUSD": 1.0},
-            "renter": {"deductible_contents_kUSD": 1.0},
-            "coinsurance": {"enabled": False, "rate": 0.8},
-        }
-    return shares, policy
+# ---------- insurance policy ----------
+def load_insurance_policy(cfg: dict) -> dict:
+    """Read insurance terms; household tenure comes from the household CSV."""
+    return cfg.get("policy") or {
+        "limit_structure_kUSD": 250.0,
+        "deductible_structure_kUSD": 1.0,
+        "limit_contents_kUSD": 100.0,
+        "deductible_contents_kUSD": 1.0,
+        "owner": {"deductible_structure_kUSD": 1.0},
+        "renter": {"deductible_contents_kUSD": 1.0},
+        "coinsurance": {"enabled": False, "rate": 0.8},
+    }
 
 
 # ---------- finance (read-only; all from YAML) ----------

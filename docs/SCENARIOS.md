@@ -11,8 +11,8 @@ scenarios**. No model code changes are required.
 
 ## 1. What `--scenario baseline | worst` actually means
 
-`--scenario` is **not** a hazard switch. It toggles household adaptation
-(`core/cli.py`, `choices=["baseline", "worst"]`):
+In `main.py`, `--scenario` toggles household adaptation. The flood inputs are
+configured separately:
 
 | `--scenario` | Meaning |
 |---|---|
@@ -51,7 +51,7 @@ To run your own hazard scenario:
    ```bash
    python main.py --scenario baseline --no-plots --output-mode full
    ```
-   Outputs land under `outputs/baseline/` (`decisions/`, `finance/`,
+   With the default model, outputs land under `outputs/baseline/baseline/` (`decisions/`, `finance/`,
    `vulnerability/`, `states/`).
 
 That is the entire hazard-scenario mechanism. The same Bayesian behavioral model
@@ -81,10 +81,20 @@ Besides the hazard, these are designed, intentional knobs:
 | Adoption stochasticity | `--decision-threshold` (and `draw_bounds` in YAML) | Adoption acceptance window |
 | Monte Carlo ensemble | `scripts/utilities/run_mc100_local.py` | Varies the action-decision seed and Bayesian posterior draw while keeping initialization and the flood-depth seed fixed |
 
-The sensitivity-analysis scripts under `scripts/sensitivity/` are the canonical
-list of parameters the study treats as designed knobs. For the full
-calibrated-vs-tunable map (what is safe to change vs what would invalidate the
-calibration), see [PARAMETERS.md](PARAMETERS.md).
+For example, run the adaptation scenario with a GUL ratio threshold of 0.20
+for both household groups and a separate output directory:
+
+```sh
+python main.py --scenario baseline --thr-owner 0.20 --thr-renter 0.20 --deterministic --no-plots --output-mode summary --out-root ../floodabm-custom-threshold-020
+```
+
+These overrides apply to this run and leave the benchmark input files
+unchanged. This example is a new scenario, not a reproduction of a published
+sensitivity case. For the revised paper's paired analyses, follow the
+[threshold](REPRODUCIBILITY.md#recompute-the-threshold-sensitivity-series-figures-s4-and-s5)
+and [flood-sequence](REPRODUCIBILITY.md#recompute-the-flood-sequence-sensitivity-series-figure-s6)
+reconstruction guides. See [PARAMETERS.md](PARAMETERS.md) for which changes
+require recalibration.
 
 ## See also
 - [FUTURE_SIMULATION.md](FUTURE_SIMULATION.md) — running beyond 2023 (read the warning)

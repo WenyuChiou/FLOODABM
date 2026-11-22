@@ -7,20 +7,15 @@ This is the primary entry point for running FLOODABM simulations.
 
 QUICK START
 -----------
-    # Run baseline scenario with optimized models
-    python main.py --model-dir models_optimized --output-mode full
+    # Run with adaptation using the shipped models
+    python main.py --scenario baseline --no-plots --output-mode full
 
-    # Run worst-case (no adaptation) scenario for comparison
-    python main.py --scenario worst --model-dir models_optimized --output-mode full
-
-    # Run both then analyze
-    python analyze_themes.py
+    # Run without adaptation for comparison
+    python main.py --scenario worst --no-plots --output-mode full
 
 CLI ARGUMENTS
 -------------
-    --model-dir     : Model directory (default: 'models')
-                      Auto-detects all 'models*' directories in modules/actions/
-                      Available options shown in --help output
+    --model-dir     : Model registry key (default: baseline; see --list-models)
     
     --scenario      : Simulation scenario (default: 'baseline')
                       'baseline' = Normal simulation with agent decisions
@@ -32,8 +27,8 @@ CLI ARGUMENTS
                       'minimal' = Essential only (~10MB)
     
     --out-root      : Custom output directory (default: outputs/)
-    --thr-owner     : Override owner flood ratio threshold (default: 0.5)
-    --thr-renter    : Override renter flood ratio threshold (default: 0.5)
+    --thr-owner     : Override the owner flood ratio threshold from YAML
+    --thr-renter    : Override the renter flood ratio threshold from YAML
     --no-plots      : Skip all visualization generation
     --deterministic : Use fixed RNG each year for reproducibility
 
@@ -68,8 +63,8 @@ depth_distribution_by_tract_year.csv:
     calibrated input for tract-level TP shock and flood-prone classification.
 
 flood:
-    ratio_threshold_owner  : Flood ratio trigger for owner group (default: 0.5)
-    ratio_threshold_renter : Flood ratio trigger for renter group (default: 0.5)
+    ratio_threshold_owner  : Flood ratio trigger for owner group (0.10 in the benchmark)
+    ratio_threshold_renter : Flood ratio trigger for renter group (0.10 in the benchmark)
 
 ARCHITECTURE
 ------------
@@ -108,7 +103,7 @@ from utils._helpers import (
     load_yaml_cfg, resolve_path, years_from_cfg,
     load_households_csv, load_depths_legacy, depths_for_year,
     grp_params_from_yaml,
-    load_inline_owner_share_policy, read_finance_from_yaml,
+    load_insurance_policy, read_finance_from_yaml,
     finalize_has_fi,
 )
 from utils.main_helpers import (
@@ -130,6 +125,8 @@ from modules.actions.decision import (
     load_predictors, _init_fi_flags_from_yaml,
 )
 from modules.finance import run_finance_for_year
+from modules.wrr_flood_sequence import EVENT_ORDERS, depth_sampling_seed, relabel_depth_inputs
+from modules.wrr_action_intervals import CASES as WRR_ACTION_CASES, apply_wrr_action_interval
 from utils.sa_output_manager import SAOutputManager
 
 
@@ -361,6 +358,14 @@ def run_single_scenario(
     ap.add_argument("--compare-severe-years", type=str, default="",
                     help="Comma-separated severe years to shade, e.g. '2011,2014,2021'.")
     ap.add_argument("--no-plots", action="store_true", help="Skip all plotting (override YAML output.enable_plots).")
+    ap.add_argument(
+        "--wrr-flood-order", choices=tuple(EVENT_ORDERS),
+        help="Replay one saved revised WRR event order with --no-plots and a fresh output path.",
+    )
+    ap.add_argument(
+        "--wrr-s4-case", choices=tuple(WRR_ACTION_CASES),
+        help="Replay one saved WRR Figure S4 interval variation with --no-plots and a fresh output path.",
+    )
     ap.add_argument("--deterministic", action="store_true", help="Use fixed RNG each year (no SEED+year offset) for reproducibility.")
     ap.add_argument(
         "--decision-seed",
@@ -378,12 +383,32 @@ def run_single_scenario(
     ap.add_argument("--years", type=int, default=None,
                     help="Limit simulation to first N years (for testing)")
     ap.add_argument("--decision-threshold", type=float, default=None,
-                    help="Override decision_threshold (default 0.5). Action adopted if p > threshold.")
+                    help="Override the YAML decision threshold (0.0 in the WRR benchmark).")
     ap.add_argument(
         "--fi-renter-bounds", type=float, nargs=2, metavar=("LOW", "HIGH"),
         help="Override draw_bounds.FI_renter without changing homeowner FI bounds.",
     )
     args = ap.parse_args(argv)
+    saved_replay = args.wrr_flood_order is not None or args.wrr_s4_case is not None
+    if args.wrr_flood_order is not None:
+        if not args.no_plots:
+            ap.error("--wrr-flood-order requires --no-plots; plotting uses the observed event years")
+        if not args.out_root:
+            ap.error("--wrr-flood-order requires an explicit --out-root")
+    if args.wrr_s4_case is not None:
+        if not args.no_plots or not args.out_root:
+            ap.error("--wrr-s4-case requires --no-plots and an explicit --out-root")
+        if args.model_dir != "baseline" or (scenario_override or args.scenario) not in {None, "baseline"}:
+            ap.error("--wrr-s4-case uses only the baseline model and adaptation scenario")
+        if args.deterministic or any(value is not None for value in (
+            args.wrr_flood_order, args.thr_owner, args.thr_renter, args.shock_owner, args.shock_renter,
+            args.fi_renter_bounds, args.decision_threshold, args.years,
+        )):
+            ap.error("--wrr-s4-case cannot be combined with other scientific overrides")
+        try:
+            apply_wrr_action_interval(CFG, args.wrr_s4_case)
+        except ValueError as exc:
+            ap.error(str(exc))
     
     # Override scenario if specified (for batch run)
     if scenario_override:
@@ -412,6 +437,10 @@ def run_single_scenario(
 
     yaml_scen = str(CFG.get("scenario", "baseline")).strip().lower()
     SCEN = (args.scenario or yaml_scen or "baseline").lower()
+    if args.wrr_flood_order is not None and SCEN not in {"baseline", "worst"}:
+        ap.error("--wrr-flood-order requires a baseline or worst scenario")
+    if args.wrr_s4_case is not None and SCEN != "baseline":
+        ap.error("--wrr-s4-case requires the baseline adaptation scenario")
     NO_ACTION = (SCEN == "worst")
 
     # =========================================================================
@@ -421,7 +450,20 @@ def run_single_scenario(
     env_out = os.environ.get("FLOODABM_OUTPUT_ROOT", None)
     OUT_ROOT = Path(args.out_root or env_out or (ROOT / "outputs")).resolve()
     # Always include model name in output path for consistent structure
-    OUTPUT_DIR = (OUT_ROOT / args.model_dir / SCEN).resolve()
+    model_output = OUT_ROOT / args.model_dir
+    OUTPUT_DIR = model_output / SCEN
+    if not saved_replay:
+        OUTPUT_DIR = OUTPUT_DIR.resolve()
+    else:
+        if (
+            model_output.parent != OUT_ROOT
+            or model_output.is_symlink()
+            or model_output.resolve() != model_output
+        ):
+            option = "--wrr-flood-order" if args.wrr_s4_case is None else "--wrr-s4-case"
+            ap.error(f"{option} requires a model directory inside the explicit output root")
+        # Do not resolve a possibly dangling scenario link into a new destination.
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
     VIS_DIR = OUTPUT_DIR / "visualization"
     STATES_DIR = OUTPUT_DIR / "states"
     FIN_DIR = OUTPUT_DIR / "finance"
@@ -513,8 +555,7 @@ def run_single_scenario(
     CV_NJ = {"rcv": 0.694, "contents": 1.8}
 
     # ---------------------------------------------------------------------------
-    # Decision Threshold: Probability cutoff for action adoption
-    # Action is adopted if predicted probability > threshold (default 0.5)
+    # Decision threshold: minimum adoption probability before the random draw.
     # ---------------------------------------------------------------------------
     DECISION_THRESHOLD = float(CFG.get("decision_threshold", 0.5))
 
@@ -533,8 +574,7 @@ def run_single_scenario(
     OWNER_CONTENTS_RATIO = float(OWNER_INS.get("owner_contents_ratio", 0.57))
     OWNER_INSURES_BOTH = bool(OWNER_INS.get("owner_insures_both", True))
 
-    # Policy & owner share
-    OWNER_SHARE, policy_dict = load_inline_owner_share_policy(CFG)
+    policy_dict = load_insurance_policy(CFG)
 
     # =========================================================================
     # SECTION 5: DATA LOADING
@@ -542,6 +582,12 @@ def run_single_scenario(
     # Load flood depth data (long format: tract × year × depth_m)
     DEPTHS_LONG = load_depths_legacy(PATH_DEPTHS)
     DEPTH_DISTRIBUTIONS = load_depth_distributions(PATH_DEPTH_DISTRIBUTIONS)
+    source_by_target = {}
+    if args.wrr_flood_order is not None:
+        DEPTHS_LONG, DEPTH_DISTRIBUTIONS, source_by_target = relabel_depth_inputs(
+            args.wrr_flood_order, DEPTHS_LONG, DEPTH_DISTRIBUTIONS
+        )
+        print(f"[info] WRR flood order {args.wrr_flood_order}, source years: {list(source_by_target.values())}")
     validate_depth_distribution_alignment(DEPTHS_LONG, DEPTH_DISTRIBUTIONS)
     print(f"[info] Using depth distributions: {len(DEPTH_DISTRIBUTIONS)} tract-years")
     YEARS = years_from_cfg(CFG, DEPTHS_LONG["year"].unique(), PATH_EVENTS)
@@ -625,7 +671,8 @@ def run_single_scenario(
     if missing_psych:
         raise ValueError(
             f"Household CSV is missing psych columns: {missing_psych}. "
-            "Run: python generate_household_psych.py"
+            "Use the shipped household CSV for the benchmark. For a custom inventory, "
+            "see docs/PARAMETERS.md for generating the columns in a new CSV."
         )
     STATE["TP"] = STATE["TP_init"].astype(float)
     STATE["t_clock"] = 0.0
@@ -673,7 +720,7 @@ def run_single_scenario(
             STATE_V,
             y,
             DEPTH_DISTRIBUTIONS,
-            np.random.RandomState(SEED + 100_000 + int(y)),
+            np.random.RandomState(depth_sampling_seed(SEED, int(y), source_by_target)),
         )
 
         # -----------------------------------------------------------------------
@@ -881,7 +928,18 @@ def main(argv: list[str] | None = None) -> None:
     ap_check.add_argument("--list-models", action="store_true")
     ap_check.add_argument("--run-all", action="store_true")
     ap_check.add_argument("--model-dir", type=str, default=None)
+    ap_check.add_argument("--wrr-flood-order", choices=tuple(EVENT_ORDERS))
+    ap_check.add_argument("--wrr-s4-case", choices=tuple(WRR_ACTION_CASES))
     known_args, remaining_argv = ap_check.parse_known_args(argv)
+    if known_args.wrr_flood_order is not None and (
+        known_args.compare_flood_or or known_args.compare_all_models or known_args.run_all
+    ):
+        ap_check.error("--wrr-flood-order runs one scenario at a time; comparison and batch flags are not supported")
+    if known_args.wrr_s4_case is not None and (
+        known_args.compare_flood_or or known_args.compare_all_models or known_args.run_all
+        or known_args.list_models
+    ):
+        ap_check.error("--wrr-s4-case runs one adaptation scenario at a time; comparison and batch flags are not supported")
     
     # Handle --list-models: show available models and exit
     if known_args.list_models:

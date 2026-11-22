@@ -4,8 +4,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from typing import Callable, Dict, Tuple, List
-from pathlib import Path
-import json
 
 
 from .decision import (  # type: ignore
@@ -199,27 +197,6 @@ def run_loop_mgmix_fast(
         )
         decisions_by_year[y] = dec
     return decisions_by_year
-
-
-def _load_action_dynamics_default() -> dict:
-    """
-    Backward compatibility: If action_dyn is not passed from runner, try reading JSON.
-    Your new project has switched to YAML; this is only for minimal compatibility.
-    """
-    try:
-        cfg_path = Path(__file__).resolve().parent / "config" / "abm_params.json"
-        if cfg_path.exists():
-            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-            dyn = cfg.get("action_dynamics", {}) or {}
-            return {
-                "apply_RL":     bool(dyn.get("apply_RL", True)),
-                "rl_backfill":  bool(dyn.get("rl_backfill", True)),
-                "apply_BP":     bool(dyn.get("apply_BP", True)),
-                "bp_backfill":  bool(dyn.get("bp_backfill", False)),
-            }
-    except Exception:
-        pass
-    return {"apply_RL": True, "rl_backfill": True, "apply_BP": True, "bp_backfill": False}
 
 
 def _apply_action_dynamics(

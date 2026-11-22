@@ -18,43 +18,24 @@ the model works*, not just *what hazard it sees*.
 
 ---
 
-## 1. Inert ("dead") configuration surfaces
+## 1. Configuration for the revised benchmark
 
-Some files and keys look like live configuration but are not read at runtime. The
-live config path is the inline YAML read in `main.py` / `main_mc.py` via
-`utils._helpers.load_yaml_cfg`. These are marked in-source as well.
-
-| Surface | Status | Live source instead |
-|---|---|---|
-| `core/config.py`, `core/cli.py`, `utils/config_loader.py` | **Not imported at runtime.** A typed-dataclass loader + a second CLI parser that the live runners never call. | `main.py` builds its own inline argparse parser; YAML via `utils._helpers.load_yaml_cfg`. |
-| `abm_params.yaml: beta_parameters` block | **Dead.** Editing it has no effect. | Live initial-psychology Beta shapes are in `modules/actions/tp.py` (`BETA_PARAMS_OWNER_DEFAULT` / `BETA_PARAMS_RENTER_DEFAULT`) and pre-baked into `config/households_for_abm_sfha.csv`. See [PARAMETERS.md](PARAMETERS.md). |
-| `abm_params.yaml: hazard` block, `flood.events_mode`, `flood.min_trigger`, `files.grid_depths_yaml` | **No live consumer.** | Tract means load from `files.depths_overall`; household depths load from `files.depth_distributions`. |
-
-Practical effect: do not wire a new tool to `core/config.py` or `core/cli.py`, and
-do not expect edits to the keys above to change a run.
+`main.py` reads `config/abm_params.yaml` using `utils._helpers.load_yaml_cfg`.
+Tract means and household depths load from `files.depths_overall` and
+`files.depth_distributions`, respectively. The benchmark preflight requires
+`hazard.depths_mode: grid_hist`. The revised run uses the 2011–2023 span; a
+separate `files.flood_events` calendar is optional input for `years.mode: events_only`.
+The household inventory supplies tenure directly.
 
 ---
 
-## 2. Two entry points that do not honor the same settings
+## 2. Single-run and ensemble entry points
 
-There are two runners, and they are **not** behaviorally identical:
-
-- `main.py` — single deterministic/stochastic run.
-- `main_mc.py` — the Monte Carlo driver that **produces every paper figure**
-  (via `generate_paper_figures.py`), using its own fixed internal settings
-  (documented below) that match the published-results configuration.
-
-Differences a reuser must know:
-
-| Setting | `main.py` | `main_mc.py` (figures) |
-|---|---|---|
-| `years_step` | read from YAML | **hardcoded to 1.0** (YAML value ignored) |
-| `flood.ratio_threshold_owner` / `_renter` | read (per-tenure TP-shock trigger) | **not used**; the MC path gates on a single `tp_config.shock_min_ratio` key that is **absent from the shipped YAML**, falling back to `flood.ratio_threshold` |
-| `reset_clock_on_flood` | hardcoded `True` | hardcoded `False` |
-
-Consequence: tuning some YAML keys changes a `main.py` run but **not** the
-figure-producing MC runs. If your goal is to alter the published-style results,
-verify the knob is honored in `main_mc.py`, not just `main.py`.
+`main.py` runs a single scenario; the revised ensemble invokes it through
+`scripts/utilities/run_mc100_local.py`. A standalone default run and a numbered
+ensemble draw use different Bayesian coefficient selections. Use the
+[reproduction guide](REPRODUCIBILITY.md) for the paired scenario comparison
+and the seeded design; the earlier Monte Carlo drivers remain in Git history.
 
 ---
 
@@ -73,14 +54,14 @@ action strings and per-tenure structure are re-encoded in **several layers**:
   — EH elevation, BP buyout-removal, RL relocation are each bespoke);
 - finance (FI-only: `has_FI` is derived from `action == "FI"` across
   `modules/finance/`; EH/BP/RL have no financial coupling);
-- **two** output/figure stacks (`utils/` driven by `main.py`, plus `main_mc.py`),
-  and the per-paper-figure scripts under `scripts/paper_figures/`.
+- the simulation output writers under `utils/`, and the figure-specific
+  summaries and renderers.
 
 Realistic blast radius for a new action: roughly 25–35 sites across these layers
 plus newly trained model files. There is no shortcut.
 
 **The one clean extension seam:** `modules/actions/decision.py` `load_predictors`.
-You can replace the Bayesian predictor wholesale with your own model (random
+You can replace the Bayesian predictor with your own model (random
 forest, neural net, rule table, …) by returning two callables that honor the
 `predict(*, TP, CP, SP) -> {action: prob_array}` contract — no retraining of the
 shipped engine required. This is clean **only** for a like-for-like predictor that
@@ -100,11 +81,10 @@ in `models/baseline/` carry coefficients for only these three drivers.
 - Adding a new decision driver (e.g. income, prior losses) requires **retraining**
   to produce new weight files; editing `FEATURES` alone yields zero weights for the
   new driver (a silent no-effect — see §5).
-- The retraining pipeline is **not runnable as shipped**: `calibration/bayesian_engine/data.py`
-  imports `from src.util_2 import load_data`, but no `src/` package is included, so
-  Phase 2 raises `ImportError` on import. Phase 1 raw survey input is also not in
-  the repo. See [PARAMETERS.md](PARAMETERS.md) §4. Reusing the shipped models (the
-  common case) is unaffected.
+- A clone cannot refit the published models. The survey, processed Phase 2
+  workbook, and original data loader are external. The shipped models remain
+  usable for inference and simulation. See the
+  [refitting constraints](PARAMETERS.md#4-refitting-constraints).
 
 ---
 
@@ -122,8 +102,8 @@ if you extend the model without knowing them:
   keeps a whitelist of psychology columns (`TP_init … PA_init`, `has_FI`); any other
   per-household column you add to `households_for_abm_sfha.csv` is silently discarded
   before it reaches the simulation.
-- **Unmapped action dropped from outputs.** The output tallies (e.g. `main_mc.py`
-  and `utils/` writers) map a fixed set of action strings; an action not in the map
+- **Unmapped action dropped from outputs.** The simulation output writers under
+  `utils/` map a fixed set of action strings; an action not in the map
   becomes `NaN` and disappears from summaries, Excel exports, and figures, even if it
   was simulated.
 ---
@@ -136,8 +116,8 @@ editing the cited location.
 
 | Setting | Where | Note |
 |---|---|---|
-| Flood-prone threshold (a tract is "flood-prone" if it floods in ≥ N of 13 years) | `scripts/paper_figures/plot_fig8_tp_by_prone.py` (`FP_THRESHOLD = 7`) | Drives the flood-prone vs non-prone partition in the TP figures. |
-| Tenure median incomes (owner 148,097 / renter 63,699) | `scripts/paper_figures/plot_fig11_income_aep.py` | Drives the income-normalized equity figure; ACS values for the shipped study area. Re-targeting the model requires updating these. |
+| Flood-prone threshold (positive flood depth in at least 7 of 13 years) | `utils/flood_prone.py` (`FLOOD_PRONE_MIN_YEARS`) | Defines flood-prone and non-prone tracts for the benchmark. The repository plots Figures 8 and 9 from the saved group-level summaries. |
+| Tenure median incomes (owner 148,097 / renter 63,699) | `scripts/utilities/rebuild_wrr_finance_series.py` (`MEDIAN_INCOME_USD`) | ACS income values for normalizing losses in Figure 11. Use values from the new study area when adapting this analysis. |
 | Relocation contents retention | `modules/actions/pipeline.py` (`_attach_rl_dest_by_depth` region) | Relocated renters currently retain 100% of contents value; the contents-reduction draw described in the docstring is disabled in the shipped behavior. |
 | Recorded elevation amount | `modules/actions/decision.py` `sequential_decision_fast` (inline literal `5.0` on the `out_elev[take_EH]` line) | In the default `eh_one_time` mode the actual elevation is drawn from `action_dynamics.eh_once_min/max_ft` and this recorded value is not used. |
 | Decision-tree topology and RL destination count | `modules/actions/decision.py`, `main.py` (`rl_dest_k_best`) | Per-tenure action order and the relocation candidate count are fixed in code; only the per-step draw windows/thresholds are config-tunable. |

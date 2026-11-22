@@ -3,7 +3,7 @@
 Generate Household-Level Initial Conditions
 =============================================
 
-Adds to a household CSV:
+Adds to a new copy of a household CSV:
   - TP_init, CP_init, SP_init, SC_init, PA_init  (Beta-distributed psych)
   - has_FI for legacy, non-SFHA configurations only
 
@@ -11,8 +11,10 @@ Each household gets an independent draw based on its group (owner/renter).
 For the SFHA-aware benchmark, the existing inside_SFHA and has_FI columns are
 validated and preserved; this utility never regenerates its FI initialization.
 
+Use the shipped inventory unchanged for the published benchmark.
+
 Usage:
-    python scripts/utilities/generate_household_psych.py [--seed 2025] [--csv path/to/households.csv]
+    python scripts/utilities/generate_household_psych.py --csv INPUT.csv --output OUTPUT.csv [--seed 2025]
 """
 from __future__ import annotations
 
@@ -90,15 +92,18 @@ def _assign_has_fi(
 
 def generate_initial_conditions(
     csv_path: Path,
+    *,
+    output_csv: Path,
     yaml_path: Path | None = None,
     seed: int = 2025,
     beta_owner: dict | None = None,
     beta_renter: dict | None = None,
 ) -> pd.DataFrame:
-    """Read households CSV, add psych + has_FI columns, write back.
+    """Read household inputs and write generated attributes to a new CSV.
 
     Args:
-        csv_path: Path to the configured household CSV
+        csv_path: Path to the source household CSV
+        output_csv: Path to a new file; the input and existing files are never overwritten
         yaml_path: Path to abm_params.yaml (for insurance rates)
         seed: Random seed for reproducibility
         beta_owner: Beta(a,b) params per variable for owners
@@ -107,6 +112,9 @@ def generate_initial_conditions(
     Returns:
         Updated DataFrame
     """
+    if output_csv.exists() or output_csv.is_symlink():
+        raise FileExistsError(f"Refusing to overwrite {output_csv}; choose a new output CSV")
+
     beta_owner = beta_owner or BETA_PARAMS_OWNER_DEFAULT
     beta_renter = beta_renter or BETA_PARAMS_RENTER_DEFAULT
 
@@ -161,9 +169,11 @@ def generate_initial_conditions(
         ins_cfg = cfg.get("insurance_init", {}) or {}
         df = _assign_has_fi(df, ins_cfg, seed=seed)
 
-    # --- Write back ---
-    df.to_csv(csv_path, index=False, encoding="utf-8")
-    print(f"[OK] Wrote {len(df):,} rows × {len(df.columns)} cols to {csv_path}")
+    # Exclusive creation also protects against a file appearing during the calculation.
+    content = df.to_csv(index=False)
+    with output_csv.open("x", encoding="utf-8", newline="") as output:
+        output.write(content)
+    print(f"[OK] Wrote {len(df):,} rows x {len(df.columns)} cols to {output_csv}")
     for var in PSYCH_COLS:
         col = f"{var}_init"
         print(f"  {col}: mean={df[col].mean():.4f}  std={df[col].std():.4f}")
@@ -171,28 +181,19 @@ def generate_initial_conditions(
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Generate household initial conditions")
+    ap = argparse.ArgumentParser(description="Generate household initial conditions in a new CSV")
     ap.add_argument("--seed", type=int, default=2025)
-    ap.add_argument("--csv", type=str, default=None)
-    ap.add_argument("--yaml", type=str, default=None)
+    ap.add_argument("--csv", type=Path, required=True, help="Source household CSV")
+    ap.add_argument("--output", type=Path, required=True, help="New output CSV (existing parent directory)")
+    ap.add_argument("--yaml", type=Path, default=PROJECT_ROOT / "config" / "abm_params.yaml")
     args = ap.parse_args()
 
-    root = PROJECT_ROOT
-    yaml_path = Path(args.yaml) if args.yaml else root / "config" / "abm_params.yaml"
-    if args.csv:
-        csv_path = Path(args.csv)
-    else:
-        cfg = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
-        configured_csv = (cfg.get("files", {}) or {}).get("households")
-        if not configured_csv:
-            raise ValueError(f"files.households is not configured in {yaml_path}")
-        csv_path = Path(configured_csv)
-        if not csv_path.is_absolute():
-            csv_path = root / csv_path
-    if not csv_path.exists():
-        raise FileNotFoundError(f"CSV not found: {csv_path}")
-
-    generate_initial_conditions(csv_path, yaml_path=yaml_path, seed=args.seed)
+    if not args.yaml.is_file():
+        ap.error(f"Configuration file not found: {args.yaml}")
+    try:
+        generate_initial_conditions(args.csv, output_csv=args.output, yaml_path=args.yaml, seed=args.seed)
+    except (OSError, ValueError) as error:
+        ap.exit(1, f"Household initialization: {error}\n")
 
 
 if __name__ == "__main__":

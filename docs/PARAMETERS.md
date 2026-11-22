@@ -18,7 +18,7 @@ Changing these without recalibrating silently invalidates the published results.
 | Psychology Beta shapes (`beta_parameters`) | Phase-1 survey fit (N = 557 owner / 379 renter) | Population property. **See the warning below — the YAML block is not the live source.** |
 | `tp_decay_params` (per-tenure α, β, tau0, tau_inf, k) | Phase-3 grid search | Empirical threat-perception decay (shipped truth: owner `tau_inf=33.2589`, renter `46.0431`) |
 | `finance` premium rates, `reserve` (1.15), `owner_contents_ratio` (0.57) | NFIP actuarial | Rescale every premium, affordability, and CAT damage result |
-| Preassigned `inside_SFHA` and `has_FI` in `households_for_abm_sfha.csv`; `sfha_shares.csv` | NSI-SFHA overlay and literature-informed initial FI rates | Defines the published agent initialization and must remain fixed for reproduction |
+| Preassigned `inside_SFHA` and `has_FI` in `households_for_abm_sfha.csv`; `sfha_shares.csv` | Tract SFHA area fraction and literature-informed initial FI rates | Defines the revised agent initialization and must remain fixed for reproduction |
 | `owner_share` | ACS tenure split | Sets the owner/renter agent counts per tract |
 | `flood.FFE_ft` (1.0), `files.*` | Data bindings / first-floor-elevation assumption | Calibration constants |
 

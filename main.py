@@ -58,7 +58,7 @@ initial FI:
     Legacy YAML initialization is available only when SFHA mode is disabled.
 
 sfha_initialization:
-    inside_SFHA       : NSI 2022 tract-by-tenure composition attribute
+    inside_SFHA       : seeded draw from the SFHA area share of each tract
     homeowner FI draw: U(0.00,0.10) inside SFHA; U(0.35,0.55) outside
     renter FI draw    : U(0.70,0.90)
 
@@ -270,7 +270,7 @@ def _resolve_simulation_seeds(
 def _refresh_sfha_after_relocation(
     state_before: pd.DataFrame,
     state_next: pd.DataFrame,
-    sfha_share_map: dict[tuple[str, str], float],
+    sfha_share_map: dict[str, float],
     *,
     seed: int,
     year: int,
@@ -297,9 +297,9 @@ def _refresh_sfha_after_relocation(
             out.loc[new_location, "group"].astype(str).str.lower(),
         ]
     ).groups.items():
-        share = float(sfha_share_map[(str(tract), str(group))])
+        share = float(sfha_share_map[str(tract)])
         if not 0.0 <= share <= 1.0:
-            raise ValueError(f"Invalid destination SFHA share for {tract}/{group}: {share}")
+            raise ValueError(f"Invalid destination SFHA area share for {tract}: {share}")
         stream_seed = int(seed) + int(year) * 1009 + int(str(tract)[-6:]) * 17 + (1 if group == "renter" else 0)
         rng = np.random.default_rng(stream_seed)
         out.loc[idx, "inside_SFHA"] = (rng.random(len(idx)) < share).astype("int8")
@@ -553,7 +553,7 @@ def run_single_scenario(
     STATE = load_households_csv(PATH_HOUSEHOLDS)
     print(f"[info] Loaded households: {len(STATE):,} rows")
     SFHA_CFG = CFG.get("sfha_initialization", {}) or {}
-    SFHA_SHARE_MAP: dict[tuple[str, str], float] = {}
+    SFHA_SHARE_MAP: dict[str, float] = {}
     if bool(SFHA_CFG.get("enabled", False)):
         if "inside_SFHA" not in STATE.columns:
             raise ValueError("SFHA-aware configuration requires inside_SFHA in households CSV")
@@ -563,28 +563,26 @@ def run_single_scenario(
         share_path = resolve_path(ACTIONS_DIR, SFHA_CFG.get("shares_file"), MODULES_ROOT)
         if share_path is None or not share_path.exists():
             raise FileNotFoundError("SFHA-aware configuration requires shares_file")
-        share_df = pd.read_csv(share_path, dtype={"tract_geoid": "string", "_group": "string"})
-        required_share_cols = {"tract_geoid", "_group", "sfha_share", "share_status"}
+        share_df = pd.read_csv(share_path, dtype={"tract_geoid": "string"})
+        required_share_cols = {"tract_geoid", "sfha_share", "share_status"}
         if not required_share_cols.issubset(share_df.columns):
             raise ValueError(f"SFHA shares file missing columns: {sorted(required_share_cols - set(share_df.columns))}")
-        if share_df.duplicated(["tract_geoid", "_group"]).any():
-            raise ValueError("SFHA shares file contains duplicate tract/group rows")
+        if share_df.duplicated(["tract_geoid"]).any():
+            raise ValueError("SFHA shares file contains duplicate tract rows")
+        if not share_df["share_status"].eq("SFHA_area_fraction").all():
+            raise ValueError("Revised benchmark requires tract SFHA area shares")
         share_df["tract_geoid"] = share_df["tract_geoid"].astype(str)
-        share_df["_group"] = share_df["_group"].astype(str).str.lower()
         share_df["sfha_share"] = pd.to_numeric(share_df["sfha_share"], errors="raise")
         if not share_df["sfha_share"].between(0.0, 1.0).all():
             raise ValueError("SFHA shares must be in [0, 1]")
         SFHA_SHARE_MAP = {
-            (str(tract), str(group)): float(share)
-            for tract, group, share in share_df[["tract_geoid", "_group", "sfha_share"]].itertuples(index=False, name=None)
+            str(tract): float(share)
+            for tract, share in share_df[["tract_geoid", "sfha_share"]].itertuples(index=False, name=None)
         }
-        expected_share_keys = {
-            (str(tract), str(group).lower())
-            for tract, group in STATE[["tract_geoid", "group"]].drop_duplicates().itertuples(index=False, name=None)
-        }
+        expected_share_keys = set(STATE["tract_geoid"].astype(str).unique())
         missing_share_keys = sorted(expected_share_keys - set(SFHA_SHARE_MAP))
         if missing_share_keys:
-            raise ValueError(f"SFHA shares are missing tract/tenure pairs: {missing_share_keys}")
+            raise ValueError(f"SFHA shares are missing tracts: {missing_share_keys}")
         print(f"[info] inside_SFHA households: {int(STATE['inside_SFHA'].sum()):,}")
     had_preassigned_fi = "has_FI" in STATE.columns
     STATE = _prepare_initial_fi(

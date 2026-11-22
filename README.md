@@ -79,13 +79,14 @@ All input data required to run the simulation are included in the `config/` dire
 
 - `abm_params.yaml` -- simulation parameters (TP decay, action bounds, NFIP rates)
 - `households_for_abm_sfha.csv` -- current household inventory (52,141 households across 27 tracts), including the binary `inside_SFHA` attribute and the SFHA-specific initial FI status
-- `households_for_abm.csv` -- retained legacy inventory without the SFHA attribute
-- `sfha_shares.csv` -- NSI-based SFHA share by tract and homeowner/renter group
-- `sfha_assignment_manifest.json` -- input provenance, `RES3F=50` renter weighting, initial FI rates, and the documented zero-share fallback
-- `mg_share_by_tract.json` -- renter share per tract derived from ACS data
+- `households_for_abm.csv` -- base synthetic inventory required to rebuild the revised initialization
+- `sfha_area_share_by_tract.csv` -- input tract-area fractions used by the initialization builder
+- `sfha_shares.csv` -- one SFHA area share per tract, used for both tenure groups
+- `sfha_assignment_manifest.json` -- checksums, seeds, initial FI rates and initialization counts
 - `overall_md_mean_by_tract_2011_2023.json` -- mean flood depths per tract-year from the CAT model
+- `depth_distribution_by_tract_year.csv` -- grid-cell depth distributions used to sample household depths
 
-No external data download is needed to run the model. Processed outputs that support published tables and figures are provided under `data/supplementary/`, for example `Table_S_MC_variance.csv` (the annual median and interquartile range across the 50 stochastic runs reported in the Supporting Information) and `mc_initpsy_seeds.csv` (the 50-run Monte Carlo seed list). Other contents of `data/` are runtime caches and are not tracked by git.
+No survey workbook or external data download is needed to rerun the model with the published calibration. The benchmark uses the fitted models and the tract-area initialization in this repository. See [Reproducing the revised benchmark](docs/REPRODUCIBILITY.md) for the exact run and output checks, and how those differ from refitting the model or regenerating the paper's graphics.
 
 ## Quick Start
 
@@ -150,7 +151,7 @@ All parameters are defined in `config/abm_params.yaml`, organized into:
 - **Action dynamics** -- elevation caps, buyout/relocation toggles, draw bounds
 - **Finance** -- NFIP premium rates, deductibles, coverage limits by homeownership status
 - **Insurance initialization** -- take-up rates by homeowner/renter group and SFHA status
-- **SFHA initialization** -- NSI-based tract and homeowner/renter shares. Initial FI rates are 30% for homeowners inside the SFHA, 3% for homeowners outside, 8% for renters inside, and 2% for renters outside. Homeowners use FI draw bounds U(0, 0.10) inside the SFHA and U(0.35, 0.55) outside; renters use U(0.70, 0.90) regardless of SFHA status.
+- **SFHA initialization** -- SFHA area share by tract, with the same share used for homeowners and renters. Initial FI rates are 30% for homeowners inside the SFHA, 3% for homeowners outside, 8% for renters inside, and 2% for renters outside. Homeowners use FI draw bounds U(0, 0.10) inside the SFHA and U(0.35, 0.55) outside; renters use U(0.70, 0.90) regardless of SFHA status.
 - **Flood hazard** -- depth thresholds, event masking
 
 `main_mc.py` is retained as a legacy implementation and exits when the
@@ -180,19 +181,16 @@ Results are saved under `outputs/<scenario>/`:
 | `vulnerability/` | Flood damage ratio metrics |
 | `visualization/` | Figures (when plotting is enabled) |
 
-## Reproducing Paper Figures
+## Historical Figure and Table Scripts
 
-Use the unified pipeline to regenerate the main-text figures from a Monte Carlo output tree:
+The `generate_paper_figures.py` registry and scripts under `scripts/paper_figures/`
+are retained for reference. They can require a different output tree, machine-local
+paths, or external inputs such as the NFIP validation data for Figure 5. A fresh
+clone reproduces the simulation outputs using the
+[revised benchmark instructions](docs/REPRODUCIBILITY.md); the historical registry
+does not regenerate the revised paper's graphics as shipped.
 
-```bash
-python generate_paper_figures.py          # run all registered figure scripts
-python generate_paper_figures.py --figs 6 7   # specific figures only
-python generate_paper_figures.py --list   # show the figure registry
-```
-
-The figure scripts live in `scripts/paper_figures/` and read from a 50-run Monte Carlo output tree produced by `scripts/utilities/run_mc100_local.py`. Registered figures follow the manuscript numbering:
-
-| Manuscript figure | Script |
+| Historical figure task | Script |
 |--------|--------|
 | Fig 5 — NFIP avg payout per claim (z-score), 3 counties on one panel, 50-run median + IQR | `plot_fig5_nfip_validation.py` |
 | Fig 6 — cumulative ground-up and actual loss per household | `plot_fig_rq1_combined.py` |
@@ -200,7 +198,7 @@ The figure scripts live in `scripts/paper_figures/` and read from a 50-run Monte
 | Fig 9 — tract-level mean threat perception, flood-prone vs non-prone | `plot_fig8_tp_by_prone.py` |
 | Fig 11 — income-normalized AEP of household loss (% of tenure median income) | `plot_fig11_income_aep.py` |
 
-Adaptation-trajectory (Fig 8), threat-perception distribution, ratio-threshold sensitivity, and supporting ceiling-effect figures are produced by the other scripts in `scripts/paper_figures/`. The supporting tables (including `data/supplementary/Table_S_MC_variance.csv`) are generated by the scripts in `scripts/utilities/` (`gen_table_s_mc_variance.py`, `compute_sm_table_*.py`).
+Other figure and table scripts are retained in `scripts/paper_figures/` and `scripts/utilities/`. Some target earlier results, panel layouts, or local data paths. They are not part of the clean-clone benchmark verification; see [Reproducing the revised benchmark](docs/REPRODUCIBILITY.md).
 
 Prepared outside this pipeline: the study-area map (Fig 1), the Bayesian-procedure diagram (Fig 2), the framework flowchart (Fig 3), and the flood-model diagnostics (Fig 4). The spatial flood-insurance maps (Fig 10) and the supporting population-change maps (SI Fig S4) are drawn in ArcGIS from the tract-level CSVs written by `scripts/utilities/gen_spatial_fi_delta_mc50.py` and `gen_spatial_pop_delta_mc50.py`.
 

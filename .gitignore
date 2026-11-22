@@ -50,6 +50,8 @@ Thumbs.db
 # Large data files
 *.csv
 !config/households_for_abm.csv
+!config/sfha_area_share_by_tract.csv
+!config/initial_fi_summary.csv
 !data/supplementary/*.csv
 *.parquet
 *.pkl
@@ -59,7 +61,8 @@ Thumbs.db
 # Calibration pipeline: allow code and model weights; ignore regenerable outputs
 !calibration/
 !calibration/**
-calibration/data/data_ori.xlsx
+# Local survey workbooks are optional calibration inputs, not benchmark inputs.
+calibration/data/*.xls*
 # phase1 outputs (regenerable via plot_action_distributions.py + generate_report.py)
 calibration/phase1_tenure_distributions/*.png
 calibration/phase1_tenure_distributions/*.csv

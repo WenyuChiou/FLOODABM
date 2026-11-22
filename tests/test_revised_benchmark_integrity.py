@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from main import (
 from modules.actions.bayes_fast_predictors import build_fast_predictors
 from modules.actions import vuln_for_tp
 from scripts.sensitivity.run_sensitivity_analysis import require_legacy_initial_fi
+from scripts.utilities.build_sfha_area_initialization import build as build_sfha_area_initialization
 from scripts.utilities.generate_household_psych import generate_initial_conditions
 from scripts.utilities.run_mc100_local import (
     _sha256_files,
@@ -25,6 +27,8 @@ from scripts.utilities.run_mc100_local import (
     posterior_index,
     validate_benchmark_config,
 )
+from scripts.utilities.validate_sfha_baseline import main as validate_sfha_baseline
+from scripts.utilities import verify_wrr_finance
 from utils.flood_prone import flood_prone_flags
 
 
@@ -235,3 +239,54 @@ def test_mc_fingerprint_accepts_external_inputs(tmp_path: Path) -> None:
     result = _sha256_files([external])
     assert result["n_files"] == 1
     assert len(result["sha256"]) == 64
+
+
+def test_shipped_sfha_assignment_matches_revised_input_manifest() -> None:
+    validate_sfha_baseline()
+
+
+def test_rebuild_matches_shipped_sfha_source_and_output_hashes(tmp_path: Path) -> None:
+    config = ROOT / "config"
+    expected = json.loads((config / "sfha_assignment_manifest.json").read_text(encoding="utf-8"))
+    actual = build_sfha_area_initialization(
+        config / "households_for_abm.csv",
+        config / "sfha_area_share_by_tract.csv",
+        tmp_path / "rebuild",
+    )
+    for key in ("source_households", "source_area_shares", "outputs", "hash_format"):
+        assert actual[key] == expected[key]
+
+
+def test_relocated_households_use_one_area_share_for_both_tenures() -> None:
+    before = pd.DataFrame({"i": [1, 2], "tract_geoid": ["34013021300"] * 2})
+    after = pd.DataFrame({
+        "i": [1, 2], "tract_geoid": ["34013021400"] * 2,
+        "group": ["owner", "renter"], "inside_SFHA": [0, 0],
+    })
+    nxt = _refresh_sfha_after_relocation(
+        before, after, {"34013021400": 1.0}, seed=20260817, year=2012,
+    )
+    assert nxt["inside_SFHA"].tolist() == [1, 1]
+
+
+def test_finance_reference_records_the_revised_seed_schedule() -> None:
+    file = ROOT / "data/supplementary/wrr_mc50_finance_reference.csv"
+    with file.open(encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    assert len(rows) == 100
+    assert {(int(r["run_id"]), r["scenario"]) for r in rows} == {
+        (i, sc) for i in range(1, 51) for sc in ("baseline", "worst")
+    }
+    for row in rows:
+        i = int(row["run_id"])
+        assert int(row["decision_seed"]) == decision_seed(i)
+        assert int(row["posterior_index"]) == posterior_index(i)
+        assert len(bytes.fromhex(row["finance_sha256"])) == 32
+
+
+def test_finance_verifier_rejects_changed_output(tmp_path: Path, monkeypatch) -> None:
+    reference = ROOT / "data/supplementary/wrr_mc50_finance_reference.csv"
+    sentinel = "changed"
+    monkeypatch.setattr(verify_wrr_finance, "finance_digest", lambda *_: sentinel)
+    with pytest.raises(ValueError, match="Archived finance output differs"):
+        verify_wrr_finance.verify(tmp_path, reference, 1, 1)

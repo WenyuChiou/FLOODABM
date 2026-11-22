@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 from io import BytesIO
-import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Iterator
-from urllib.parse import urlencode, urlsplit
-from urllib.request import urlopen
 
 if TYPE_CHECKING:
     from geopandas import GeoDataFrame
@@ -23,20 +19,17 @@ if TYPE_CHECKING:
 if __package__:
     from . import export_wrr_spatial_fi_png as spatial
     from . import render_wrr_supporting_raster as raster
+    from .wrr_public_sources import fema_geometry, public_input, read_limited, verify_digest
 else:
     import export_wrr_spatial_fi_png as spatial
     import render_wrr_supporting_raster as raster
+    from wrr_public_sources import fema_geometry, public_input, read_limited, verify_digest
 
 
 TRACT_ARCHIVE_NAME = "tl_2022_34_tract.zip"
 TRACT_ARCHIVE_SHA = "bec4d351275e6cc3c7613fd845303a771dd9094ba9e20154394d5ece955d945f"
 TRACT_GEOMETRY_SHA = "5e5d531dda32bd3a8b25c4a349b61cd497e36eb7bd4f703912ae48995c900cbf"
 CENSUS_BASE = "https://www2.census.gov/geo/tiger/TIGER2022"
-FEMA_QUERY = (
-    "https://services.arcgis.com/XG15cJAlne2vxtgt/ArcGIS/rest/services/"
-    "FEMA_HurricaneWind_Tract/FeatureServer/0/query"
-)
-FEMA_GEOMETRY_SHA = "3c432a1d16673f7a9e8dfd7ccafb627b82c84d28dbdfffa6cb8a3d629222dc71"
 LAYOUT_PINS = (
     "5d22a43820352827b4ed6d32bd1b56071b2cbd334d3e51d05c539970a53f4f04",
     "4cbec7e5729b528ba08ff33146624f5154a8f256c56d17991088e04a25aed943",
@@ -72,35 +65,6 @@ WATER_IDS = {
 SERIES_NAMES = ("Figure10_spatial_fi.csv", "FigureS7_population_change.csv")
 
 
-def read_limited(path: Path, limit: int) -> bytes:
-    """Read a bounded local input."""
-    with path.open("rb") as stream:
-        data = stream.read(limit + 1)
-    if len(data) > limit:
-        raise ValueError(f"{path.name} exceeds the expected input size")
-    return data
-
-
-def verify_digest(data: bytes, expected: str, label: str) -> None:
-    """Reject bytes that do not match this revision's input or output."""
-    if hashlib.sha256(data).hexdigest() != expected:
-        raise ValueError(f"{label}: SHA-256 differs from the pinned revision")
-
-
-def public_input(cache: Path | None, name: str, url: str, limit: int) -> bytes:
-    """Read a supplied cache file or download it from the recorded public provider."""
-    if cache is not None:
-        return read_limited(cache / name, limit)
-    with urlopen(url, timeout=30) as response:
-        requested, final = urlsplit(url), urlsplit(response.geturl())
-        if final.scheme != "https" or final.netloc != requested.netloc:
-            raise ValueError(f"{name}: unexpected source redirect")
-        data = response.read(limit + 1)
-    if len(data) > limit:
-        raise ValueError(f"{name}: response exceeds the expected input size")
-    return data
-
-
 def load_layout(path: Path, digest: str) -> bytes:
     """Allow only the two verified layout-only files, regardless of filename."""
     data = read_limited(path, 4_000_000)
@@ -116,33 +80,6 @@ def population_tract_ids(fi: bytes, population: bytes) -> tuple[str, ...]:
     if any(fi_ids != set(values) for values in changes.values()):
         raise ValueError("Figure 10 and S7 series contain different tracts")
     return tuple(sorted(fi_ids))
-
-
-def fema_geometry(cache: Path | None, tracts: tuple[str, ...]) -> GeoDataFrame:
-    """Validate the public FEMA geometry by ID and normalized WKB, not JSON order."""
-    import geopandas as gpd
-    import shapely
-    from shapely.geometry import shape
-
-    ids = ",".join(f"'{tract}'" for tract in tracts)
-    params = {
-        "f": "geojson", "where": f"Tract IN ({ids})", "outFields": "Tract",
-        "returnGeometry": "true", "outSR": 4326, "returnZ": "false", "returnM": "false",
-    }
-    source = public_input(cache, "fema_tracts.geojson", FEMA_QUERY + "?" + urlencode(params), 2_000_000)
-    data = json.loads(source)
-    if not isinstance(data, dict) or data.get("type") != "FeatureCollection" or "error" in data:
-        raise ValueError("FEMA response did not contain the expected feature collection")
-    features = sorted(data["features"], key=lambda item: item["properties"]["Tract"])
-    if tuple(item["properties"]["Tract"] for item in features) != tracts:
-        raise ValueError("FEMA changed the revised tract set")
-    digest = hashlib.sha256()
-    for feature in features:
-        digest.update(feature["properties"]["Tract"].encode("ascii"))
-        digest.update(shapely.normalize(shape(feature["geometry"])).wkb)
-    if digest.hexdigest() != FEMA_GEOMETRY_SHA:
-        raise ValueError("Public FEMA geometry does not match the verified revision")
-    return gpd.GeoDataFrame.from_features(features, crs=4326)
 
 
 def public_water(cache: Path | None, category: str) -> GeoDataFrame:

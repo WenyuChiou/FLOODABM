@@ -123,6 +123,20 @@ replay, not the map CSV. A current NFHL download is not a substitute for
 the pinned snapshot. This command reproduces the values behind Figure 1,
 not its basemap or final layout.
 
+To rebuild **only Figure 1's coverage table** without the archived tract
+GeoPackage, use the verified public FEMA tract geometries:
+
+```sh
+python scripts/utilities/rebuild_wrr_sfha_areas.py --public-tracts --sfha /path/to/nj_nfhl_sfha_study_tracts.geojson --output-dir ../wrr-figure1-areas
+```
+
+This route still requires the pinned archived NFHL extract. The command
+checks the 27 tract IDs and geometry before rebuilding
+`sfha_tract_area_coverage.csv`, and verifies the revised CSV hash before
+writing it. For offline use, pass `--public-source-dir` with the verified
+`fema_tracts.geojson` cache. Use both archived inputs for the model table:
+the public geometry does not produce its exact full-precision CSV.
+
 ## Rebuild the initial states
 
 ```sh

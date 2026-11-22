@@ -1,4 +1,4 @@
-"""Rebuild the accepted model and Figure 1 area tables from two archived layers."""
+"""Rebuild the accepted model or Figure 1 SFHA area tables."""
 
 from __future__ import annotations
 
@@ -8,6 +8,11 @@ import hashlib
 from io import BytesIO, StringIO
 from pathlib import Path
 
+if __package__:
+    from .wrr_public_sources import fema_geometry, read_limited, verify_digest
+else:
+    from wrr_public_sources import fema_geometry, read_limited, verify_digest
+
 
 TRACTS_SHA256 = "07ac664f8c171459e8625fd12a0b065c3f7aad6ecf4ad907c2f5d2d9e808d3b1"
 SFHA_SHA256 = "9bb2422c77a91ac9c7abf5e3358b2753aaafc2e1cb7ebda4f2a372de6664dfc0"
@@ -15,6 +20,7 @@ MODEL_CSV = "sfha_area_share_by_tract.csv"
 MAP_CSV = "sfha_tract_area_coverage.csv"
 MODEL_SHA256 = "09603907a1ab7aa66b128d939df73dadfbb77b49c93203ae2e546c3ab7dbb818"
 MAP_SHA256 = "047b82516a8a23dcf80ffcd98917cec097fc06a00964119539c033781c94cd1e"
+MODEL_REFERENCE = Path(__file__).resolve().parents[2] / "config" / MODEL_CSV
 
 
 def verified_source(path: Path, digest: str) -> BytesIO:
@@ -78,16 +84,44 @@ def verified_tables(tracts_path: Path, sfha_path: Path) -> dict[str, bytes]:
     return outputs
 
 
+def verified_public_map_table(sfha_path: Path, source_dir: Path | None) -> bytes:
+    """Recompute only Figure 1 with pinned FEMA tracts and archived SFHA zones."""
+    import geopandas as gpd
+
+    sfha_source = verified_source(sfha_path, SFHA_SHA256)
+    sfha = gpd.read_file(sfha_source, columns=[], engine="pyogrio")
+    if len(sfha) != 1428:
+        raise ValueError("Unexpected number of features in the archived SFHA overlay")
+
+    # Git may change line endings, but the scientific fields and rows are pinned.
+    reference = read_limited(MODEL_REFERENCE, 10_000).replace(b"\r\n", b"\n")
+    verify_digest(reference, MODEL_SHA256, MODEL_CSV)
+    rows = csv.DictReader(StringIO(reference.decode("utf-8")))
+    ids = tuple(sorted(row["tract_geoid"] for row in rows))
+    tracts = fema_geometry(source_dir, ids)
+    result = encode_map_table(area_table(tracts, sfha, epsg=5070))
+    verify_digest(result, MAP_SHA256, MAP_CSV)
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--tracts", type=Path, required=True, help="Archived study_tracts_svi.gpkg")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--tracts", type=Path, help="Archived study_tracts_svi.gpkg; rebuild both tables")
+    mode.add_argument("--public-tracts", action="store_true", help="Use public FEMA tracts; Figure 1 only")
+    parser.add_argument("--public-source-dir", type=Path, help="Offline FEMA GeoJSON cache for --public-tracts")
     parser.add_argument("--sfha", type=Path, required=True, help="Archived nj_nfhl_sfha_study_tracts.geojson")
-    parser.add_argument("--output-dir", type=Path, required=True, help="New directory for the two verified CSVs")
+    parser.add_argument("--output-dir", type=Path, required=True, help="New directory for the verified CSV output")
     args = parser.parse_args()
+    if args.public_source_dir is not None and not args.public_tracts:
+        parser.error("--public-source-dir requires --public-tracts")
     try:
         if args.output_dir.exists() or args.output_dir.is_symlink():
             raise FileExistsError(f"Refusing to overwrite {args.output_dir}")
-        tables = verified_tables(args.tracts, args.sfha)
+        if args.public_tracts:
+            tables = {MAP_CSV: verified_public_map_table(args.sfha, args.public_source_dir)}
+        else:
+            tables = verified_tables(args.tracts, args.sfha)
         args.output_dir.mkdir(parents=True, exist_ok=False)
         for name, content in tables.items():
             path = args.output_dir / name

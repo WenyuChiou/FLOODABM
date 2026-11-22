@@ -1,10 +1,13 @@
 import hashlib
 from io import BytesIO
+import json
 from pathlib import Path
+from urllib.request import Request
 
 import pytest
 
 from scripts.utilities import rebuild_wrr_sfha_areas as rebuild
+from scripts.utilities import wrr_public_sources as sources
 
 
 def test_overlay_unions_overlaps_before_calculating_tract_share():
@@ -105,3 +108,115 @@ def test_existing_destination_is_not_overwritten(tmp_path, monkeypatch, capsys):
     assert error.value.code == 1
     assert "Refusing to overwrite" in capsys.readouterr().err
     assert existing.read_bytes() == b"do not overwrite"
+
+
+@pytest.mark.parametrize("matches_reference", [True, False])
+def test_public_route_writes_only_the_exact_map_table(tmp_path, monkeypatch, matches_reference):
+    gpd = pytest.importorskip("geopandas")
+    from shapely.geometry import box
+
+    area = box(0, 0, 4, 4)
+    zones = gpd.GeoDataFrame(geometry=[area] * 1428, crs=5070)
+    ids = tuple(f"34013{i:06d}" for i in range(27))
+    tracts = gpd.GeoDataFrame({"Tract": list(ids)}, geometry=[area] * 27, crs=5070)
+    reference = b"tract_geoid\n" + b"".join(x.encode() + b"\n" for x in ids)
+    model_reference = tmp_path / "shipped.csv"
+    model_reference.write_bytes(reference.replace(b"\n", b"\r\n"))
+    monkeypatch.setattr(rebuild, "MODEL_REFERENCE", model_reference)
+    monkeypatch.setattr(rebuild, "MODEL_SHA256", hashlib.sha256(reference).hexdigest())
+    wanted = b"tract_geoid,sfha_area_percent,tract_area_m2,sfha_covered_area_m2\n"
+    wanted += b"".join(x.encode() + b",100.0,16.0,16.0\n" for x in ids)
+    monkeypatch.setattr(
+        rebuild, "MAP_SHA256", hashlib.sha256(wanted if matches_reference else b"wrong").hexdigest()
+    )
+    nfhl = tmp_path / "pinned_nfhl.geojson"
+    nfhl.write_bytes(b"archived flood data")
+    monkeypatch.setattr(rebuild, "SFHA_SHA256", hashlib.sha256(nfhl.read_bytes()).hexdigest())
+
+    def read_file(snapshot, **_):
+        assert isinstance(snapshot, BytesIO)
+        assert snapshot.read() == b"archived flood data"
+        return zones
+
+    def fema_geometry(cache, geoids):
+        assert cache is None and geoids == ids
+        return tracts
+
+    monkeypatch.setattr(gpd, "read_file", read_file)
+    monkeypatch.setattr(rebuild, "fema_geometry", fema_geometry)
+    output = tmp_path / "areas"
+    monkeypatch.setattr(
+        "sys.argv", ["rebuild", "--public-tracts", "--sfha", str(nfhl), "--output-dir", str(output)]
+    )
+    if matches_reference:
+        rebuild.main()
+        assert sorted(x.name for x in output.iterdir()) == [rebuild.MAP_CSV]
+        assert (output / rebuild.MAP_CSV).read_bytes() == wanted
+    else:
+        with pytest.raises(SystemExit) as error:
+            rebuild.main()
+        assert error.value.code == 1
+        assert not output.exists()
+    assert model_reference.read_bytes() == reference.replace(b"\n", b"\r\n")
+
+
+def test_modified_public_route_flood_input_does_not_contact_provider(tmp_path, monkeypatch, capsys):
+    pytest.importorskip("geopandas")
+    nfhl = tmp_path / "nfhl.geojson"
+    nfhl.write_bytes(b"new NFHL download")
+    output = tmp_path / "areas"
+
+    def no_query(*_):
+        pytest.fail("Public geometries must not be queried after NFHL verification fails")
+
+    monkeypatch.setattr(rebuild, "fema_geometry", no_query)
+    monkeypatch.setattr(
+        "sys.argv", ["rebuild", "--public-tracts", "--sfha", str(nfhl), "--output-dir", str(output)]
+    )
+    with pytest.raises(SystemExit) as error:
+        rebuild.main()
+    assert error.value.code == 1
+    assert "Unexpected input SHA-256: nfhl.geojson" in capsys.readouterr().err
+    assert not output.exists()
+
+
+def test_shared_fema_cache_checks_geometry_independent_of_feature_order(tmp_path, monkeypatch):
+    pytest.importorskip("geopandas")
+    from shapely import normalize
+    from shapely.geometry import box, mapping
+
+    ids = tuple(f"34013{i:06d}" for i in range(27))
+    geom = box(0, 0, 1, 1)
+    digest = hashlib.sha256()
+    for geoid in ids:
+        digest.update(geoid.encode("ascii"))
+        digest.update(normalize(geom).wkb)
+    monkeypatch.setattr(sources, "FEMA_GEOMETRY_SHA", digest.hexdigest())
+    features = [
+        {"type": "Feature", "properties": {"Tract": geoid}, "geometry": mapping(geom)}
+        for geoid in reversed(ids)
+    ]
+    cache = tmp_path / "fema_tracts.geojson"
+
+    def cache_features():
+        cache.write_text(json.dumps({"type": "FeatureCollection", "features": features}))
+
+    cache_features()
+    assert tuple(sources.fema_geometry(tmp_path, ids).Tract) == ids
+    features[0]["geometry"] = mapping(box(0, 0, 1, 2))
+    cache_features()
+    with pytest.raises(ValueError, match="does not match the verified revision"):
+        sources.fema_geometry(tmp_path, ids)
+    features[0]["geometry"] = {"type": "InvalidPolygon", "coordinates": []}
+    cache_features()
+    with pytest.raises(ValueError, match="invalid tract or geometry schema"):
+        sources.fema_geometry(tmp_path, ids)
+
+
+@pytest.mark.parametrize(
+    "url", ["https://other.example/data", "http://source.example/data", "https://source.example/data"]
+)
+def test_public_download_rejects_redirect_before_requesting_another_location(url):
+    handler = sources.RejectPublicSourceRedirect()
+    with pytest.raises(ValueError, match="Unexpected public source redirect"):
+        handler.redirect_request(Request("https://source.example/data"), None, 302, "Found", {}, url)

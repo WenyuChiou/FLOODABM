@@ -45,7 +45,7 @@ def test_offline_cache_does_not_fall_back_to_network(tmp_path, monkeypatch):
     def unexpected(*args, **kwargs):
         pytest.fail("network access was attempted with an explicit cache")
 
-    monkeypatch.setattr(maps, "urlopen", unexpected)
+    monkeypatch.setattr("scripts.utilities.wrr_public_sources.build_opener", unexpected)
     with pytest.raises(FileNotFoundError):
         maps.public_input(tmp_path, "tracts.zip", "https://example.net/tracts.zip", 50)
     (tmp_path / "tracts.zip").write_bytes(b"test data")

@@ -27,6 +27,7 @@ how to rerun the benchmark and check its numerical outputs.
 | `data/figures/Figure5_metrics_corrected_county_labels.csv` | Correlations and year counts in Figure 5. |
 | `data/figures/Figure6_cumulative_loss.csv` | Final cumulative loss series for Figure 6a–b, normalized by fixed initial tenure counts. |
 | `data/figures/Figure6_annual_finance.csv` | Final finance series for Figure 6c–f, archived under the former filename `Figure7_annual_finance.csv` before the panels were renumbered. |
+| `data/figures/Figure7_aep.csv` | Final pooled run-year GUL and actual-loss exceedance curves in dollars per household. No individual household records. |
 | `data/figures/Figure9_tp_by_prone.csv` | Final annual group-level threat perception medians and interquartile ranges. |
 | `models/baseline/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | One full posterior per action and tenure; shared by the ensemble and posterior predictive query. |
 | `models/baseline_fast/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | Smaller posterior-mean caches used by the default single-run simulation. These are not duplicates of the full posteriors. |

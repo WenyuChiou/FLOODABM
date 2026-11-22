@@ -60,6 +60,7 @@ Thumbs.db
 !data/figures/Figure5_nfip_validation_corrected_county_labels.csv
 !data/figures/Figure6_cumulative_loss.csv
 !data/figures/Figure6_annual_finance.csv
+!data/figures/Figure7_aep.csv
 !data/figures/Figure9_tp_by_prone.csv
 *.parquet
 *.pkl

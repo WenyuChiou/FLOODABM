@@ -17,6 +17,34 @@ For the complete ensemble, use a different output directory and omit `--start` a
 
 The finance check compares all 13 annual tract finance CSVs against one archived checksum per run and scenario. It normalizes line endings; numeric formatting changes across library versions can still cause a strict mismatch. The reference is the archived tract-area WRR benchmark. This check covers simulation finance. See [checking reproduced WRR figures](WRR_FIGURE_CHECKS.md) for the separate comparison against the final figure exports and the limits of figure regeneration.
 
+## Recompute finance figure data from all 50 paired draws
+
+Once the 50 paired draws complete, run:
+
+```sh
+python scripts/utilities/rebuild_wrr_finance_series.py --mc-root ../wrr-ensemble --out-dir ../wrr-recomputed-finance
+```
+
+The command verifies the 100 scenario/draw finance bundles. It then computes
+the 39 simulated county-year payout bands and their three validation
+correlations (Figure 5), all 260 Figure 6 rows, and both 2,400-point AEP
+curves (Figures 7 and 11). Figure 5 uses the corrected county identifiers
+and the bundled observed z-scores and selected-year flags; the command does
+not refetch the underlying claims.
+The 2011–2023 cumulative profiles use fixed initial tenure counts; the
+annual dollar series use each run-year's tenure counts. The AEPs pool only
+2012–2023 adaptation results, with 600 run-year values per tenure and
+metric, divided by each run-year's household count before ranking. GUL
+and actual loss are ranked separately. Differences at the same exceedance
+probability are differences between two curve values; they are not paired
+payouts from the same simulated run-year. Figure 11 divides the ranked
+dollar values by the corresponding median tenure income.
+
+The outputs are compared to the bundled figure data at every coordinate
+before writing. Existing directories are not overwritten. This rebuild
+verifies the plotted data; replaying the final Figure 6/7 layout still
+requires the [vector components](WRR_FIGURE_CHECKS.md#replay-from-the-archived-pdf-components).
+
 ## Rebuild the initial states
 
 ```sh
@@ -55,6 +83,10 @@ use within-draw totals; the stacked bars use separate medians. Figure 8
 rates and Figure 6 shares are fractions, not percentages. The table does
 not assign annual IQRs to the pooled exceedance curves (Figures 7 and 11),
 the median-only tract map (Figure 10), or to the observed data in Figure 5.
+Figure 9's 2023 estimate for renters in flood-prone tracts uses 49 valid
+draws: one draw has no post-action TP for a tract with a positive
+decision-time renter weight. The published aggregation omits that draw
+for this stratum; the other 51 Figure 9 estimates use all 50 draws.
 
 The earlier seed list and variance table remain in Git history. Survey
 workbooks for refitting are not shipped; re-estimating the fitted models

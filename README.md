@@ -26,8 +26,6 @@ Each action modifies exposure or vulnerability in the catastrophe flood model. S
 ```
 FLOODABM/
 ├── main.py                      # Single-run simulation (2011-2023)
-├── main_mc.py                   # Legacy Monte Carlo runner; formal ensemble uses scripts/utilities/run_mc100_local.py
-├── generate_paper_figures.py    # Historical plotting registry; not the revised WRR pipeline
 ├── requirements.txt
 │
 ├── config/                      # Configuration and input data
@@ -50,8 +48,8 @@ FLOODABM/
 │
 ├── utils/                       # Visualization helpers and output
 │
-└── scripts/                     # Organized scripts (not called directly)
-    ├── paper_figures/           # Individual figure scripts (called by generate_paper_figures.py)
+└── scripts/
+    ├── paper_figures/           # Analysis-specific scripts; see the revised figure guide
     ├── examples/                # Example helper scripts (e.g. future-depth generator)
     ├── sensitivity/             # Sensitivity analysis runners
     ├── validation/              # NFIP validation
@@ -146,9 +144,8 @@ All parameters are defined in `config/abm_params.yaml`, organized into:
 - **SFHA initialization** -- SFHA area share by tract, with the same share used for homeowners and renters. Initial FI rates are 30% for homeowners inside the SFHA, 3% for homeowners outside, 8% for renters inside, and 2% for renters outside. Homeowners use FI draw bounds U(0, 0.10) inside the SFHA and U(0.35, 0.55) outside; renters use U(0.70, 0.90) regardless of SFHA status.
 - **Flood hazard** -- depth thresholds, event masking
 
-`main_mc.py` is retained as a legacy implementation and exits when the
-SFHA-aware configuration is enabled; it must not be used to produce the
-current baseline.
+The formal ensemble uses `scripts/utilities/run_mc100_local.py` to run both
+scenarios with the fixed revised design. See the [reproduction guide](docs/REPRODUCIBILITY.md).
 
 ## Simulation Flow
 
@@ -173,29 +170,18 @@ Results are saved under `outputs/<scenario>/`:
 | `vulnerability/` | Flood damage ratio metrics |
 | `visualization/` | Figures (when plotting is enabled) |
 
-## Revised Figure Checks and Historical Scripts
+## Reproduce and check the revised figures
 
 Use the [revised WRR figure checker](docs/WRR_FIGURE_CHECKS.md) to compare
 regenerated PNGs with the final figure exports.
 
-The `generate_paper_figures.py` registry and scripts under `scripts/paper_figures/`
-are retained for reference. They can require a different output tree, machine-local
-paths, or external inputs such as the NFIP validation data for Figure 5. A fresh
-clone reproduces the simulation outputs using the
-[revised benchmark instructions](docs/REPRODUCIBILITY.md); the historical registry
-does not regenerate the revised paper's graphics as shipped.
-
-| Historical figure task | Script |
-|--------|--------|
-| Fig 5 — NFIP avg payout per claim (z-score), 3 counties on one panel, 50-run median + IQR | `plot_fig5_nfip_validation.py` |
-| Fig 6 — cumulative ground-up and actual loss per household | `plot_fig_rq1_combined.py` |
-| Fig 7 — financial outcomes and loss AEP curves | `plot_fig_rq1_combined.py` (same run as Fig 6) |
-| Fig 9 — tract-level mean threat perception, flood-prone vs non-prone | `plot_fig8_tp_by_prone.py` |
-| Fig 11 — income-normalized AEP of household loss (% of tenure median income) | `plot_fig11_income_aep.py` |
-
-Other figure and table scripts are retained in `scripts/paper_figures/` and `scripts/utilities/`. Some target earlier results, panel layouts, or local data paths. They are not part of the clean-clone benchmark verification; see [Reproducing the revised benchmark](docs/REPRODUCIBILITY.md).
-
-Prepared outside this pipeline: the study-area map (Fig 1), the coupled framework (Fig 2), the adoption-probability diagram (Fig 3), and the flood-model diagnostics (Fig 4). The spatial flood-insurance maps (Fig 10) and the supporting population-change maps (SI Fig S7) are drawn in ArcGIS using tract-level data.
+`scripts/utilities/render_wrr_figures.py` redraws Figures 5, 8, 9, and 11 from
+the bundled aggregate data. `scripts/utilities/render_wrr_vector_figures.py`
+replays Figures 4, 6, and 7 when the pinned study-archive PDFs are supplied.
+The [figure guide](docs/WRR_FIGURE_CHECKS.md) gives the exact inputs and
+checks for each route and identifies the figures still prepared outside it.
+Use the [revised benchmark instructions](docs/REPRODUCIBILITY.md) for simulation
+outputs; the individual analysis scripts are not a replacement for the figure guide.
 
 > Note: the formal Monte Carlo driver requires `--out-root` to point outside the repository. Across the 50 runs, it varies the action-decision seed and Bayesian posterior draw while keeping the SFHA assignment, initial FI status, household attributes, flood sequence, and flood-depth sampling seed fixed. The posterior `.npz` files are stored in `models/baseline/`; single runs use the posterior-mean cache in `models/baseline_fast/`.
 

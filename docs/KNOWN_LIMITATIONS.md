@@ -29,25 +29,13 @@ The household inventory supplies tenure directly.
 
 ---
 
-## 2. Two entry points that do not honor the same settings
+## 2. Single-run and ensemble entry points
 
-There are two runners, and they are **not** behaviorally identical:
-
-- `main.py` — single deterministic/stochastic run.
-- `main_mc.py` — the older Monte Carlo driver. It cannot run with the revised
-  SFHA setup. The revised ensemble uses `scripts/utilities/run_mc100_local.py`
-  to run `main.py`; its outputs are checked separately from the final figures.
-
-Differences a reuser must know:
-
-| Setting | `main.py` | Legacy `main_mc.py` |
-|---|---|---|
-| `years_step` | read from YAML | **hardcoded to 1.0** (YAML value ignored) |
-| `flood.ratio_threshold_owner` / `_renter` | read (per-tenure TP-shock trigger) | **not used**; the MC path gates on a single `tp_config.shock_min_ratio` key that is **absent from the shipped YAML**, falling back to `flood.ratio_threshold` |
-| `reset_clock_on_flood` | hardcoded `True` | hardcoded `False` |
-
-Do not use the legacy entry point to test a change to the revised benchmark.
-See the [reproduction guide](REPRODUCIBILITY.md) for the current runner.
+`main.py` runs a single scenario; the revised ensemble invokes it through
+`scripts/utilities/run_mc100_local.py`. A standalone default run and a numbered
+ensemble draw use different Bayesian coefficient selections. Use the
+[reproduction guide](REPRODUCIBILITY.md) for the paired scenario comparison
+and the seeded design; the earlier Monte Carlo drivers remain in Git history.
 
 ---
 
@@ -66,8 +54,8 @@ action strings and per-tenure structure are re-encoded in **several layers**:
   — EH elevation, BP buyout-removal, RL relocation are each bespoke);
 - finance (FI-only: `has_FI` is derived from `action == "FI"` across
   `modules/finance/`; EH/BP/RL have no financial coupling);
-- **two** output/figure stacks (`utils/` driven by `main.py`, plus `main_mc.py`),
-  and the per-paper-figure scripts under `scripts/paper_figures/`.
+- the simulation output writers under `utils/`, and the figure-specific
+  summaries and renderers.
 
 Realistic blast radius for a new action: roughly 25–35 sites across these layers
 plus newly trained model files. There is no shortcut.
@@ -115,8 +103,8 @@ if you extend the model without knowing them:
   keeps a whitelist of psychology columns (`TP_init … PA_init`, `has_FI`); any other
   per-household column you add to `households_for_abm_sfha.csv` is silently discarded
   before it reaches the simulation.
-- **Unmapped action dropped from outputs.** The output tallies (e.g. `main_mc.py`
-  and `utils/` writers) map a fixed set of action strings; an action not in the map
+- **Unmapped action dropped from outputs.** The simulation output writers under
+  `utils/` map a fixed set of action strings; an action not in the map
   becomes `NaN` and disappears from summaries, Excel exports, and figures, even if it
   was simulated.
 ---

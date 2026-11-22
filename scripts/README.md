@@ -12,10 +12,13 @@ One-time data generation, export, and analysis scripts. Run as needed.
 
 | Script | Purpose |
 |--------|---------|
+| `run_mc100_local.py` | Run the revised paired scenarios with the canonical draw schedule; use `--start` and `--end` to select draws |
+| `verify_wrr_finance.py` | Verify annual tract finance output against the revised benchmark |
+| `render_wrr_figures.py` | Redraw the four supported figures from bundled aggregates |
+| `render_wrr_vector_figures.py` | Reproduce Figures 4, 6, and 7 from the pinned external study-archive PDFs |
+| `verify_wrr_figures.py` | Compare decoded PNG pixels to the submitted figure reference |
 | `generate_household_psych.py` | Generate household psychometric parameters for the household file configured by `files.households` |
 | `export_arcgis_excel.py` | Export tract-level data to Excel for ArcGIS Pro |
 | `generate_tract_summary_excel.py` | Create comprehensive tract summary table |
 | `gen_zscore_validation.py` | Generate z-score validation figure (internal) |
 | `_calc_zscore_r2.py` | Compute R2 across threshold scenarios |
-| `run_mc_extend.py` | Extend Monte Carlo from 15 to 30 runs |
-| `run_montecarlo.py` | Standalone MC runner (replaced by `main_mc.py`) |

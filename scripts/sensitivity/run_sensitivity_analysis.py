@@ -162,7 +162,7 @@ def _has_outputs(run_dir: Path) -> bool:
     return (rd / "tp_traj.csv").exists() or (rd / "finance").exists()
 
 
-# ── metric extraction (from run_montecarlo.py) ──────────────────────────
+# ── metric extraction for this sensitivity analysis ───────────────────
 
 def collect_run_metrics(run_dir: Path) -> dict:
     """Extract key metrics from a completed run directory."""

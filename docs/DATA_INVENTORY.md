@@ -46,6 +46,8 @@ how to rerun the benchmark and check its numerical outputs.
 | `data/supplementary/mc_initpsy_seeds.csv` and `data/supplementary/Table_S_MC_variance.csv` | Superseded ensemble seed list and variance summary removed in the preceding cleanup. |
 | Root `core/` and `utils/config_loader.py` | Unused old settings, data, path, and CLI loaders. The calibration-specific `core/` package is separate and retained. |
 | `modules/actions/MODELS_VERSION_GUIDE.md` | Documented unshipped model variants and workstation-specific paths. Use the reproduction guide for the shipped model. |
+| `main_mc.py`, `scripts/utilities/run_montecarlo.py`, `scripts/utilities/run_mc_extend.py` | Obsolete ensemble drivers. The revised benchmark uses the fixed draw schedule in `scripts/utilities/run_mc100_local.py`. |
+| `generate_paper_figures.py`, `scripts/paper_figures/plot_mc_convergence_s2.py`, `scripts/utilities/gen_table_s_mc_variance.py` | Superseded plotting registry and summaries for earlier runs. See the [revised figure guide](WRR_FIGURE_CHECKS.md) for current render routes. |
 
 The published YAML contains only the shipped model settings and input paths.
 It no longer lists unused Beta parameters, a separate owner-share table,

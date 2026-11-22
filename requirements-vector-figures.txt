@@ -1,0 +1,3 @@
+# Separate environment for the accepted PDF-to-PNG figure renders.
+PyMuPDF==1.26.7
+Pillow==12.0.0

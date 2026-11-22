@@ -29,10 +29,29 @@ from scripts.utilities.run_mc100_local import (
 )
 from scripts.utilities.validate_sfha_baseline import main as validate_sfha_baseline
 from scripts.utilities import verify_wrr_finance
+from utils._helpers import load_insurance_policy, load_yaml_cfg
 from utils.flood_prone import flood_prone_flags
+from utils.model_registry import ModelRegistry
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_published_configuration_uses_the_shipped_policy_and_model() -> None:
+    config = load_yaml_cfg(ROOT / "config" / "abm_params.yaml")
+    assert "owner_share" not in config
+    assert load_insurance_policy(config) == config["policy"]
+
+    registry = ModelRegistry(ROOT)
+    assert registry.list_models() == ["baseline"]
+    assert registry.get_path("baseline") == ROOT / "models" / "baseline"
+
+
+def test_default_insurance_policy_does_not_require_tenure_shares() -> None:
+    policy = load_insurance_policy({})
+    assert policy["limit_structure_kUSD"] == 250.0
+    assert policy["limit_contents_kUSD"] == 100.0
+    assert policy["coinsurance"] == {"enabled": False, "rate": 0.8}
 
 
 def test_posterior_draw_uses_tracked_nonconstant_models(monkeypatch: pytest.MonkeyPatch) -> None:

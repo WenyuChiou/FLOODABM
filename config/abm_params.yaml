@@ -9,67 +9,9 @@ action_dynamics:
   eh_one_time: true
   eh_step_ft: 1.0
   rl_backfill: false
-# DEAD CONFIG (verified 2026-06): this entire `beta_parameters` block is NOT read
-# at runtime. The live initial-psychology Beta shapes are hardcoded in
-# modules/actions/tp.py (BETA_PARAMS_OWNER_DEFAULT / BETA_PARAMS_RENTER_DEFAULT)
-# and the per-household draws are pre-baked into config/households_for_abm_sfha.csv.
-# Editing the values below has NO effect on a run — see docs/PARAMETERS.md.
-beta_parameters:
-  CP_mean:
-    owner:
-      alpha: 7.857
-      beta: 5.052
-    renter:
-      alpha: 3.824
-      beta: 2.164
-    original_range:
-    - 0.0
-    - 1.0
-  PA_mean:
-    owner:
-      alpha: 5.539
-      beta: 2.942
-    renter:
-      alpha: 2.513
-      beta: 1.322
-    original_range:
-    - 0.0
-    - 1.0
-  SC_mean:
-    owner:
-      alpha: 4.774
-      beta: 1.690
-    renter:
-      alpha: 2.794
-      beta: 1.036
-    original_range:
-    - 0.0
-    - 1.0
-  SP_mean:
-    owner:
-      alpha: 3.398
-      beta: 2.752
-    renter:
-      alpha: 1.759
-      beta: 1.103
-    original_range:
-    - 0.0
-    - 1.0
-  TP_mean:
-    owner:
-      alpha: 6.270
-      beta: 4.635
-    renter:
-      alpha: 3.713
-      beta: 2.668
-    original_range:
-    - 0.0
-    - 1.0
 files:
   depth_distributions: config/depth_distribution_by_tract_year.csv
   depths_overall: config/overall_md_mean_by_tract_2011_2023.json
-  flood_events: vulnerability/data/flood_events.csv
-  grid_depths_yaml: config/grid_depths_hist.yaml  # DEAD CONFIG: no live consumer (depths load from depths_overall)
   households: config/households_for_abm_sfha.csv
 finance:
   default_premium:
@@ -91,47 +33,12 @@ finance:
 flood:
   FFE_ft: 1.0
   depth_threshold_m: null
-  events_mode: mask        # DEAD CONFIG: no live consumer (verified 2026-06)
-  min_trigger: 1.0e-06     # DEAD CONFIG: no live consumer (verified 2026-06)
   ratio_threshold: 0.10
   ratio_threshold_owner: 0.10
   ratio_threshold_renter: 0.10
-# DEAD CONFIG (verified 2026-06): the entire `hazard` block has no live consumer.
-# Flood depths are loaded from files.depths_overall and files.depth_distributions,
-# not via these keys.
+# The benchmark preflight requires grid-cell depth sampling.
 hazard:
   depths_mode: grid_hist
-  grid_hist:
-    bin_method: uniform
-    fallback: exact
-owner_share:
-  '34013021300': 0.073496
-  '34013021601': 0.096306
-  '34013021602': 0.009814
-  '34013021802': 0.083784
-  '34013021803': 0.058219
-  '34027040101': 0.060031
-  '34027040102': 0.083004
-  '34027040200': 0.065362
-  '34027040301': 0.135646
-  '34027040302': 0.113115
-  '34027040701': 0.042916
-  '34027040801': 0.04275
-  '34027040803': 0.039785
-  '34027040805': 0.04562
-  '34027041704': 0.074872
-  '34031154005': 0.049324
-  '34031154006': 0.125303
-  '34031223802': 0.103237
-  '34031246001': 0.097619
-  '34031246003': 0.031224
-  '34031246102': 0.097935
-  '34031246103': 0.05035
-  '34031246104': 0.159916
-  '34031246201': 0.016308
-  '34031246202': 0.01913
-  '34031246203': 0.008287
-  '34031246300': 0.160892
 output:
   enable_plots: true
 paths:

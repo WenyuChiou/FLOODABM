@@ -41,7 +41,7 @@ from utils._helpers import (
     load_yaml_cfg, resolve_path, years_from_cfg,
     load_households_csv, load_depths_legacy,
     init_tract_psych_safe, grp_params_from_yaml,
-    load_inline_owner_share_policy, read_finance_from_yaml,
+    load_insurance_policy, read_finance_from_yaml,
 )
 from modules.actions.tp import TPConfig, TPGroupParams
 from modules.actions.decision import load_predictors, build_state_indexer, _init_fi_flags_from_yaml
@@ -179,7 +179,7 @@ def run_once_initpsy(init_seed: int, crn_seed: int, decision_seed: int | None = 
     OWNER_CONTENTS_RATIO = float(OWNER_INS.get("owner_contents_ratio", 0.57))
     OWNER_INSURES_BOTH   = bool(OWNER_INS.get("owner_insures_both", True))
 
-    OWNER_SHARE, policy_dict = load_inline_owner_share_policy(CFG)
+    policy_dict = load_insurance_policy(CFG)
 
     DEPTHS_LONG = load_depths_legacy(PATH_DEPTHS)
     YEARS = years_from_cfg(CFG, DEPTHS_LONG["year"].unique(), PATH_EVENTS)

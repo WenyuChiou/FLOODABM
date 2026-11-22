@@ -17,11 +17,14 @@ how to rerun the benchmark and check its numerical outputs.
 | `config/sfha_assignment_summary.csv` | Initialization audit by tract and tenure. |
 | `config/initial_fi_summary.csv` | Initial insurance counts and rates by tenure and SFHA status. |
 | `config/sfha_assignment_manifest.json` | Initialization seeds, checksums, and provenance. |
-| `config/models/models_config.yaml` | Model registry; only the baseline model data are shipped. |
+| `config/models/models_config.yaml` | Registry of the shipped baseline model. |
 | `data/supplementary/wrr_mc50_finance_reference.csv` | Seed schedule and archived finance checksums for the revised 50-draw ensemble. |
 | `data/supplementary/wrr_main_figures_reference.json` | Dimensions and decoded pixel checksums for the final revised main figures. |
 | `data/figures/Figure8_adaptation_trajectories.csv` | Final group-level median and interquartile ranges plotted in Figure 8; no household records. |
 | `data/figures/Figure11_income_aep.csv` | Final pooled and sorted income-normalized AEP series plotted in Figure 11; no household records. |
+| `data/figures/Figure5_nfip_validation_corrected_county_labels.csv` | Final simulated summary and observed standardized payouts by county and year, with corrected labels. |
+| `data/figures/Figure5_metrics_corrected_county_labels.csv` | Correlations and year counts in Figure 5. |
+| `data/figures/Figure9_tp_by_prone.csv` | Final annual group-level threat perception medians and interquartile ranges. |
 | `models/baseline/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | One full posterior per action and tenure; shared by the ensemble and posterior predictive query. |
 | `models/baseline_fast/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | Smaller posterior-mean caches used by the default single-run simulation. These are not duplicates of the full posteriors. |
 | `models/baseline/best_calibrators.json` | Fallback calibrators for the canonical baseline predictors. |
@@ -41,6 +44,12 @@ how to rerun the benchmark and check its numerical outputs.
 | `modules/actions/calibrators/best_calibrators.yaml` | Old calibrator export with no remaining reader. |
 | `calibration/data/data.xlsx` and `calibration/data/cal_data.xlsx` | Optional historical refitting inputs removed in the preceding cleanup. Fitted simulation models do not require these workbooks. |
 | `data/supplementary/mc_initpsy_seeds.csv` and `data/supplementary/Table_S_MC_variance.csv` | Superseded ensemble seed list and variance summary removed in the preceding cleanup. |
+| Root `core/` and `utils/config_loader.py` | Unused old settings, data, path, and CLI loaders. The calibration-specific `core/` package is separate and retained. |
+| `modules/actions/MODELS_VERSION_GUIDE.md` | Documented unshipped model variants and workstation-specific paths. Use the reproduction guide for the shipped model. |
+
+The published YAML contains only the shipped model settings and input paths.
+It no longer lists unused Beta parameters, a separate owner-share table,
+unshipped hazard defaults, or unshipped model variants.
 
 Unchanged dates on fitted models or source data do not make them stale. Use the
 consumer and verification path above to distinguish active dependencies and

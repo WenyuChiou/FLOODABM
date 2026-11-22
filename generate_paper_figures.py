@@ -71,7 +71,7 @@ def run_figure(fig_num: int, root: str | None, dry_run: bool = False) -> bool:
         return True
 
     env = os.environ.copy()
-    # Ensure scripts can import from project root (utils/, core/, modules/)
+    # Ensure scripts can import from project root (utils/ and modules/).
     project_root = str(Path(__file__).resolve().parent)
     env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
     if root:

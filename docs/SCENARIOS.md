@@ -11,8 +11,8 @@ scenarios**. No model code changes are required.
 
 ## 1. What `--scenario baseline | worst` actually means
 
-`--scenario` is **not** a hazard switch. It toggles household adaptation
-(`core/cli.py`, `choices=["baseline", "worst"]`):
+In `main.py`, `--scenario` toggles household adaptation. The flood inputs are
+configured separately:
 
 | `--scenario` | Meaning |
 |---|---|

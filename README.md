@@ -35,12 +35,6 @@ FLOODABM/
 │   ├── households_for_abm_sfha.csv  # Household inventory with inside_SFHA and initial FI status
 │   └── overall_md_mean_by_tract_2011_2023.json  # Flood depths by tract-year
 │
-├── core/                        # Framework infrastructure
-│   ├── config.py                # Configuration loader
-│   ├── data.py                  # Data loading utilities
-│   ├── cli.py                   # Command-line arguments
-│   └── paths.py                 # Path management
-│
 ├── modules/
 │   ├── actions/                 # Household decision models (Bayesian + TP)
 │   ├── finance/                 # NFIP premium, payout, OOP calculations

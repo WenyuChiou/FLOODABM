@@ -8,7 +8,7 @@ It loads pre-trained Bayesian regression models and caches the posterior mean we
 as .npz files for efficient subsequent loads.
 
 Key Features:
-- Supports both original models (models/) and optimized models (models_optimized/)
+- Supports the shipped models in models/baseline and compatible external models
 - Robust unpickling with shims for missing dependencies (JAX, NumPyro, etc.)
 - Vectorized prediction using NumPy for high performance
 - Optional probability calibration (Platt scaling, isotonic regression)
@@ -19,7 +19,7 @@ Public API:
 
 Example:
     >>> from pathlib import Path
-    >>> pred_owner, pred_renter = build_fast_predictors(Path("modules/actions/models_optimized"))
+    >>> pred_owner, pred_renter = build_fast_predictors(Path("models/baseline"))
     >>> result = pred_owner(TP=tp_array, CP=cp_array, SP=sp_array)
     >>> print(result["FI"])  # Flood Insurance adoption probabilities
 """

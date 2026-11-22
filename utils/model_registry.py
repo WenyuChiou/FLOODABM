@@ -10,17 +10,12 @@ Falls back to auto-detection if config file is missing.
 Models are stored in 'models/' folder at project root:
   models/
   ├── baseline/
-  ├── baseline_fast/
-  ├── optimized/
-  └── optimized_fast/
+  └── baseline_fast/
 
 Example:
     >>> from utils.model_registry import ModelRegistry
-    >>> registry = ModelRegistry(Path("."))  # project root
-    >>> registry.print_summary()
-    Found 2 model(s):
-      • baseline: Baseline Model (8 pkl) ✓ calibrators ✓ cached
-      • optimized: Optimized Model (8 pkl) ✓ calibrators ✓ cached
+    >>> ModelRegistry().list_models()
+    ['baseline']
 """
 from __future__ import annotations
 

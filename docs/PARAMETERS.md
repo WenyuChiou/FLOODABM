@@ -15,22 +15,20 @@ Changing these without recalibrating silently invalidates the published results.
 
 | Parameter (in `config/abm_params.yaml` unless noted) | Provenance | Why frozen |
 |---|---|---|
-| Psychology Beta shapes (`beta_parameters`) | Phase-1 survey fit (N = 557 owner / 379 renter) | Population property. **See the warning below — the YAML block is not the live source.** |
+| Initial household psychology | Phase-1 survey fit (557 homeowners and 379 renters) | The published household CSV stores the fixed draws. |
 | `tp_decay_params` (per-tenure α, β, tau0, tau_inf, k) | Phase-3 grid search | Empirical threat-perception decay (shipped truth: owner `tau_inf=33.2589`, renter `46.0431`) |
 | `finance` premium rates, `reserve` (1.15), `owner_contents_ratio` (0.57) | NFIP actuarial | Rescale every premium, affordability, and CAT damage result |
 | Preassigned `inside_SFHA` and `has_FI` in `households_for_abm_sfha.csv`; `sfha_shares.csv` | Tract SFHA area fraction and literature-informed initial FI rates | Defines the revised agent initialization and must remain fixed for reproduction |
-| `owner_share` | ACS tenure split | Sets the owner/renter agent counts per tract |
+| Household tenure in `households_for_abm_sfha.csv` | Synthetic household inventory | Determines homeowner and renter counts by tract; no separate tenure-share setting is used. |
 | `flood.FFE_ft` (1.0), `files.*` | Data bindings / first-floor-elevation assumption | Calibration constants |
 
-> **`beta_parameters` is effectively dead config.** The live psychology Beta
-> shapes are in `modules/actions/tp.py` (`BETA_PARAMS_OWNER_DEFAULT` /
-> `BETA_PARAMS_RENTER_DEFAULT`), and the per-household initial values are already
-> baked into `config/households_for_abm_sfha.csv`. Editing the `beta_parameters` YAML
-> block alone will **not** change a run. To change the psychology distribution you
-> must edit `tp.py` and regenerate the household file (see §3).
+> The Beta shapes used to generate new initial psychology draws are defined in
+> `modules/actions/tp.py` (`BETA_PARAMS_OWNER_DEFAULT` and
+> `BETA_PARAMS_RENTER_DEFAULT`). The benchmark reads the fixed values in
+> `config/households_for_abm_sfha.csv`.
 
 > **Two different "alpha/beta".** `tp_decay_params.alpha/beta` are decay-weighting
-> constants; `beta_parameters` are Beta-distribution shape parameters for the
+> constants; the Beta-distribution shape parameters describe the
 > initial psychology draws. They are unrelated — do not conflate them.
 
 ## 2. Safe to tune — scenario levers

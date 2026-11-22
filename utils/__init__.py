@@ -12,7 +12,6 @@ from typing import Any
 __all__ = [
 	"plots",
 	"helpers",
-	"config_loader",
 	"plots_comparision_scenario",
 	"main_helpers",
 ]
@@ -23,8 +22,6 @@ def __getattr__(name: str) -> Any:  # PEP 562 — lazy attribute access on modul
 		return import_module(".plots", __name__)
 	if name == "helpers":
 		return import_module(".\u005fhelpers", __name__)  # alias _helpers as helpers
-	if name == "config_loader":
-		return import_module(".config_loader", __name__)
 	if name == "plots_comparision_scenario":
 		return import_module(".plots_comparision_scenario", __name__)
 	if name == "main_helpers":

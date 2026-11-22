@@ -56,6 +56,9 @@ Thumbs.db
 !data/supplementary/*.csv
 !data/figures/Figure8_adaptation_trajectories.csv
 !data/figures/Figure11_income_aep.csv
+!data/figures/Figure5_metrics_corrected_county_labels.csv
+!data/figures/Figure5_nfip_validation_corrected_county_labels.csv
+!data/figures/Figure9_tp_by_prone.csv
 *.parquet
 *.pkl
 *.h5

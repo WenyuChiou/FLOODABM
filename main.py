@@ -7,20 +7,15 @@ This is the primary entry point for running FLOODABM simulations.
 
 QUICK START
 -----------
-    # Run baseline scenario with optimized models
-    python main.py --model-dir models_optimized --output-mode full
+    # Run with adaptation using the shipped models
+    python main.py --scenario baseline --no-plots --output-mode full
 
-    # Run worst-case (no adaptation) scenario for comparison
-    python main.py --scenario worst --model-dir models_optimized --output-mode full
-
-    # Run both then analyze
-    python analyze_themes.py
+    # Run without adaptation for comparison
+    python main.py --scenario worst --no-plots --output-mode full
 
 CLI ARGUMENTS
 -------------
-    --model-dir     : Model directory (default: 'models')
-                      Auto-detects all 'models*' directories in modules/actions/
-                      Available options shown in --help output
+    --model-dir     : Model registry key (default: baseline; see --list-models)
     
     --scenario      : Simulation scenario (default: 'baseline')
                       'baseline' = Normal simulation with agent decisions
@@ -32,8 +27,8 @@ CLI ARGUMENTS
                       'minimal' = Essential only (~10MB)
     
     --out-root      : Custom output directory (default: outputs/)
-    --thr-owner     : Override owner flood ratio threshold (default: 0.5)
-    --thr-renter    : Override renter flood ratio threshold (default: 0.5)
+    --thr-owner     : Override the owner flood ratio threshold from YAML
+    --thr-renter    : Override the renter flood ratio threshold from YAML
     --no-plots      : Skip all visualization generation
     --deterministic : Use fixed RNG each year for reproducibility
 
@@ -68,8 +63,8 @@ depth_distribution_by_tract_year.csv:
     calibrated input for tract-level TP shock and flood-prone classification.
 
 flood:
-    ratio_threshold_owner  : Flood ratio trigger for owner group (default: 0.5)
-    ratio_threshold_renter : Flood ratio trigger for renter group (default: 0.5)
+    ratio_threshold_owner  : Flood ratio trigger for owner group (0.10 in the benchmark)
+    ratio_threshold_renter : Flood ratio trigger for renter group (0.10 in the benchmark)
 
 ARCHITECTURE
 ------------
@@ -108,7 +103,7 @@ from utils._helpers import (
     load_yaml_cfg, resolve_path, years_from_cfg,
     load_households_csv, load_depths_legacy, depths_for_year,
     grp_params_from_yaml,
-    load_inline_owner_share_policy, read_finance_from_yaml,
+    load_insurance_policy, read_finance_from_yaml,
     finalize_has_fi,
 )
 from utils.main_helpers import (
@@ -378,7 +373,7 @@ def run_single_scenario(
     ap.add_argument("--years", type=int, default=None,
                     help="Limit simulation to first N years (for testing)")
     ap.add_argument("--decision-threshold", type=float, default=None,
-                    help="Override decision_threshold (default 0.5). Action adopted if p > threshold.")
+                    help="Override the YAML decision threshold (0.0 in the WRR benchmark).")
     ap.add_argument(
         "--fi-renter-bounds", type=float, nargs=2, metavar=("LOW", "HIGH"),
         help="Override draw_bounds.FI_renter without changing homeowner FI bounds.",
@@ -513,8 +508,7 @@ def run_single_scenario(
     CV_NJ = {"rcv": 0.694, "contents": 1.8}
 
     # ---------------------------------------------------------------------------
-    # Decision Threshold: Probability cutoff for action adoption
-    # Action is adopted if predicted probability > threshold (default 0.5)
+    # Decision threshold: minimum adoption probability before the random draw.
     # ---------------------------------------------------------------------------
     DECISION_THRESHOLD = float(CFG.get("decision_threshold", 0.5))
 
@@ -533,8 +527,7 @@ def run_single_scenario(
     OWNER_CONTENTS_RATIO = float(OWNER_INS.get("owner_contents_ratio", 0.57))
     OWNER_INSURES_BOTH = bool(OWNER_INS.get("owner_insures_both", True))
 
-    # Policy & owner share
-    OWNER_SHARE, policy_dict = load_inline_owner_share_policy(CFG)
+    policy_dict = load_insurance_policy(CFG)
 
     # =========================================================================
     # SECTION 5: DATA LOADING

@@ -18,20 +18,14 @@ the model works*, not just *what hazard it sees*.
 
 ---
 
-## 1. Inert ("dead") configuration surfaces
+## 1. Configuration for the revised benchmark
 
-Some files and keys look like live configuration but are not read at runtime. The
-live config path is the inline YAML read in `main.py` / `main_mc.py` via
-`utils._helpers.load_yaml_cfg`. These are marked in-source as well.
-
-| Surface | Status | Live source instead |
-|---|---|---|
-| `core/config.py`, `core/cli.py`, `utils/config_loader.py` | **Not imported at runtime.** A typed-dataclass loader + a second CLI parser that the live runners never call. | `main.py` builds its own inline argparse parser; YAML via `utils._helpers.load_yaml_cfg`. |
-| `abm_params.yaml: beta_parameters` block | **Dead.** Editing it has no effect. | Live initial-psychology Beta shapes are in `modules/actions/tp.py` (`BETA_PARAMS_OWNER_DEFAULT` / `BETA_PARAMS_RENTER_DEFAULT`) and pre-baked into `config/households_for_abm_sfha.csv`. See [PARAMETERS.md](PARAMETERS.md). |
-| `abm_params.yaml: hazard` block, `flood.events_mode`, `flood.min_trigger`, `files.grid_depths_yaml` | **No live consumer.** | Tract means load from `files.depths_overall`; household depths load from `files.depth_distributions`. |
-
-Practical effect: do not wire a new tool to `core/config.py` or `core/cli.py`, and
-do not expect edits to the keys above to change a run.
+`main.py` reads `config/abm_params.yaml` using `utils._helpers.load_yaml_cfg`.
+Tract means and household depths load from `files.depths_overall` and
+`files.depth_distributions`, respectively. The benchmark preflight requires
+`hazard.depths_mode: grid_hist`. The revised run uses the 2011–2023 span; a
+separate `files.flood_events` calendar is optional input for `years.mode: events_only`.
+The household inventory supplies tenure directly.
 
 ---
 
@@ -79,7 +73,7 @@ Realistic blast radius for a new action: roughly 25–35 sites across these laye
 plus newly trained model files. There is no shortcut.
 
 **The one clean extension seam:** `modules/actions/decision.py` `load_predictors`.
-You can replace the Bayesian predictor wholesale with your own model (random
+You can replace the Bayesian predictor with your own model (random
 forest, neural net, rule table, …) by returning two callables that honor the
 `predict(*, TP, CP, SP) -> {action: prob_array}` contract — no retraining of the
 shipped engine required. This is clean **only** for a like-for-like predictor that

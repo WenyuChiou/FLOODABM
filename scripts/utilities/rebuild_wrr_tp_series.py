@@ -141,13 +141,15 @@ def verify_series(actual: pd.DataFrame, expected: pd.DataFrame) -> float:
     return float(delta.max())
 
 
-def publish(out_dir: Path, payload: bytes) -> Path:
+def publish(out_dir: Path, payload: bytes, *, filename: str = FILENAME) -> Path:
+    if Path(filename).name != filename or not filename.endswith(".csv"):
+        raise ValueError("Expected a single CSV filename")
     out_dir.parent.mkdir(parents=True, exist_ok=True)
-    output = out_dir / FILENAME
-    with TemporaryDirectory(prefix=".wrr-tp-", dir=out_dir.parent) as folder:
-        staged = Path(folder) / FILENAME
+    output = out_dir / filename
+    with TemporaryDirectory(prefix=".wrr-series-", dir=out_dir.parent) as folder:
+        staged = Path(folder) / filename
         if staged.write_bytes(payload) != len(payload):
-            raise OSError("Incomplete write of the verified Figure 9 series")
+            raise OSError(f"Incomplete write of the verified series: {filename}")
         out_dir.mkdir()
         try:
             # Publish the complete file on the same filesystem, without replacing a target.

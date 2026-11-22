@@ -69,10 +69,24 @@ for the bundled route.
 ## Redraw adoption and threat-perception trajectories
 
 Follow the [PNG commands](WRR_FIGURE_CHECKS.md#render-from-the-bundled-data)
-to redraw Figures 8 and 9 from the bundled aggregate series. Figure 8 uses
-the saved series. To recompute Figure 9 from the complete ensemble above
-and verify the PNG, use new series and image directories. Run each command
-only after the previous one succeeds:
+to redraw Figures 8 and 9 from the bundled aggregate series. To rebuild
+the three insurance and elevation panels (Figure 8a–c) from the complete
+ensemble above and verify the full image, use new series and image
+directories. Run each command only after the previous one succeeds:
+
+```sh
+python scripts/utilities/rebuild_wrr_adoption_series.py --mc-root ../wrr-ensemble --out-dir ../wrr-adoption
+python scripts/utilities/render_wrr_figures.py --series-dir ../wrr-adoption --figure-dir ../wrr-adoption-png --figures 8
+python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-adoption-png --figures 8
+```
+
+The command recalculates 78 rows for Figure 8a–c from the annual decision
+files and checks them against the revised series. It carries the 26 revised
+relocation rows for Figure 8d unchanged from the bundled CSV; it does not
+recompute the relocation panel.
+
+To recompute Figure 9 from the complete ensemble, use a separate pair
+of new directories and run each command only after the previous one succeeds:
 
 ```sh
 python scripts/utilities/rebuild_wrr_tp_series.py --mc-root ../wrr-ensemble --out-dir ../wrr-tp

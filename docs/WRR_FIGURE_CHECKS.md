@@ -121,6 +121,16 @@ prior bootstrap curves and flood maps. It does not recompute the calibration
 intervals or simulate flood depths, and it does not recreate Word's embedded
 JPEG for S3. Use `--figures 2 3` to redraw only S2 and S3.
 
+Rebuilding these figures from their scientific inputs would require additional
+sources. This checkout does not include the matching inputs and plotting
+procedure for those builds:
+
+| Figure | Inputs needed beyond the archived image |
+| --- | --- |
+| S1 | Bootstrap results for the plotted threat-perception decay medians and 95% intervals, or the inputs and procedure that produced those results. |
+| S2 | Stage IV-forced and WRF-forced simulated depths for Hurricane Irene, the reference depth grid, and the grid comparison and plotting procedure. |
+| S3 | The 2012–2023 annual maximum-depth grids, flood-model domain boundary, and map settings. |
+
 ### Supporting Figure S7 from the study archive
 
 Use the pre-crop population map in the study figure archive,
@@ -267,11 +277,24 @@ are needed. The PDFs are not bundled. This route reproduces the layout and
 rendering stage; it does not rerun the flood diagnostics or regenerate the
 finance series from simulation CSVs.
 
+## Figure 1 data coverage and PNG verification
+
+The [overlay rebuild](REPRODUCIBILITY.md#recompute-the-sfha-area-shares)
+reproduces all 27 revised tract coverage values using the two pinned layers.
+In a controlled ArcGIS test, verified public FEMA tract geometries replaced the
+27 drawn tract polygons. The resulting pixels matched the original layer's
+render with the online basemap turned off and the other layers unchanged.
+
+The [Esri World Topographic Map style](https://r.esri.com/arcgisutils/reference/arc_portal_urls.html)
+is an online dependency of the detail frame. The live ArcGIS re-export does not
+match the revised PNG. For exact image verification, supply the archived revised
+`Figure_01.png` to the [figure checker](#checking-reproduced-wrr-figures).
+
 ## Final revision sources and current reproduction coverage
 
 | Final figure | Source and reproduction boundary |
 | --- | --- |
-| 1 | Study-area map with tract SFHA shares and white-outlined county labels. The [overlay rebuild](REPRODUCIBILITY.md#recompute-the-sfha-area-shares) exactly reproduces the 27 coverage values from the archived geospatial inputs. The ArcGIS PNG re-export did not match the final pixels; differences were concentrated in the right-hand frame, which uses the World Topographic Map basemap. |
+| 1 | Study-area map with tract SFHA shares and white-outlined county labels. See the [Figure 1 checks](#figure-1-data-coverage-and-png-verification). |
 | 2–3 | Framework and adoption-probability illustrations. The checker accepts the submitted PNGs; these illustrations are not outputs of a simulation run. |
 | 4 | Flood-model diagnostics. [Verify the final archived PNG](#verify-the-archived-figure-4-png) separately from the household simulation. |
 | 5 | County NFIP diagnostic. The bundled renderer uses the corrected Morris/Passaic labels and the final aggregate series; the regenerated PNG matches the final pixels. |
@@ -284,8 +307,8 @@ finance series from simulation CSVs.
 
 The [simulation benchmark](REPRODUCIBILITY.md) and this image check are
 separate. A clone contains the simulation inputs, figure reference checksums,
-and the sources needed to redraw Figures 5–9 and 11. Figures 1, 4, 10 and S7
-require separately supplied materials for the checks described above. The
+and the sources needed to redraw Figures 5–9 and 11. Figures 1, 4, 10, S1–S3,
+and S7 require separately supplied materials for the stated checks. The
 public GIS route for Figures 10 and S7 needs only their layout files, rebuilt
 series, and public GIS inputs. The layouts, native GIS projects, and
 hydrologic modeling projects are not included in the clone.

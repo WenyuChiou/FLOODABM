@@ -1,85 +1,39 @@
 # Calibration Pipeline: Owner/Renter Behavioral Parameters
 
-This directory preserves the FLOODABM behavioral calibration methods, organized by housing
-tenure. Reproducing the revised simulation with the shipped fitted models does not require
-refitting or survey workbooks. To refit, supply authorized local workbooks under `calibration/data/`;
-the two processed files below are inputs to different phases. The directory
-tree and phase summaries include historical calibration inputs and outputs;
-they are not a list of files distributed with the revised benchmark. Read the
-[refitting constraints](../docs/PARAMETERS.md#4-known-calibration-pipeline-limitations-documented-not-fixed) before running calibration.
-Plotting scripts now write PNGs only. The fitted posterior models can be
-queried directly without survey input:
+The revised simulation uses the fitted models in `models/baseline/` and
+`models/baseline_fast/`, the assigned household inventory, and the TP decay
+settings in `config/abm_params.yaml`. Reproducing it does not require survey
+workbooks or refitting. Start with the [reproduction guide](../docs/REPRODUCIBILITY.md).
+To examine the fitted adoption models without survey data, run:
 
 ```sh
 python calibration/phase2_bayesian_regression/posterior_predictive_query.py --tp 0.6 --cp 0.7 --sp 0.5 --out-dir ../calibration-png
 ```
 
-## Directory Structure
+## What is in this checkout
 
 ```
 calibration/
-├── data/                           # User-supplied local source data, not shipped
-│   ├── data_ori.xlsx               # Raw survey (NMG/MG sheets + owner/renter variable sheets)
-│   ├── data.xlsx                   # Processed survey data (Bayesian engine reads this)
-│   └── cal_data.xlsx               # TP decay calibration data (owner_cal, renter_cal sheets)
+├── bayesian_engine/               # Phase 2 fitting source; see refitting constraints
+├── phase2_bayesian_regression/
+│   └── posterior_predictive_query.py
 │
-├── extract_tenure_data.py          # Phase 1: Extract & fit distributions from survey
-├── audit_anomalies.py              # Data quality audit script
-│
-├── bayesian_engine/                # Phase 2: Bayesian Beta Regression
-│   ├── main.py                     # Entry point: run all group × action models
-│   ├── model.py                    # NumPyro Beta regression model definition
-│   ├── config.py                   # GROUPS = [("owner_variable","owner"), ("renter_variable","renter")]
-│   ├── data.py                     # Data loading from Excel sheets
-│   ├── calibration.py              # Post-hoc probability calibration (Platt/isotonic/beta)
-│   ├── evaluation.py               # Out-of-fold evaluation
-│   ├── metrics.py                  # Brier score, ECE, calibration metrics
-│   ├── strategy.py                 # Training strategy patterns
-│   └── utils.py                    # Utility functions
-│
-├── phase1_tenure_distributions/    # Phase 1 outputs
-│   ├── beta_parameters_summary.csv # Alpha/Beta params for 5 vars × 2 groups (+ KS test)
-│   ├── action_adoption_rates.csv   # FI/EH/BP/RL adoption rates by tenure
-│   ├── beta_distributions_owner_renter.png      # 10-panel histograms + Beta fits
-│   ├── overlay_comparison.png                  # Owner vs Renter overlay
-│   ├── action_rates_owner_renter.png           # Adoption rate bar charts
-│   ├── action_means_owner_renter.png           # Mean Likert score comparison
-│   ├── Phase1_Owner_Renter_Report.docx          # Comprehensive Word report
-│   └── generate_report.py                       # Script to regenerate report
-│
-├── phase2_bayesian_regression/     # Phase 2 outputs
-│   ├── coefficient_comparison.png  # β coefficients by group × action
-│   ├── convergence_diagnostics.png # R-hat and ESS for all parameters
-│   ├── calibration_improvement.png # ECE before vs after calibration
-│   ├── prior_vs_posterior.png      # Prior→Posterior shrinkage
-│   ├── brier_skill_score.png       # BSS by model
-│   ├── phase2_metrics_table.csv        # Summary metrics table
-│   ├── best_calibrators_v2.json    # Calibrator selection
-│   ├── Validation.docx             # Validation report
-│   ├── SUPPLEMENT_bundle.xlsx      # Supplementary data
-│   ├── generate_phase2_plots.py    # Script to regenerate plots
-│   ├── owner_group/{BP,EH,FI,RL}/ # prob_metrics.xlsx per action
-│   └── renter_group/{BP,EH,FI,RL}/
-│
-└── phase3_tp_decay/                # Phase 3: TP Decay Calibration
-    ├── run_calibration.py          # Entry point
-    ├── config.py                   # Grid search settings (owner/renter)
-    ├── core/                       # model.py, data.py, optimizer.py, visualizer.py
-    └── outputs/
-        ├── tp_decay_curves.png                # Calibrated decay curves
-        ├── tp_decay_confidence_intervals.png   # 95% CI ribbons
-        ├── tp_decay_residuals.png              # Observed vs predicted
-        ├── rmse_heatmap_owner.png              # RMSE landscape
-        ├── rmse_heatmap_renter.png
-        ├── calibration_summary.xlsx            # Full results
-        ├── tp_decay_params_for_abm.json        # Parameters for ABM config
-        └── phase3_metrics_table.csv            # Summary metrics
+└── phase3_tp_decay/
+    ├── run_calibration.py         # Optional refitting; workbook not shipped
+    ├── config.py
+    ├── core/
+    └── outputs/tp_decay_params_for_abm.json   # Reference parameters
 ```
+
+See the [refitting constraints](../docs/PARAMETERS.md#4-refitting-constraints).
+The workstation-only preprocessing, audit, and exploratory scripts remain in
+Git history; they are not part of the revised benchmark's runnable workflow.
 
 ## Pipeline Overview
 
 ### Phase 1: Survey Data Extraction & Distribution Fitting
-**Script:** `extract_tenure_data.py`
+Historical preprocessing used the study's original Qualtrics export. The
+survey and preprocessing script are not distributed in the active workflow.
 
 1. Reads raw survey data from `999_value.xlsx` (original Qualtrics export)
 2. Splits respondents by Q5 (housing status): Q5=1 → renter, Q5∈{2,3} → owner
@@ -96,11 +50,13 @@ calibration/
 **Sample sizes:** Owner=557, Renter=379 (total n=936)
 
 ### Phase 2: Bayesian Beta Regression (calibration workflow)
-**Script:** `bayesian_engine/main.py`
+`bayesian_engine/` retains historical fitting code. The original processed
+survey workbook and its loader are not bundled, so this code cannot refit the
+published models from the clone.
 
 1. Fits Beta regression: P(action) ~ sigmoid(β₀ + β_TP·TP + β_CP·CP + β_SP·SP)
 2. Uses NumPyro NUTS sampler (4 chains, 4000 warmup, 1200 samples)
-3. Trains 8 models: owner×{FI,EH,BP,RL} + renter×{FI,EH,BP,RL}
+3. Considers up to eight candidate combinations of tenure and action
 4. Applies post-hoc calibration (Platt scaling, temperature, isotonic, beta)
 5. Outputs `.pkl` (full model) and `.npz` (weights only) files
 
@@ -115,7 +71,10 @@ under `calibration/phase2_bayesian_regression/`.
 **Script:** `phase3_tp_decay/run_calibration.py`
 
 Uses `cal_data.xlsx` (owner_cal: n=135, renter_cal: n=73) to calibrate
-the TP exponential decay parameters per tenure group.
+the TP exponential decay parameters per tenure group. This workbook is not
+bundled. For exploratory refits with authorized data, work in a separate
+checkout: the script writes to its local `outputs/` directory, including the
+reference-parameter filename. A refit is not a reconstruction of Figure S1.
 
 Model: `TP(t) = TP0 * exp(-ln2 * w_eff * Eff(t))`
 where `w_eff = α*(1-PA) + β*SC`, `τ(t) = τ∞ - (τ∞-τ₀)*exp(-k*t)`
@@ -126,7 +85,7 @@ Pipeline:
 3. Fine-tuning via L-BFGS-B
 4. Bootstrap CIs (N=100)
 
-**Outputs in `phase3_tp_decay/outputs/`:**
+**Outputs generated by an optional refit (not shipped, except reference parameters):**
 - `tp_decay_curves.png` — Calibrated decay curves
 - `tp_decay_confidence_intervals.png` — 95% CI ribbons
 - `tp_decay_residuals.png` — Observed vs predicted scatter

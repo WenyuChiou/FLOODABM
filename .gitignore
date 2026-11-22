@@ -70,23 +70,23 @@ Thumbs.db
 *.h5
 *.feather
 
-# Calibration pipeline: allow code and model weights; ignore regenerable outputs
+# Calibration provenance and fitted models; ignore local outputs and survey inputs
 !calibration/
 !calibration/**
 # Local survey workbooks are optional calibration inputs, not benchmark inputs.
 calibration/data/*.xls*
-# phase1 outputs (regenerable via plot_action_distributions.py + generate_report.py)
+# Historical Phase 1 outputs (not distributed)
 calibration/phase1_tenure_distributions/*.png
 calibration/phase1_tenure_distributions/*.csv
 calibration/phase1_tenure_distributions/*.docx
-# phase2 outputs (regenerable via bayesian_engine); the shared posteriors are in models/baseline/
+# Local Phase 2 outputs; the shipped posteriors are in models/baseline/
 calibration/phase2_bayesian_regression/models/*.npz
 calibration/phase2_bayesian_regression/*.png
 calibration/phase2_bayesian_regression/*.xlsx
 calibration/phase2_bayesian_regression/owner_group/**/*.xlsx
 calibration/phase2_bayesian_regression/renter_group/**/*.xlsx
 # phase3 outputs (regenerable via run_calibration.py + core/visualizer.py)
-# keep: tp_decay_params_for_abm.json (optional calibration reports read it)
+# Keep tp_decay_params_for_abm.json as calibration provenance.
 calibration/phase3_tp_decay/outputs/*.png
 calibration/phase3_tp_decay/outputs/*.xlsx
 calibration/phase3_tp_decay/outputs/*.csv

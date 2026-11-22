@@ -81,11 +81,10 @@ in `models/baseline/` carry coefficients for only these three drivers.
 - Adding a new decision driver (e.g. income, prior losses) requires **retraining**
   to produce new weight files; editing `FEATURES` alone yields zero weights for the
   new driver (a silent no-effect — see §5).
-- The retraining pipeline is **not runnable as shipped**: `calibration/bayesian_engine/data.py`
-  imports `from src.util_2 import load_data`, but no `src/` package is included, so
-  Phase 2 raises `ImportError` on import. Phase 1 raw survey input is also not in
-  the repo. See [PARAMETERS.md](PARAMETERS.md) §4. Reusing the shipped models (the
-  common case) is unaffected.
+- A clone cannot refit the published models. The survey, processed Phase 2
+  workbook, and original data loader are external. The shipped models remain
+  usable for inference and simulation. See the
+  [refitting constraints](PARAMETERS.md#4-refitting-constraints).
 
 ---
 

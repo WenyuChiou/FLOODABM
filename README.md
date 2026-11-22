@@ -37,18 +37,18 @@ FLOODABM/
 │   └── vulnerability/           # Flood damage functions
 │
 ├── models/
-│   └── baseline_fast/           # Pre-trained Bayesian models (.npz)
+│   ├── baseline/                # Fitted posterior draws for the revised ensemble
+│   └── baseline_fast/           # Posterior-mean caches for single runs
 │
-├── calibration/                 # Calibration pipeline (3 phases)
-│   ├── phase1_tenure_distributions/  # Beta distribution fitting
-│   ├── phase2_bayesian_regression/   # Bayesian logistic regression
-│   └── phase3_tp_decay/             # TP decay parameter estimation
+├── calibration/                 # Calibration provenance and fitted model query
+│   ├── bayesian_engine/          # Phase 2 fitting code retained for provenance
+│   ├── phase2_bayesian_regression/ # Query the shipped posterior models
+│   └── phase3_tp_decay/          # Optional TP decay refitting with external input
 │
 ├── utils/                       # Visualization helpers and output
 │
 └── scripts/
     ├── examples/                # Example helper scripts (e.g. future-depth generator)
-    ├── validation/              # NFIP validation
     └── utilities/               # Ensemble runner, figure rebuilds, and verification
 ```
 

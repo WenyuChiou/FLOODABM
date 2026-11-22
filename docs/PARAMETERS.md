@@ -54,8 +54,8 @@ recalibration.
 instrument are unchanged and only the hazard/climate scenario varies. Treat
 `calibration/` as a read-only provenance record.
 
-**Recalibrate (full Phase 1 → 2 → 3)** only when **any** of these differ: study
-region/basin, population demographics, or survey instrument. Three plug-in tiers:
+For another study area, population, or survey instrument, reassess whether
+the Passaic calibration applies. Use a separate checkout for custom settings:
 
 1. **Own numbers, no rerun.** Overwrite `tp_decay_params` in the YAML and drop
    replacement `.npz` model files into `models/baseline/` (and `models/baseline_fast/`).
@@ -66,34 +66,33 @@ region/basin, population demographics, or survey instrument. Three plug-in tiers
    Keep the shipped inventory unchanged for benchmark reproduction. Adding
    `--yaml CUSTOM.yaml` uses your configuration when validating or assigning initial
    insurance status; it does not override the Python Beta shapes (§1).
-2. **Own survey, reuse Phase 2/3.** Build `data.xlsx` (sheets `owner_variable` /
-   `renter_variable` with columns FI, EH, BP, RL, TP_mean, CP_mean, SP_mean,
-   SC_mean, PA_mean, Source) and `cal_data.xlsx` (`owner_cal` / `renter_cal`), then
-   run Phases 2–3. **See the known limitation below.**
-3. **Own raw survey.** Phase 1 is not reusable as shipped (hardcoded paths and
-   instrument-specific question maps).
+2. **Own survey.** Derive any new parameters from authorized data and a
+   documented fitting workflow. The published refitting source and input
+   requirements are described below.
 
 ### Write-back map (where each calibration output goes)
 - Phase 1 (Beta shapes) → `modules/actions/tp.py:BETA_PARAMS_*_DEFAULT` **(not the YAML)** + regenerate the household CSV.
 - Phase 2 (Bayesian regression) → `.npz` into `models/baseline/` + `models/baseline_fast/`.
 - Phase 3 (TP decay) → `tp_decay_params` in `config/abm_params.yaml` (and `calibration/phase3_tp_decay/outputs/tp_decay_params_for_abm.json`).
 
-## 4. Known calibration-pipeline limitations (documented, not fixed)
+## 4. Refitting constraints
 
-These are recorded so an external team is not surprised; they are **not** changed
-here because this version is under peer review.
+The inputs and code needed for a full training rerun are not included:
 
-- **Phase 1 is not runnable as shipped:** its raw survey input is not in the repo
-  and the path points at a personal location.
-- **Phase 2 has a broken import:** `calibration/bayesian_engine/data.py` does
-  `from src.util_2 import load_data`, but no `src/` package or `util_2` module is
-  shipped, so `python -m bayesian_engine.main` raises `ImportError` immediately.
-  To re-run Phase 2 from the processed `data.xlsx`/`cal_data.xlsx`, supply your own
-  `load_data` loader.
+- Phase 1 used instrument-specific survey preprocessing. The original survey
+  is not distributed, and the workstation-specific tools remain in Git history.
+- Phase 2 fitting source is retained for provenance. It depends on the
+  original `data.xlsx` (`owner_variable` and `renter_variable` sheets) and
+  the `src.util_2.load_data` loader; neither is included. Use the
+  [posterior predictive query](../calibration/README.md) to examine the
+  shipped models.
+- Optional Phase 3 fitting requires an authorized `cal_data.xlsx` in
+  `calibration/data/` (`owner_cal` and `renter_cal` sheets). Run it in a
+  separate checkout to keep the shipped parameters and reference files intact.
 
-Reusing the shipped models (the common case for climate scenarios) is unaffected by
-either limitation.
+The [revised benchmark](REPRODUCIBILITY.md) runs with its shipped models
+and input files.
 
 ## See also
 - [SCENARIOS.md](SCENARIOS.md) · [FUTURE_SIMULATION.md](FUTURE_SIMULATION.md) · [DATA_FORMATS.md](DATA_FORMATS.md)
-- `calibration/README.md` — the original calibration pipeline notes
+- [Calibration notes](../calibration/README.md) — fitted parameters and historical methods

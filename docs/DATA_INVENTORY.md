@@ -38,9 +38,9 @@ file is recorded in the manifest for provenance only.
 | `models/baseline/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | One full posterior per action and tenure; shared by the ensemble and posterior predictive query. |
 | `models/baseline_fast/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | Smaller posterior-mean caches used by the default single-run simulation. These are not duplicates of the full posteriors. |
 | `models/baseline/best_calibrators.json` | Fallback calibrators for the canonical baseline predictors. |
-| `calibration/phase3_tp_decay/outputs/tp_decay_params_for_abm.json` | Reference result read by the optional TP-calibration report and augmented-calibration tools. The published simulation reads its active settings from `config/abm_params.yaml`. |
+| `calibration/phase3_tp_decay/outputs/tp_decay_params_for_abm.json` | Reference result retained as TP calibration provenance. The revised simulation reads its active settings from `config/abm_params.yaml`. |
 
-## Superseded data removed from the checkout
+## Superseded data and tools removed from the checkout
 
 | File | Reason |
 | --- | --- |
@@ -53,6 +53,10 @@ file is recorded in the manifest for provenance only.
 | `modules/actions/calibrators/best_calibrators.json` | Old calibrator export; the model loader does not search this directory. |
 | `modules/actions/calibrators/best_calibrators.yaml` | Old calibrator export with no remaining reader. |
 | `calibration/data/data.xlsx` and `calibration/data/cal_data.xlsx` | Optional historical refitting inputs removed in the preceding cleanup. Fitted simulation models do not require these workbooks. |
+| Former Phase 1 extraction, plotting, reporting, and survey-audit tools | Hardcoded to workstation files and output paths; the simulation uses the revised household inventory instead. The calibration methods remain documented and the tools remain in Git history. |
+| Former augmented TP calibration scripts and report | Fitted a separate exploratory model with a TP floor. It is not the TP update used in the revised benchmark. The standard Phase 3 source and reference parameters are retained. |
+| `scripts/validation/validate_nfip.py` | Read an external workstation file and used earlier county assignments and loss summaries. Rebuild the revised Figure 5 metrics with the [finance-series builder](REPRODUCIBILITY.md#recompute-finance-figure-data-from-all-50-paired-draws). |
+| Former model-export and storage-optimization guides | Pointed to unshipped model variants and retired sensitivity commands. The [parameter guide](PARAMETERS.md) and [reproduction guide](REPRODUCIBILITY.md) describe the supported paths. |
 | `data/supplementary/mc_initpsy_seeds.csv` and the former 341-row `Table_S_MC_variance.csv` | Earlier ensemble seed list and variance summary. The revised draw schedule and 455-row Text S7 table replace them. |
 | Root `core/` and `utils/config_loader.py` | Unused old settings, data, path, and CLI loaders. The calibration-specific `core/` package is separate and retained. |
 | `modules/actions/MODELS_VERSION_GUIDE.md` | Documented unshipped model variants and workstation-specific paths. Use the reproduction guide for the shipped model. |

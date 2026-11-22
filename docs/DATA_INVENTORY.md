@@ -23,6 +23,7 @@ file is recorded in the manifest for provenance only.
 | `config/sfha_assignment_manifest.json` | Initialization seeds, checksums, and provenance. |
 | `config/models/models_config.yaml` | Registry of the shipped baseline model. |
 | `data/supplementary/wrr_mc50_finance_reference.csv` | Seed schedule and archived finance checksums for the revised 50-draw ensemble. |
+| `data/supplementary/wrr_s4_finance_reference.csv`, `wrr_s5_finance_reference.csv`, and `wrr_s6_finance_reference.csv` | One archived finance checksum per revised sensitivity case and draw (and scenario for S6). Each checksum covers all 13 years; no raw study outputs are bundled. |
 | `data/supplementary/wrr_main_figures_reference.json` | Dimensions and decoded pixel checksums for the final revised main figures. |
 | `data/supplementary/Table_S_MC_variance.csv` | Current Text S7 table: 455 yearly entries of medians and quartiles for the revised ensemble. |
 | `data/figures/Figure8_adaptation_trajectories.csv` | Final group-level median and interquartile ranges plotted in Figure 8; no household records. |

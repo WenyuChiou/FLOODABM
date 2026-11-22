@@ -179,19 +179,22 @@ def compare(table: pd.DataFrame, reference: pd.DataFrame, keys: list[str], value
     return float(delta.max())
 
 
-def publish_tables(out_dir: Path, trajectory: pd.DataFrame, plot: pd.DataFrame) -> None:
+def publish_tables(out_dir: Path, trajectory: pd.DataFrame, plot: pd.DataFrame, *,
+                   names: tuple[str, str] = (TRAJECTORY, PLOT)) -> None:
     """Close both staged files before exposing either final CSV, without overwriting."""
     if out_dir.exists() or out_dir.is_symlink():
         raise FileExistsError(f"Output directory already exists: {out_dir}")
+    if len(set(names)) != 2 or any(not name or Path(name).name != name for name in names):
+        raise ValueError("Expected two distinct simple output filenames")
     out_dir.parent.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix=".wrr-s6-", dir=out_dir.parent) as staging:
         staged = Path(staging)
-        for name, table in ((TRAJECTORY, trajectory), (PLOT, plot)):
+        for name, table in zip(names, (trajectory, plot), strict=True):
             table.to_csv(staged / name, mode="x", index=False, lineterminator="\n")
         out_dir.mkdir()
         linked = []
         try:
-            for name in (TRAJECTORY, PLOT):
+            for name in names:
                 source = staged / name
                 dest = out_dir / name
                 os.link(source, dest)

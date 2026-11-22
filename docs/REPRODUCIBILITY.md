@@ -227,8 +227,40 @@ requires separately authorized calibration data.
 
 ## Recompute the threshold sensitivity series (Figures S4 and S5)
 
-Use the first ten draws of the verified main ensemble as controls. The archived
-case roots and reference inputs are not included in the repository:
+From a clean clone with `requirements-benchmark.txt` installed, run the
+first ten draws of the main ensemble as paired controls, or reuse an existing
+verified ensemble. S4 replays 20 saved draw-interval settings for the
+adaptation scenario; S5 replays 16 saved GUL-ratio thresholds, varying one
+tenure's threshold and keeping the other at 0.10. Each setting uses the same
+ten decision seeds and posterior draws as the control.
+
+```sh
+python scripts/utilities/run_mc100_local.py --out-root ../wrr-ensemble --start 1 --end 10
+python scripts/utilities/run_wrr_threshold_sensitivity.py --figure 4 --case-root ../wrr-s4
+python scripts/utilities/run_wrr_threshold_sensitivity.py --figure 5 --case-root ../wrr-s5
+python scripts/utilities/rebuild_wrr_action_intervals.py --mc-root ../wrr-ensemble --case-root ../wrr-s4 --out-dir ../wrr-s4-csv
+python scripts/utilities/rebuild_wrr_gul_threshold_series.py --mc-root ../wrr-ensemble --case-root ../wrr-s5 --out-dir ../wrr-s5-csv
+conda run -n wrr-figure9 python scripts/utilities/render_wrr_supporting_figures.py --figure-dir ../wrr-threshold-png --figures 4 5 --s4-series ../wrr-s4-csv/Figure_R1_data.csv --s5-series ../wrr-s5-csv/Figure_R2_fixed_initial_data.csv
+```
+
+Each line must succeed before running the next. Set up the exact renderer with
+[the figure guide](WRR_FIGURE_CHECKS.md). For a quick S4 check, add
+`--cases EX01_EH_lower --draws 1` to its simulation command; for S5, use
+`--cases EX02_homeowner_020 --draws 1`. These do not supply the complete
+sets needed by the rebuild commands. To proceed from verified cases, omit
+the filters and add `--reuse`. Missing or mismatched annual finance files
+stop the runner. The checksum references cover every year of each of the
+200 S4 and 160 S5 variation runs.
+
+Both builders sum annual losses, divide by the initial tenure count, and
+subtract the normalized loss of the same draw and tenure in the control.
+The reported median and IQR summarize these paired differences. Renter
+insurance and relocation settings in S4 are shown for renters; the other
+settings are shown for homeowners.
+
+### Optional: verify the original archives
+
+The archived case roots and reference inputs are not included in the repository:
 
 ```sh
 python scripts/utilities/rebuild_wrr_action_intervals.py --mc-root ../wrr-ensemble --case-root ../ex01-raw --case-registry ../ex01-case-registry.csv --annual-metrics ../ex01-annual-metrics.csv --reference-dir ../r1 --out-dir ../wrr-s4-recomputed
@@ -238,21 +270,13 @@ python scripts/utilities/rebuild_wrr_gul_threshold_series.py --mc-root ../wrr-en
 S4 uses the revised EX01 full-ten-draw archive
 (`20260824_EX01_sfha_area_full10_01`) and its separate interval registry.
 Its final reference folder contains `Figure_R1_data.csv` and
-`paired_outcomes_by_run.csv`. The builder checks 20 action-interval settings
-with ten draws each. Renter insurance and relocation results are shown for
-renters; the other settings are shown for homeowners.
+`paired_outcomes_by_run.csv`.
 
 S5 uses the revised EX02 archive (`20260824_EX02_sfha_area_full10_02`),
 including the 16 threshold settings with ten draws each. Its reference folder
 contains `annual_metrics.csv`, `paired_fixed_initial_by_run.csv`, and
-`Figure_R2_fixed_initial_data.csv`. Each setting uses the matching draw of the
-0.10 control, for the tenure whose threshold was varied.
-
-Both builders sum annual losses, divide by the initial tenure count, and
-subtract the normalized loss of the same draw and tenure in the control.
-The reported median and IQR summarize these paired differences. Each builder
-checks annual finance results before checking the paired and plotted values.
-The verified CSVs are plotting data; no PNG or new simulation is produced.
+`Figure_R2_fixed_initial_data.csv`. Both archive modes check annual finance
+aggregates and the paired results against the pinned archived tables.
 
 ## Recompute the flood-sequence sensitivity series (Figure S6)
 

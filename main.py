@@ -126,6 +126,7 @@ from modules.actions.decision import (
 )
 from modules.finance import run_finance_for_year
 from modules.wrr_flood_sequence import EVENT_ORDERS, depth_sampling_seed, relabel_depth_inputs
+from modules.wrr_action_intervals import CASES as WRR_ACTION_CASES, apply_wrr_action_interval
 from utils.sa_output_manager import SAOutputManager
 
 
@@ -361,6 +362,10 @@ def run_single_scenario(
         "--wrr-flood-order", choices=tuple(EVENT_ORDERS),
         help="Replay one saved revised WRR event order with --no-plots and a fresh output path.",
     )
+    ap.add_argument(
+        "--wrr-s4-case", choices=tuple(WRR_ACTION_CASES),
+        help="Replay one saved WRR Figure S4 interval variation with --no-plots and a fresh output path.",
+    )
     ap.add_argument("--deterministic", action="store_true", help="Use fixed RNG each year (no SEED+year offset) for reproducibility.")
     ap.add_argument(
         "--decision-seed",
@@ -384,11 +389,26 @@ def run_single_scenario(
         help="Override draw_bounds.FI_renter without changing homeowner FI bounds.",
     )
     args = ap.parse_args(argv)
+    saved_replay = args.wrr_flood_order is not None or args.wrr_s4_case is not None
     if args.wrr_flood_order is not None:
         if not args.no_plots:
             ap.error("--wrr-flood-order requires --no-plots; plotting uses the observed event years")
         if not args.out_root:
             ap.error("--wrr-flood-order requires an explicit --out-root")
+    if args.wrr_s4_case is not None:
+        if not args.no_plots or not args.out_root:
+            ap.error("--wrr-s4-case requires --no-plots and an explicit --out-root")
+        if args.model_dir != "baseline" or (scenario_override or args.scenario) not in {None, "baseline"}:
+            ap.error("--wrr-s4-case uses only the baseline model and adaptation scenario")
+        if args.deterministic or any(value is not None for value in (
+            args.wrr_flood_order, args.thr_owner, args.thr_renter, args.shock_owner, args.shock_renter,
+            args.fi_renter_bounds, args.decision_threshold, args.years,
+        )):
+            ap.error("--wrr-s4-case cannot be combined with other scientific overrides")
+        try:
+            apply_wrr_action_interval(CFG, args.wrr_s4_case)
+        except ValueError as exc:
+            ap.error(str(exc))
     
     # Override scenario if specified (for batch run)
     if scenario_override:
@@ -419,6 +439,8 @@ def run_single_scenario(
     SCEN = (args.scenario or yaml_scen or "baseline").lower()
     if args.wrr_flood_order is not None and SCEN not in {"baseline", "worst"}:
         ap.error("--wrr-flood-order requires a baseline or worst scenario")
+    if args.wrr_s4_case is not None and SCEN != "baseline":
+        ap.error("--wrr-s4-case requires the baseline adaptation scenario")
     NO_ACTION = (SCEN == "worst")
 
     # =========================================================================
@@ -430,7 +452,7 @@ def run_single_scenario(
     # Always include model name in output path for consistent structure
     model_output = OUT_ROOT / args.model_dir
     OUTPUT_DIR = model_output / SCEN
-    if args.wrr_flood_order is None:
+    if not saved_replay:
         OUTPUT_DIR = OUTPUT_DIR.resolve()
     else:
         if (
@@ -438,7 +460,8 @@ def run_single_scenario(
             or model_output.is_symlink()
             or model_output.resolve() != model_output
         ):
-            ap.error("--wrr-flood-order requires a model directory inside the explicit output root")
+            option = "--wrr-flood-order" if args.wrr_s4_case is None else "--wrr-s4-case"
+            ap.error(f"{option} requires a model directory inside the explicit output root")
         # Do not resolve a possibly dangling scenario link into a new destination.
         OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
     VIS_DIR = OUTPUT_DIR / "visualization"
@@ -906,11 +929,17 @@ def main(argv: list[str] | None = None) -> None:
     ap_check.add_argument("--run-all", action="store_true")
     ap_check.add_argument("--model-dir", type=str, default=None)
     ap_check.add_argument("--wrr-flood-order", choices=tuple(EVENT_ORDERS))
+    ap_check.add_argument("--wrr-s4-case", choices=tuple(WRR_ACTION_CASES))
     known_args, remaining_argv = ap_check.parse_known_args(argv)
     if known_args.wrr_flood_order is not None and (
         known_args.compare_flood_or or known_args.compare_all_models or known_args.run_all
     ):
         ap_check.error("--wrr-flood-order runs one scenario at a time; comparison and batch flags are not supported")
+    if known_args.wrr_s4_case is not None and (
+        known_args.compare_flood_or or known_args.compare_all_models or known_args.run_all
+        or known_args.list_models
+    ):
+        ap_check.error("--wrr-s4-case runs one adaptation scenario at a time; comparison and batch flags are not supported")
     
     # Handle --list-models: show available models and exit
     if known_args.list_models:

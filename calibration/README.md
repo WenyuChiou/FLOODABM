@@ -3,7 +3,9 @@
 This directory preserves the FLOODABM behavioral calibration methods, organized by housing
 tenure. Reproducing the revised simulation with the shipped fitted models does not require
 refitting or survey workbooks. To refit, supply authorized local workbooks under `calibration/data/`;
-the two processed files below are inputs to different phases. Read the
+the two processed files below are inputs to different phases. The directory
+tree and phase summaries include historical calibration inputs and outputs;
+they are not a list of files distributed with the revised benchmark. Read the
 [refitting constraints](../docs/PARAMETERS.md#4-known-calibration-pipeline-limitations-documented-not-fixed) before running calibration.
 
 ## Directory Structure
@@ -40,7 +42,6 @@ calibration/
 │   └── generate_report.py                       # Script to regenerate report
 │
 ├── phase2_bayesian_regression/     # Phase 2 outputs
-│   ├── all_results_summary_v2.xlsx # All 8 models: coefficients, convergence, metrics
 │   ├── coefficient_comparison.png/pdf  # β coefficients by group × action
 │   ├── convergence_diagnostics.png/pdf # R-hat and ESS for all parameters
 │   ├── calibration_improvement.png/pdf # ECE before vs after calibration
@@ -88,7 +89,7 @@ calibration/
 
 **Sample sizes:** Owner=557, Renter=379 (total n=936)
 
-### Phase 2: Bayesian Beta Regression
+### Phase 2: Bayesian Beta Regression (calibration workflow)
 **Script:** `bayesian_engine/main.py`
 
 1. Fits Beta regression: P(action) ~ sigmoid(β₀ + β_TP·TP + β_CP·CP + β_SP·SP)
@@ -97,7 +98,8 @@ calibration/
 4. Applies post-hoc calibration (Platt scaling, temperature, isotonic, beta)
 5. Outputs `.pkl` (full model) and `.npz` (weights only) files
 
-**Models are saved to:** `../models/baseline/` and `../models/baseline_fast/`
+**Fitted assets shipped for simulation:** `../models/baseline/` and
+`../models/baseline_fast/`.
 
 The posterior predictive query reads the same five full posterior files from
 `../models/baseline/` as the simulation. It does not require a second model copy
@@ -128,7 +130,10 @@ Pipeline:
 - `tp_decay_params_for_abm.json` — Parameters for `config/abm_params.yaml`
 - `phase3_metrics_table.csv` — Summary metrics
 
-## Key Results
+## Parameters used in the revised benchmark
+
+The simulation reads fixed household draws from `config/households_for_abm_sfha.csv`.
+The Beta shapes used to generate new draws are defined in `modules/actions/tp.py`.
 
 ### Beta Distribution Parameters (Phase 1)
 | Variable | Owner α | Owner β | Renter α | Renter β |
@@ -139,25 +144,9 @@ Pipeline:
 | SC       | 4.774   | 1.690   | 2.794    | 1.036    |
 | PA       | 5.539   | 2.942   | 2.513    | 1.322    |
 
-### Bayesian Regression Coefficients (Phase 2, posterior means)
-| Model      | β_TP  | β_CP  | β_SP  | β₀    |
-|------------|-------|-------|-------|-------|
-| owner_FI   | 3.05  | 0.42  | 0.13  | -2.87 |
-| owner_EH   | 2.76  | -0.11 | 0.53  | -3.32 |
-| owner_BP   | 2.88  | -0.62 | 0.85  | -3.56 |
-| owner_RL   | 2.90  | -0.81 | -0.02 | -2.69 |
-| renter_FI  | 2.90  | 1.52  | -0.39 | -3.38 |
-| renter_EH  | 2.36  | 1.06  | 2.96  | -5.55 |
-| renter_BP  | 2.71  | -0.96 | 1.94  | -3.85 |
-| renter_RL  | 3.10  | 0.94  | -0.69 | -3.29 |
+### Adoption models and TP decay
 
-All 8 models: 0 divergences, R-hat = 1.00, ESS > 400.
-
-### TP Decay Parameters (Phase 3, calibrated)
-| Group  | α      | β      | τ₀   | τ∞     | k      | RMSE   |
-|--------|--------|--------|------|--------|--------|--------|
-| Owner  | 0.4976 | 0.2285 | 1.00 | 31.08  | 0.0300 | 0.1537 |
-| Renter | 0.3966 | 0.0289 | 1.00 | 48.37  | 0.0100 | 0.1363 |
-
-Owner: stronger PA effect (α=0.50), moderate SC effect (β=0.23), faster adaptation (k=0.03).
-Renter: moderate PA effect (α=0.40), minimal SC effect (β=0.03), slower adaptation (k=0.01).
+The benchmark uses five fitted adoption models: homeowner FI, EH, and BP and
+renter FI and RL. It reads TP decay parameters from `config/abm_params.yaml`.
+See the [data inventory](../docs/DATA_INVENTORY.md) for the shipped files and
+the [reproduction guide](../docs/REPRODUCIBILITY.md) for verification.

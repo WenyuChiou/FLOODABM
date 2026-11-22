@@ -4,6 +4,10 @@ The revised benchmark uses one published household inventory and one set of
 full Bayesian posteriors. The [reproduction guide](REPRODUCIBILITY.md) explains
 how to rerun the benchmark and check its numerical outputs.
 
+Start with `config/abm_params.yaml`. Use `config/households_for_abm_sfha.csv`
+for both simulation and initialization replay. The prior unassigned household
+file is recorded in the manifest for provenance only.
+
 ## Data retained in the checkout
 
 | File | Consumer or purpose |

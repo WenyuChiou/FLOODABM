@@ -154,6 +154,27 @@ by its decoded pixels. This replay starts from the archived GIS map export;
 the [map data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps)
 verifies the underlying insurance data separately.
 
+### Main Figure 10 from the editable ArcGIS project
+
+If you have the study archive's `Sources/maps/Figure10/Figure10_ready.aprx`
+and its linked local layers, you can generate the exact Figure 10 PNG without
+the archived bitmap. Install the benchmark dependencies in Python 3.14.0
+and use a separate licensed ArcGIS Pro Python environment (verified with
+ArcGIS Pro 3.2). Rebuild `Figure10_spatial_fi.csv` using the
+[spatial data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps),
+then run:
+
+```sh
+python scripts/utilities/export_wrr_spatial_fi_png.py --project /path/to/Figure10_ready.aprx --series ../wrr-spatial-data/Figure10_spatial_fi.csv --arcgis-python /path/to/ArcGIS/python.exe --figure-dir ../wrr-rendered
+```
+
+Keep the project and the linked layers together as supplied. The command
+checks the 162 bivariate classes used by the six visible map panels against
+the rebuilt CSV. It positions the legend marker in memory without saving
+any modification to the project, then exports, crops, and verifies the PNG.
+The only retained output is `Figure_10.png`; no PDF is involved. The editable
+project, linked layers, and ArcGIS Pro are external to the clone.
+
 ## Verify the archived Figure 4 PNG
 
 The hydrologic validation figure uses inundation maps and hydrographs from
@@ -208,14 +229,14 @@ finance series from simulation CSVs.
 | 7 | SQ2 two-panel aggregate exceedance probability figure. The [data-driven PNG renderer](#main-figure-7-directly-from-the-exceedance-series) rebuilds the curves and protection-margin labels at the exact submitted pixels. The finance PDF replay remains an alternative. |
 | 8 | Adoption trajectories. The included renderer uses the final aggregate series and the last legend and annotation edits; its regenerated PNG matches the final pixels. |
 | 9 | Threat-perception trajectories. The final aggregate series and 17-point legend reproduce the exact PNG with the separate pinned environment. |
-| 10 | Spatial flood-insurance comparison. The [map data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps) reproduces the complete source CSV, including all 162 bivariate cell assignments. Cropping the pinned archived full-page export reproduces the final PNG exactly. A new native ArcGIS export has not been verified to match. |
+| 10 | Spatial flood-insurance comparison. The [map data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps) reproduces all 162 bivariate cell assignments. Both the pinned archive replay and the [verified native ArcGIS export](#main-figure-10-from-the-editable-arcgis-project) produce the exact final PNG. |
 | 11 | Income-normalized AEP, with the revised income-relative protection-margin labels. Redrawing it from the bundled aggregate series matches the final PNG pixels. |
 
 The [simulation benchmark](REPRODUCIBILITY.md) and this image check are
 separate. A clone contains the simulation inputs, figure reference checksums,
 and the sources needed to redraw Figures 5–9 and 11. Figures 1, 4 and 10
 require separately archived materials for the checks described above. The
-native GIS and hydrologic modeling projects are not included.
+native GIS and hydrologic modeling projects are not included in the clone.
 
 The same spatial builder reconstructs the six percentage-change fields
 plotted in Supporting Figure S7. The original GIS inputs contain ancillary

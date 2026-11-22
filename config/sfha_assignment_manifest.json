@@ -1,73 +1,32 @@
 {
-  "seed": 20260817,
-  "nsi_sources": [
-    {
-      "source_id": "USACE National Structure Inventory 2022, New Jersey study-area extract",
-      "sha256": "e0ded1985b299ff55d802ddc35409ffd834a471af843c4948f5a4ab2cdcea837"
-    }
-  ],
-  "sfha_source": {
-    "source_id": "FEMA National Flood Hazard Layer SFHA study-tract extract",
-    "sha256": "9bb2422c77a91ac9c7abf5e3358b2753aaafc2e1cb7ebda4f2a372de6664dfc0"
+  "schema_version": "2.0",
+  "design": "tract SFHA area share applied equally to homeowners and renters",
+  "sfha_assignment_method": "inside_SFHA = 1 when the stable uniform draw for tract|group|agent-ID is below the tract SFHA area share",
+  "sfha_assignment_seed": 20260817,
+  "initial_FI_assignment_seed": 20260818,
+  "initial_FI_rates": {
+    "owner|inside_SFHA=0": 0.03,
+    "owner|inside_SFHA=1": 0.3,
+    "renter|inside_SFHA=0": 0.02,
+    "renter|inside_SFHA=1": 0.08
   },
-  "tract_source": {
-    "source_id": "27 study census tracts with SVI attributes",
-    "sha256": "07ac664f8c171459e8625fd12a0b065c3f7aad6ecf4ad907c2f5d2d9e808d3b1"
+  "source_households": {
+    "path": "config/households_for_abm.csv",
+    "sha256": "918fa264d04605ca979203d5794e079a1d505422adaad32588e54cc3012f8e54"
   },
-  "household_path": {
-    "path": "config/households_for_abm_sfha.csv",
-    "sha256": "e5dea74f58cd290ba2fd669b7cc58ac95d4f2b938a5f16fc6a76a697c67304c7"
+  "source_area_shares": {
+    "path": "config/sfha_area_share_by_tract.csv",
+    "sha256": "09603907a1ab7aa66b128d939df73dadfbb77b49c93203ae2e546c3ab7dbb818"
   },
-  "fi_decision_threshold_intervals": {
-    "homeowner": {
-      "inside_SFHA": [
-        0.0,
-        0.1
-      ],
-      "outside_SFHA": [
-        0.35,
-        0.55
-      ]
-    },
-    "renter": {
-      "all_SFHA_statuses": [
-        0.7,
-        0.9
-      ]
-    }
+  "outputs": {
+    "households_for_abm_sfha.csv": "64d4e4cf3a31da503cdbad2ae78d146fa758c1138c0490292f608e42d5513271",
+    "sfha_shares.csv": "4b73269842ae9d9049be8da816cd27511a3ce560e6fe0d857b5e64a84dd370ef",
+    "sfha_assignment_summary.csv": "5cbe0f939033420f462dcf0d30287b2a2133b4055ecece09441dd2b240b694c7",
+    "initial_fi_summary.csv": "bf88a569dd86af560185857bd83dee5049bb0d30180fcb73fc159edef244e943"
   },
-  "renter_class_weight": {
-    "RES3F": 50.0
-  },
-  "sfha_share_file": "config/sfha_shares.csv",
-  "fallback_assumption": {
-    "tract_geoid": "34027040302",
-    "group": "renter",
-    "sfha_share": 0.0,
-    "reason": "no supported NSI RES3 record"
-  },
-  "initial_FI": {
-    "assignment_seed": 20260818,
-    "method": "exact_count_random_assignment_by_group_and_SFHA_status",
-    "rates_pct": {
-      "owner": {
-        "outside_SFHA": 3,
-        "inside_SFHA": 30
-      },
-      "renter": {
-        "outside_SFHA": 2,
-        "inside_SFHA": 8
-      }
-    },
-    "counts": {
-      "owner_outside_SFHA": 1183,
-      "owner_inside_SFHA": 630,
-      "renter_outside_SFHA": 191,
-      "renter_inside_SFHA": 86,
-      "total": 2090
-    },
-    "interpretation": "literature-informed but modeler-specified initial FI rates"
-  },
+  "n_households": 52141,
   "n_tracts": 27,
-  "n_households": 52141
+  "inside_SFHA": 6485,
+  "initial_FI": 2861,
+  "hash_format": "SHA-256 of file bytes with CRLF normalized to LF"
 }

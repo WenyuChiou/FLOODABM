@@ -1,13 +1,16 @@
 # Calibration Pipeline: Owner/Renter Behavioral Parameters
 
-This directory contains the complete calibration pipeline for the FLOODABM behavioral parameters,
-organized by housing tenure (homeowner vs. renter).
+This directory preserves the FLOODABM behavioral calibration methods, organized by housing
+tenure. Reproducing the revised simulation with the shipped fitted models does not require
+refitting or survey workbooks. To refit, supply authorized local workbooks under `calibration/data/`;
+the two processed files below are inputs to different phases. Read the
+[refitting constraints](../docs/PARAMETERS.md#4-known-calibration-pipeline-limitations-documented-not-fixed) before running calibration.
 
 ## Directory Structure
 
 ```
 calibration/
-├── data/                           # Source data
+├── data/                           # User-supplied local source data, not shipped
 │   ├── data_ori.xlsx               # Raw survey (NMG/MG sheets + owner/renter variable sheets)
 │   ├── data.xlsx                   # Processed survey data (Bayesian engine reads this)
 │   └── cal_data.xlsx               # TP decay calibration data (owner_cal, renter_cal sheets)

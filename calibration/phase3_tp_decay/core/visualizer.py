@@ -90,7 +90,6 @@ def plot_overlay(best_pair: dict, owner_raw_df: pd.DataFrame, renter_raw_df: pd.
 
     fig.tight_layout()
     fig.savefig(outdir / "tp_decay_curves.png")
-    fig.savefig(outdir / "tp_decay_curves.pdf")
     plt.close(fig)
     print("[OK] tp_decay_curves")
 
@@ -129,7 +128,6 @@ def plot_confidence_intervals(best_pair, owner_boot, renter_boot, owner_raw, ren
 
     fig.tight_layout()
     fig.savefig(outdir / "tp_decay_confidence_intervals.png")
-    fig.savefig(outdir / "tp_decay_confidence_intervals.pdf")
     plt.close(fig)
     print("[OK] tp_decay_confidence_intervals")
 
@@ -172,7 +170,6 @@ def plot_residuals(best_pair, owner_df, renter_df, outdir):
     ax.set_aspect('equal')
     fig.tight_layout()
     fig.savefig(outdir / "tp_decay_residuals.png")
-    fig.savefig(outdir / "tp_decay_residuals.pdf")
     plt.close(fig)
     print("[OK] tp_decay_residuals")
 
@@ -188,6 +185,5 @@ def plot_rmse_heatmap(grid_df: pd.DataFrame, group_name: str, outdir: Path):
     ax.set_title(f"RMSE Landscape — {group_name.capitalize()}")
     fig.tight_layout()
     fig.savefig(outdir / f"rmse_heatmap_{group_name}.png")
-    fig.savefig(outdir / f"rmse_heatmap_{group_name}.pdf")
     plt.close(fig)
     print(f"[OK] rmse_heatmap_{group_name}")

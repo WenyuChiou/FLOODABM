@@ -23,15 +23,18 @@ FINANCE_DOLLARS = {
 }
 ACTION_PANELS = {("homeowner", "FI"): "a", ("renter", "FI"): "b",
                  ("homeowner", "EH"): "c", ("renter", "RL"): "d"}
+QUANTILES = ("median", "q25", "q75")
+BEHAVIOR_TABLES = {"Figure8_adaptation_trajectories.csv", "Figure9_tp_by_prone.csv"}
+REBUILD_TOLERANCE = Decimal("1e-9")
 
 
-def build(sources: Path = SOURCES) -> str:
+def build(sources: Path = SOURCES, *, behavior_sources: Path | None = None) -> str:
     table = []
     coverage = defaultdict(set)
 
     def add(source, record, figure, metric, unit, **metadata):
         year = int(record["year"])
-        quantile_text = [record[key] for key in ("median", "q25", "q75")]
+        quantile_text = [record[key] for key in QUANTILES]
         median, q25, q75 = map(Decimal, quantile_text)
         if year not in YEARS or not all(v.is_finite() for v in (median, q25, q75)) or not q25 <= median <= q75:
             raise ValueError(f"Invalid ensemble quantiles: {source}, {record!r}")
@@ -45,7 +48,8 @@ def build(sources: Path = SOURCES) -> str:
                           source=source, **metadata))
 
     def read(source, expected_rows):
-        with (sources / source).open(newline="", encoding="utf-8-sig") as file:
+        directory = behavior_sources if behavior_sources is not None and source in BEHAVIOR_TABLES else sources
+        with (directory / source).open(newline="", encoding="utf-8-sig") as file:
             rows = list(csv.DictReader(file))
         if len(rows) != expected_rows:
             raise ValueError(f"{source} has {len(rows)} rows; expected {expected_rows}")
@@ -104,20 +108,63 @@ def build(sources: Path = SOURCES) -> str:
     return output.getvalue()
 
 
+def verify_rebuilt(data: str, expected: str) -> Decimal:
+    keys = [field for field in FIELDS if field not in QUANTILES]
+
+    def parse(text):
+        rows = csv.DictReader(StringIO(text))
+        if tuple(rows.fieldnames or ()) != FIELDS:
+            raise ValueError("Unexpected annual-quantile columns")
+        result = {}
+        for row in rows:
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError("Annual-quantile row has extra or missing cells")
+            key = tuple(row[name] for name in keys)
+            quantiles = tuple(Decimal(row[name]) for name in QUANTILES)
+            if key in result or not all(value.is_finite() for value in quantiles):
+                raise ValueError(f"Duplicate key or invalid quantile: {key}")
+            result[key] = quantiles
+        if len(result) != 455:
+            raise ValueError("Expected 455 annual-quantile rows")
+        return result
+
+    actual = parse(data)
+    reference = parse(expected)
+    if actual.keys() != reference.keys():
+        raise ValueError("A rebuilt annual-quantile row differs in year, metric, or metadata")
+    delta = max(abs(a - b) for key in actual
+                for a, b in zip(actual[key], reference[key], strict=True))
+    if delta > REBUILD_TOLERANCE:
+        raise ValueError(f"A rebuilt annual quantile differs by {delta} (limit {REBUILD_TOLERANCE})")
+    return delta
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="Compare with the bundled publication table")
     mode.add_argument("--output", type=Path, help="Write a new CSV (never overwrites)")
+    parser.add_argument("--finance-series-dir", type=Path, help="Read the Figure 5 and 6 rebuilt series")
+    parser.add_argument("--behavior-series-dir", type=Path, help="Read the Figure 8 and 9 rebuilt series")
     args = parser.parse_args()
-    data = build()
-    if args.check:
-        if PUBLISHED.read_text(encoding="utf-8") != data:
-            parser.exit(1, "The published table does not match the revised figure aggregates\n")
-        print("PASS: all 455 published annual-quantile rows match the revised aggregates")
-    else:
-        with args.output.open("x", encoding="utf-8", newline="") as csv_file:
-            csv_file.write(data)
+    supplied = args.finance_series_dir is not None
+    if supplied != (args.behavior_series_dir is not None):
+        parser.error("Supply both rebuilt series directories or neither")
+    try:
+        data = build(args.finance_series_dir or SOURCES, behavior_sources=args.behavior_series_dir)
+        if args.check:
+            if supplied:
+                delta = verify_rebuilt(data, PUBLISHED.read_text(encoding="utf-8"))
+                print(f"PASS: 455 rebuilt annual-quantile rows match; largest absolute difference {delta:.3g}")
+            else:
+                if PUBLISHED.read_bytes() != data.encode("utf-8"):
+                    raise ValueError("The published table does not match the revised figure aggregates")
+                print("PASS: all 455 published annual-quantile rows match the revised aggregates")
+        else:
+            with args.output.open("x", encoding="utf-8", newline="") as csv_file:
+                csv_file.write(data)
+    except (OSError, ValueError, ArithmeticError) as error:
+        parser.exit(1, f"{error}\n")
 
 
 if __name__ == "__main__":

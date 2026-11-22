@@ -33,6 +33,8 @@ file is recorded in the manifest for provenance only.
 | `data/figures/Figure6_annual_finance.csv` | Final finance series for Figure 6c–f, archived under the former filename `Figure7_annual_finance.csv` before the panels were renumbered. |
 | `data/figures/Figure7_aep.csv` | Final pooled run-year GUL and actual-loss exceedance curves in dollars per household. No individual household records. |
 | `data/figures/Figure9_tp_by_prone.csv` | Final annual group-level threat perception medians and interquartile ranges. |
+| `data/figures/FigureS4_action_threshold_intervals.csv`, `FigureS5_gul_ratio_threshold.csv`, and `FigureS6_flood_event_sequence.csv` | Accepted group-level sensitivity plot tables (20, 16, and 104 rows). These contain no individual household records and can be replaced at render time with the verified rebuilt tables. |
+| `data/supplementary/wrr_s8_s9_cumulative_finance.csv` | 80 tenure-level cumulative GUL and payout totals for Tables S8–S9; no individual or tract-level records. |
 | `models/baseline/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | One full posterior per action and tenure; shared by the ensemble and posterior predictive query. |
 | `models/baseline_fast/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | Smaller posterior-mean caches used by the default single-run simulation. These are not duplicates of the full posteriors. |
 | `models/baseline/best_calibrators.json` | Fallback calibrators for the canonical baseline predictors. |
@@ -56,10 +58,17 @@ file is recorded in the manifest for provenance only.
 | `modules/actions/MODELS_VERSION_GUIDE.md` | Documented unshipped model variants and workstation-specific paths. Use the reproduction guide for the shipped model. |
 | `main_mc.py`, `scripts/utilities/run_montecarlo.py`, `scripts/utilities/run_mc_extend.py` | Obsolete ensemble drivers. The revised benchmark uses the fixed draw schedule in `scripts/utilities/run_mc100_local.py`. |
 | `generate_paper_figures.py`, `scripts/paper_figures/plot_mc_convergence_s2.py`, `scripts/utilities/gen_table_s_mc_variance.py` | Superseded plotting registry and summaries for earlier runs. See the [revised figure guide](WRR_FIGURE_CHECKS.md) for current render routes. |
+| `scripts/utilities/gen_fig9_bivariate_classes.py`, `gen_spatial_fi_delta_mc50.py`, `gen_spatial_pop_delta_mc50.py` (same directory) | Earlier map preparation paths with workstation-specific inputs and obsolete figure numbering. The revised builder verifies Figure 10 and Supporting Figure S7 map data from the canonical ensemble. |
+| `scripts/utilities/compute_sm_table_2020_baseline_fi.py`, `compute_sm_table_non_fi_pool.py` (same directory) | Earlier exploratory tables depend on workstation paths and old ensemble outputs. Use the revised spatial-series builder for the data behind Figure 10. The exploratory tables remain in Git history. |
+| `scripts/utilities/_calc_zscore_r2.py`, `gen_zscore_validation.py` (same directory) | Validation scripts for obsolete single-run threshold experiments. Use the paired-draw finance builder and final Figure 5 PNG route for the revised validation. |
+| Former `scripts/paper_figures/` | These scripts used older ensembles and figure numbering, or produced exploratory figures that are not in the revised manuscript, supporting information, or response. Use the [revised figure guide](WRR_FIGURE_CHECKS.md) and [threshold sensitivity reconstruction commands](REPRODUCIBILITY.md#recompute-the-threshold-sensitivity-series-figures-s4-and-s5) instead. The historical scripts remain in Git. |
+| Former `scripts/sensitivity/` | Older standalone sweeps and the initial-insurance experiments predate the revised sensitivity design. The older combined runner could temporarily rewrite the benchmark YAML and household CSV. Use the [reconstruction guide](REPRODUCIBILITY.md#recompute-the-threshold-sensitivity-series-figures-s4-and-s5) for the published analyses or the [scenario guide](SCENARIOS.md#4-other-scenario-levers-cli-flags-and-parameters) for new runs. The old tools remain in Git history. |
 
 The published YAML contains only the shipped model settings and input paths.
 It no longer lists unused Beta parameters, a separate owner-share table,
 unshipped hazard defaults, or unshipped model variants.
+The action pipeline takes its settings from the simulation runner; it does not
+read a separate JSON configuration.
 
 Unchanged dates on fitted models or source data do not make them stale. Use the
 consumer and verification path above to distinguish active dependencies and

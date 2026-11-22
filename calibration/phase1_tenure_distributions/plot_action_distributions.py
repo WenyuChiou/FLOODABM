@@ -90,9 +90,8 @@ fig.suptitle(f'Adaptation Action Likert Histograms (n={n_total})\n'
              fontsize=14, fontweight='bold')
 plt.tight_layout()
 fig.savefig(OUT_DIR / 'action_likert_histograms.png')
-fig.savefig(OUT_DIR / 'action_likert_histograms.pdf')
 plt.close(fig)
-print("Saved: action_likert_histograms.png/pdf")
+print("Saved: action_likert_histograms.png")
 
 # ── Print summary ──
 print("\n" + "=" * 60)

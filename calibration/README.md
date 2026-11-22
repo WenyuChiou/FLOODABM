@@ -7,6 +7,12 @@ the two processed files below are inputs to different phases. The directory
 tree and phase summaries include historical calibration inputs and outputs;
 they are not a list of files distributed with the revised benchmark. Read the
 [refitting constraints](../docs/PARAMETERS.md#4-known-calibration-pipeline-limitations-documented-not-fixed) before running calibration.
+Plotting scripts now write PNGs only. The fitted posterior models can be
+queried directly without survey input:
+
+```sh
+python calibration/phase2_bayesian_regression/posterior_predictive_query.py --tp 0.6 --cp 0.7 --sp 0.5 --out-dir ../calibration-png
+```
 
 ## Directory Structure
 
@@ -34,19 +40,19 @@ calibration/
 ├── phase1_tenure_distributions/    # Phase 1 outputs
 │   ├── beta_parameters_summary.csv # Alpha/Beta params for 5 vars × 2 groups (+ KS test)
 │   ├── action_adoption_rates.csv   # FI/EH/BP/RL adoption rates by tenure
-│   ├── beta_distributions_owner_renter.png/pdf  # 10-panel histograms + Beta fits
-│   ├── overlay_comparison.png/pdf               # Owner vs Renter overlay
-│   ├── action_rates_owner_renter.png/pdf        # Adoption rate bar charts
-│   ├── action_means_owner_renter.png/pdf        # Mean Likert score comparison
+│   ├── beta_distributions_owner_renter.png      # 10-panel histograms + Beta fits
+│   ├── overlay_comparison.png                  # Owner vs Renter overlay
+│   ├── action_rates_owner_renter.png           # Adoption rate bar charts
+│   ├── action_means_owner_renter.png           # Mean Likert score comparison
 │   ├── Phase1_Owner_Renter_Report.docx          # Comprehensive Word report
 │   └── generate_report.py                       # Script to regenerate report
 │
 ├── phase2_bayesian_regression/     # Phase 2 outputs
-│   ├── coefficient_comparison.png/pdf  # β coefficients by group × action
-│   ├── convergence_diagnostics.png/pdf # R-hat and ESS for all parameters
-│   ├── calibration_improvement.png/pdf # ECE before vs after calibration
-│   ├── prior_vs_posterior.png/pdf      # Prior→Posterior shrinkage
-│   ├── brier_skill_score.png/pdf       # BSS by model
+│   ├── coefficient_comparison.png  # β coefficients by group × action
+│   ├── convergence_diagnostics.png # R-hat and ESS for all parameters
+│   ├── calibration_improvement.png # ECE before vs after calibration
+│   ├── prior_vs_posterior.png      # Prior→Posterior shrinkage
+│   ├── brier_skill_score.png       # BSS by model
 │   ├── phase2_metrics_table.csv        # Summary metrics table
 │   ├── best_calibrators_v2.json    # Calibrator selection
 │   ├── Validation.docx             # Validation report
@@ -60,11 +66,11 @@ calibration/
     ├── config.py                   # Grid search settings (owner/renter)
     ├── core/                       # model.py, data.py, optimizer.py, visualizer.py
     └── outputs/
-        ├── tp_decay_curves.png/pdf             # Calibrated decay curves
-        ├── tp_decay_confidence_intervals.png/pdf # 95% CI ribbons
-        ├── tp_decay_residuals.png/pdf          # Observed vs predicted
-        ├── rmse_heatmap_owner.png/pdf          # RMSE landscape
-        ├── rmse_heatmap_renter.png/pdf
+        ├── tp_decay_curves.png                # Calibrated decay curves
+        ├── tp_decay_confidence_intervals.png   # 95% CI ribbons
+        ├── tp_decay_residuals.png              # Observed vs predicted
+        ├── rmse_heatmap_owner.png              # RMSE landscape
+        ├── rmse_heatmap_renter.png
         ├── calibration_summary.xlsx            # Full results
         ├── tp_decay_params_for_abm.json        # Parameters for ABM config
         └── phase3_metrics_table.csv            # Summary metrics
@@ -121,11 +127,11 @@ Pipeline:
 4. Bootstrap CIs (N=100)
 
 **Outputs in `phase3_tp_decay/outputs/`:**
-- `tp_decay_curves.png/pdf` — Calibrated decay curves
-- `tp_decay_confidence_intervals.png/pdf` — 95% CI ribbons
-- `tp_decay_residuals.png/pdf` — Observed vs predicted scatter
-- `rmse_heatmap_owner.png/pdf` — RMSE landscape
-- `rmse_heatmap_renter.png/pdf` — RMSE landscape
+- `tp_decay_curves.png` — Calibrated decay curves
+- `tp_decay_confidence_intervals.png` — 95% CI ribbons
+- `tp_decay_residuals.png` — Observed vs predicted scatter
+- `rmse_heatmap_owner.png` — RMSE landscape
+- `rmse_heatmap_renter.png` — RMSE landscape
 - `calibration_summary.xlsx` — Full grid search + best parameters
 - `tp_decay_params_for_abm.json` — Parameters for `config/abm_params.yaml`
 - `phase3_metrics_table.csv` — Summary metrics

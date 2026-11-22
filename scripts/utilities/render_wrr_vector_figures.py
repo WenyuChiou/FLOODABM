@@ -206,6 +206,8 @@ def render(pdf, number: int, components: dict[str, bytes]) -> bytes:
 
 def verify_pixels(png: bytes, expected: dict) -> None:
     with Image.open(BytesIO(png), formats=["PNG"]) as image:
+        if getattr(image, "is_animated", False):
+            raise ValueError("Expected a static PNG, not an animated PNG")
         rgba = image.convert("RGBA")
         actual = {"width": rgba.width, "height": rgba.height, "rgba_sha256": digest(rgba.tobytes())}
     if actual != expected:

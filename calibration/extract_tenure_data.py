@@ -408,9 +408,8 @@ plt.suptitle("Beta Distribution Fits: Owner vs Renter\n5 Psychological Variables
              fontsize=14, fontweight="bold", y=1.01)
 plt.tight_layout()
 fig.savefig(OUT_DIR / "beta_distributions_owner_renter.png", dpi=200, bbox_inches="tight")
-fig.savefig(OUT_DIR / "beta_distributions_owner_renter.pdf", bbox_inches="tight")
 plt.close(fig)
-print("  → Saved beta_distributions_owner_renter.png/pdf")
+print("  → Saved beta_distributions_owner_renter.png")
 
 # ── 1.5b: Overlay comparison (same axes for owner vs renter) ─────────
 fig, axes = plt.subplots(1, 5, figsize=(22, 4.5))
@@ -439,9 +438,8 @@ plt.suptitle("Owner vs Renter: Psychological Variable Distributions",
              fontsize=14, fontweight="bold")
 plt.tight_layout()
 fig.savefig(OUT_DIR / "overlay_comparison.png", dpi=200, bbox_inches="tight")
-fig.savefig(OUT_DIR / "overlay_comparison.pdf", bbox_inches="tight")
 plt.close(fig)
-print("  → Saved overlay_comparison.png/pdf")
+print("  → Saved overlay_comparison.png")
 
 
 # (Action plots are generated separately by plot_action_distributions.py)

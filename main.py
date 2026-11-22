@@ -618,7 +618,8 @@ def run_single_scenario(
     if missing_psych:
         raise ValueError(
             f"Household CSV is missing psych columns: {missing_psych}. "
-            "Run: python generate_household_psych.py"
+            "Use the shipped household CSV for the benchmark. For a custom inventory, "
+            "see docs/PARAMETERS.md for generating the columns in a new CSV."
         )
     STATE["TP"] = STATE["TP_init"].astype(float)
     STATE["t_clock"] = 0.0

@@ -1,3 +1,3 @@
-# Separate environment for the accepted PDF-to-PNG figure renders.
+# In-memory vector drawing and exact PNG verification.
 PyMuPDF==1.26.7
 Pillow==12.0.0

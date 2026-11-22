@@ -3,6 +3,8 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
@@ -17,7 +19,6 @@ from main import (
 )
 from modules.actions.bayes_fast_predictors import build_fast_predictors
 from modules.actions import vuln_for_tp
-from scripts.sensitivity.run_sensitivity_analysis import require_legacy_initial_fi
 from scripts.utilities.build_sfha_area_initialization import build as build_sfha_area_initialization
 from scripts.utilities.generate_household_psych import generate_initial_conditions
 from scripts.utilities.run_mc100_local import (
@@ -182,11 +183,12 @@ def test_preassigned_initial_fi_is_strict_and_preserved() -> None:
 
 def test_sfha_household_generator_preserves_initial_fi(tmp_path: Path) -> None:
     csv_path = tmp_path / "households.csv"
+    output_csv = tmp_path / "new-households.csv"
     yaml_path = tmp_path / "config.yaml"
     original = pd.DataFrame(
         {
             "i": [1, 2],
-            "tract_geoid": ["34013021300", "34013021300"],
+            "tract_geoid": ["04013021300", "04013021300"],
             "group": ["owner", "renter"],
             "inside_SFHA": [1, 0],
             "has_FI": [1, 0],
@@ -195,15 +197,39 @@ def test_sfha_household_generator_preserves_initial_fi(tmp_path: Path) -> None:
     original.to_csv(csv_path, index=False)
     yaml_path.write_text("sfha_initialization:\n  enabled: true\n", encoding="utf-8")
 
-    result = generate_initial_conditions(csv_path, yaml_path=yaml_path, seed=2025)
+    initial_bytes = csv_path.read_bytes()
+    result = generate_initial_conditions(
+        csv_path, output_csv=output_csv, yaml_path=yaml_path, seed=2025
+    )
 
     assert result["inside_SFHA"].tolist() == [1, 0]
     assert result["has_FI"].tolist() == [1, 0]
+    assert csv_path.read_bytes() == initial_bytes
+    written = pd.read_csv(output_csv, dtype={"tract_geoid": "string"})
+    pd.testing.assert_frame_equal(written, result, check_dtype=False)
 
 
-def test_legacy_fi_sensitivity_rejects_sfha_benchmark() -> None:
-    with pytest.raises(RuntimeError, match="cannot run with the SFHA-aware benchmark"):
-        require_legacy_initial_fi("SA2")
+def test_household_generator_requires_new_output_and_rejects_existing_destination(
+    tmp_path: Path,
+) -> None:
+    initial = tmp_path / "households.csv"
+    initial.write_bytes(b"keep the original inventory")
+    cmd = [sys.executable, str(ROOT / "scripts/utilities/generate_household_psych.py")]
+    omitted = subprocess.run([*cmd, "--csv", str(initial)], capture_output=True, text=True)
+    assert omitted.returncode == 2
+    assert "--output" in omitted.stderr
+    omitted_input = subprocess.run(
+        [*cmd, "--output", str(tmp_path / "new.csv")], capture_output=True, text=True
+    )
+    assert omitted_input.returncode == 2
+    assert "--csv" in omitted_input.stderr
+    same = subprocess.run(
+        [*cmd, "--csv", str(initial), "--output", str(initial)], capture_output=True, text=True
+    )
+    assert same.returncode == 1
+    assert "Refusing to overwrite" in same.stderr
+    assert initial.read_bytes() == b"keep the original inventory"
+    assert not (tmp_path / "new.csv").exists()
 
 
 def test_non_sfha_initial_fi_requires_explicit_legacy_rates() -> None:

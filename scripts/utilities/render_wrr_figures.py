@@ -1,4 +1,4 @@
-"""Render supported final WRR figures from the archived plotted series."""
+"""Render supported final WRR figures from bundled or rebuilt aggregate series."""
 
 import argparse
 from pathlib import Path
@@ -15,6 +15,15 @@ import pandas as pd
 
 DATA = Path(__file__).resolve().parents[2] / "data" / "figures"
 FONT = ["Times New Roman", "Times", "DejaVu Serif"]
+SERIES = {
+    5: ("Figure5_nfip_validation_corrected_county_labels.csv",
+        "Figure5_metrics_corrected_county_labels.csv"),
+    6: ("Figure6_cumulative_loss.csv", "Figure6_annual_finance.csv"),
+    7: ("Figure7_aep.csv",),
+    8: ("Figure8_adaptation_trajectories.csv",),
+    9: ("Figure9_tp_by_prone.csv",),
+    11: ("Figure11_income_aep.csv",),
+}
 
 
 def trajectory_style() -> None:
@@ -28,10 +37,10 @@ def trajectory_style() -> None:
     })
 
 
-def nfip_validation(out: Path) -> None:
+def nfip_validation(out: Path, series_dir: Path = DATA) -> None:
     # The final series already include the validated county-label correction.
-    data = pd.read_csv(DATA / "Figure5_nfip_validation_corrected_county_labels.csv")
-    metrics = pd.read_csv(DATA / "Figure5_metrics_corrected_county_labels.csv").set_index("county")
+    data = pd.read_csv(series_dir / SERIES[5][0])
+    metrics = pd.read_csv(series_dir / SERIES[5][1]).set_index("county")
     counties = {"Essex": "#0072B2", "Morris": "#E69F00", "Passaic": "#009E73"}
     years = list(range(2011, 2024))
     plt.rcParams.update({
@@ -75,8 +84,8 @@ def nfip_validation(out: Path) -> None:
     plt.close(fig)
 
 
-def adoption(out: Path) -> None:
-    data = pd.read_csv(DATA / "Figure8_adaptation_trajectories.csv")
+def adoption(out: Path, series_dir: Path = DATA) -> None:
+    data = pd.read_csv(series_dir / SERIES[8][0])
     trajectory_style()
     specs = (
         ("homeowner", "FI", "#1a6faf", "o", "Flood Insurance (FI) — Homeowner"),
@@ -146,8 +155,8 @@ def adoption(out: Path) -> None:
     plt.close(fig)
 
 
-def threat_perception(out: Path) -> None:
-    data = pd.read_csv(DATA / "Figure9_tp_by_prone.csv")
+def threat_perception(out: Path, series_dir: Path = DATA) -> None:
+    data = pd.read_csv(series_dir / SERIES[9][0])
     trajectory_style()
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     for idx, (ax, (group, color)) in enumerate(zip(
@@ -197,8 +206,8 @@ def threat_perception(out: Path) -> None:
     plt.close(fig)
 
 
-def income(out: Path) -> None:
-    data = pd.read_csv(DATA / "Figure11_income_aep.csv")
+def income(out: Path, series_dir: Path = DATA) -> None:
+    data = pd.read_csv(series_dir / SERIES[11][0])
     plt.rcParams.update({
         "font.family": "serif", "font.serif": ["Times New Roman", "DejaVu Serif"],
         "font.size": 14, "axes.labelsize": 18, "xtick.labelsize": 15, "ytick.labelsize": 15,
@@ -249,20 +258,50 @@ def income(out: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--figure-dir", type=Path, required=True)
+    parser.add_argument("--series-dir", type=Path, default=DATA,
+                        help="Read all selected figure inputs here (default: bundled data/figures).")
+    parser.add_argument("--font-dir", type=Path, help="Optional Times New Roman directory for Figures 6 and 7")
     figures = {5: nfip_validation, 8: adoption, 9: threat_perception, 11: income}
-    parser.add_argument("--figures", type=int, nargs="+", choices=tuple(figures), default=[5, 8, 11],
-                        help="Figure 9 requires its separate pinned renderer environment.")
+    parser.add_argument("--figures", type=int, nargs="+", choices=tuple(SERIES), default=[5, 8, 11],
+                        help="Figures 6 and 7 need the vector dependencies; Figure 9 uses its separate environment.")
     args = parser.parse_args()
     if 9 in args.figures and set(args.figures) != {9}:
         parser.error("Render Figure 9 separately with the environment in environment-figure9-win64.lock.")
-    args.figure_dir.mkdir(parents=True, exist_ok=True)
     outputs = {n: args.figure_dir / f"Figure_{n:02}.png" for n in sorted(set(args.figures))}
+    missing = [args.series_dir / name for n in outputs for name in SERIES[n]
+               if not (args.series_dir / name).is_file()]
+    if missing:
+        parser.error("Missing input series: " + ", ".join(map(str, missing)))
     for path in outputs.values():
-        if path.exists():
+        if path.exists() or path.is_symlink():
             raise FileExistsError(f"Refusing to overwrite {path}")
+    verified = {}
+    if 6 in outputs:
+        try:
+            if __package__:
+                from .render_wrr_sq1_png import verified_png
+            else:
+                from render_wrr_sq1_png import verified_png
+            verified[6] = verified_png(args.series_dir, args.font_dir)
+        except (ImportError, KeyError, OSError, ValueError) as error:
+            parser.exit(1, f"Figure 6: {error}\n")
+    if 7 in outputs:
+        if __package__:
+            from .render_wrr_aep_png import verified_png
+        else:
+            from render_wrr_aep_png import verified_png
+        try:
+            verified[7] = verified_png(None if args.series_dir == DATA else args.series_dir, args.font_dir)
+        except (ImportError, KeyError, OSError, ValueError) as error:
+            parser.exit(1, f"Figure 7: {error}\n")
+    args.figure_dir.mkdir(parents=True, exist_ok=True)
     for number, path in outputs.items():
-        with plt.rc_context():
-            figures[number](path)
+        if number in verified:
+            with path.open("xb") as png:
+                png.write(verified[number])
+        else:
+            with plt.rc_context():
+                figures[number](path, args.series_dir)
         print(path)
 
 

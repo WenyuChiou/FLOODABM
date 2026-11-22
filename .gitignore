@@ -62,6 +62,9 @@ Thumbs.db
 !data/figures/Figure6_annual_finance.csv
 !data/figures/Figure7_aep.csv
 !data/figures/Figure9_tp_by_prone.csv
+!data/figures/FigureS4_action_threshold_intervals.csv
+!data/figures/FigureS5_gul_ratio_threshold.csv
+!data/figures/FigureS6_flood_event_sequence.csv
 *.parquet
 *.pkl
 *.h5

@@ -117,8 +117,8 @@ editing the cited location.
 
 | Setting | Where | Note |
 |---|---|---|
-| Flood-prone threshold (a tract is "flood-prone" if it floods in ≥ N of 13 years) | `scripts/paper_figures/plot_fig8_tp_by_prone.py` (`FP_THRESHOLD = 7`) | Drives the flood-prone vs non-prone partition in the TP figures. |
-| Tenure median incomes (owner 148,097 / renter 63,699) | `scripts/paper_figures/plot_fig11_income_aep.py` | Drives the income-normalized equity figure; ACS values for the shipped study area. Re-targeting the model requires updating these. |
+| Flood-prone threshold (positive flood depth in at least 7 of 13 years) | `utils/flood_prone.py` (`FLOOD_PRONE_MIN_YEARS`) | Defines flood-prone and non-prone tracts for the benchmark. The repository plots Figures 8 and 9 from the saved group-level summaries. |
+| Tenure median incomes (owner 148,097 / renter 63,699) | `scripts/utilities/rebuild_wrr_finance_series.py` (`MEDIAN_INCOME_USD`) | ACS income values for normalizing losses in Figure 11. Use values from the new study area when adapting this analysis. |
 | Relocation contents retention | `modules/actions/pipeline.py` (`_attach_rl_dest_by_depth` region) | Relocated renters currently retain 100% of contents value; the contents-reduction draw described in the docstring is disabled in the shipped behavior. |
 | Recorded elevation amount | `modules/actions/decision.py` `sequential_decision_fast` (inline literal `5.0` on the `out_elev[take_EH]` line) | In the default `eh_one_time` mode the actual elevation is drawn from `action_dynamics.eh_once_min/max_ft` and this recorded value is not used. |
 | Decision-tree topology and RL destination count | `modules/actions/decision.py`, `main.py` (`rl_dest_k_best`) | Per-tenure action order and the relocation candidate count are fixed in code; only the per-step draw windows/thresholds are config-tunable. |

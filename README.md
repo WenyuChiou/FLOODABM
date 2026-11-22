@@ -4,9 +4,7 @@
 
 A coupled agent-based and catastrophe flood modeling framework (ABM-CAT) for simulating household flood adaptation in the Passaic River Basin, New Jersey (2011–2023).
 
-![Framework flowchart](docs/framework_flowchart.png)
-
-*Two-way coupling between the agent-based model (ABM) and the catastrophe flood model (CAT). Flood depths drive damage and household threat perception (TP); adaptation decisions (FI / EH / BP / RL) modify exposure and vulnerability, which feed back into the next year's flood loss.*
+[How the annual simulation links flood losses and household decisions](#simulation-flow)
 
 ## Overview
 
@@ -19,7 +17,7 @@ FLOODABM simulates how homeowners and renters make flood adaptation decisions ac
 | Buyout Program (BP) | Homeowners | Government acquisition that removes the structure from the floodplain |
 | Relocation (RL) | Renters | Move to a different tract to reduce flood exposure |
 
-Each action modifies exposure or vulnerability in the catastrophe flood model. Simulated flood damage feeds back into household threat perception (TP), which drives subsequent adaptation decisions. This two-way coupling is the central mechanism of the framework.
+The flood model calculates household losses. A separate tract-level ground-up loss (GUL) ratio informs the household threat-perception (TP) update. Adaptation decisions then change insurance, vulnerability, or exposure for the next year.
 
 ## Project Structure
 
@@ -49,11 +47,9 @@ FLOODABM/
 ├── utils/                       # Visualization helpers and output
 │
 └── scripts/
-    ├── paper_figures/           # Analysis-specific scripts; see the revised figure guide
     ├── examples/                # Example helper scripts (e.g. future-depth generator)
-    ├── sensitivity/             # Sensitivity analysis runners
     ├── validation/              # NFIP validation
-    └── utilities/               # Data tools + formal run_mc100_local.py ensemble runner
+    └── utilities/               # Ensemble runner, figure rebuilds, and verification
 ```
 
 ## Installation
@@ -95,7 +91,7 @@ python main.py --scenario worst --no-plots --output-mode full
 A baseline run takes ~2 minutes and writes results under `outputs/baseline/`:
 `decisions/` (household actions and adoption shares by tract), `finance/` (premiums, payouts, OOP, per-tract financial summaries), `vulnerability/` (flood damage ratios), and `states/` (year-end household state). The `worst` scenario writes to `outputs/worst/`.
 
-> Plotting is optional and separate from running the experiment. The inline plots (omit `--no-plots`) and the paper-figure scripts need `scipy` + `openpyxl` with `matplotlib < 3.9` (pinned in `requirements.txt`); some inline plots are still fragile. For running the model and analysing results, use `--no-plots` and read the output CSVs.
+> Plotting is optional. The single-run plots use the dependencies in `requirements.txt`. The [revised manuscript and supporting figure guide](docs/WRR_FIGURE_CHECKS.md) lists the separate environments for matching the accepted figures. To run the benchmark without inline plots, use `--no-plots` and analyze the output CSVs.
 
 ### CLI Arguments
 
@@ -113,11 +109,13 @@ A baseline run takes ~2 minutes and writes results under `outputs/baseline/`:
 ```bash
 # Local 50-run ensemble used for the paper figures (100 scenario runs)
 python scripts/utilities/run_mc100_local.py --out-root ../FLOODABM_mc50 --scenarios baseline worst
-
-# Sensitivity analysis
-python scripts/sensitivity/sa_ratio_threshold.py
-python scripts/sensitivity/sa_decision_threshold.py
 ```
+
+For the revised paper, see [Figures S4–S5 threshold sensitivity](docs/REPRODUCIBILITY.md#recompute-the-threshold-sensitivity-series-figures-s4-and-s5),
+[Figure S6 flood-sequence sensitivity](docs/REPRODUCIBILITY.md#recompute-the-flood-sequence-sensitivity-series-figure-s6),
+and [Tables S8–S9 paired sensitivities](docs/REPRODUCIBILITY.md#recompute-the-paired-sensitivity-tables-tables-s8-and-s9).
+These reproduce the published summaries from the archived cases. For a new
+experiment, use the [scenario options](docs/SCENARIOS.md#4-other-scenario-levers-cli-flags-and-parameters).
 
 ## Documentation
 
@@ -149,14 +147,16 @@ scenarios with the fixed revised design. See the [reproduction guide](docs/REPRO
 
 ## Simulation Flow
 
-1. Load configuration and household inventory
-2. For each year (2011-2023):
-   - Compute flood hazard per tract (depths and damage ratios)
-   - Calculate damage, insurance premiums, payouts, and out-of-pocket costs
-   - Determine household actions (FI/EH/BP/RL) based on threat perception
-   - Apply actions to update vulnerability, exposure, and financial state
-   - Update threat perception (shock in flood years, decay otherwise)
-3. Write outputs and generate figures
+1. Load the revised configuration and initial household inventory.
+2. For each year from 2011 through 2023, sample flood depths for each
+   household from its tract's depth distribution. Calculate ground-up loss
+   and financial outcomes under the insurance status in effect that year.
+3. In the adaptation scenario, use the tract-level GUL ratio to update TP,
+   then use the behavioral model to evaluate the actions available to each
+   household group. The no-adaptation scenario skips household decisions.
+4. Carry the resulting insurance, first-floor height, or exposure changes
+   into the next year's simulation. Save annual losses and decisions for
+   the figure and table rebuilds.
 
 ## Outputs
 
@@ -172,16 +172,21 @@ Results are saved under `outputs/<scenario>/`:
 
 ## Reproduce and check the revised figures
 
-Use the [revised WRR figure checker](docs/WRR_FIGURE_CHECKS.md) to compare
-regenerated PNGs with the final figure exports.
+From a fresh clone, generate Figures 5–8 and 11 directly as PNGs from the
+bundled results. The exact-render environment uses Python 3.14.0 and local
+Times New Roman:
 
-`scripts/utilities/render_wrr_figures.py` redraws Figures 5, 8, 9, and 11 from
-the bundled aggregate data. `scripts/utilities/render_wrr_vector_figures.py`
-replays Figures 4, 6, and 7 when the pinned study-archive PDFs are supplied.
-The [figure guide](docs/WRR_FIGURE_CHECKS.md) gives the exact inputs and
-checks for each route and identifies the figures still prepared outside it.
-Use the [revised benchmark instructions](docs/REPRODUCIBILITY.md) for simulation
-outputs; the individual analysis scripts are not a replacement for the figure guide.
+```sh
+python -m pip install -r requirements-benchmark.txt -r requirements-vector-figures.txt
+python scripts/utilities/render_wrr_figures.py --figure-dir ../wrr-png --figures 5 6 7 8 11
+python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-png --figures 5 6 7 8 11
+```
+
+Figure 9 and Supporting Figures S4–S6 also redraw from bundled results in
+their separate pinned environment. The [figure guide](docs/WRR_FIGURE_CHECKS.md)
+distinguishes these clone-only commands from the figures that still require
+separately archived source material. The figure commands write PNGs only.
+Use the [benchmark instructions](docs/REPRODUCIBILITY.md) to rerun the underlying simulations.
 
 > Note: the formal Monte Carlo driver requires `--out-root` to point outside the repository. Across the 50 runs, it varies the action-decision seed and Bayesian posterior draw while keeping the SFHA assignment, initial FI status, household attributes, flood sequence, and flood-depth sampling seed fixed. The posterior `.npz` files are stored in `models/baseline/`; single runs use the posterior-mean cache in `models/baseline_fast/`.
 

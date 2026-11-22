@@ -1,6 +1,7 @@
 """Recompute the simulated finance series in revised WRR Figures 5–7 and 11."""
 
 import argparse
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -49,12 +50,15 @@ def read_initial_counts() -> dict[str, int]:
     return counts
 
 
-def read_tract_finance(path: Path) -> tuple[dict[str, dict[str, float]], pd.DataFrame]:
+def read_tract_finance(
+    path: Path, *, payload: bytes | None = None,
+) -> tuple[dict[str, dict[str, float]], pd.DataFrame]:
     """Summarize tenure-level losses and county-level payouts/claim counts."""
     columns = [f"{group}_{name}" for group in GROUPS for name in RAW_METRICS.values()]
     county_columns = ["payout_total_usd", "claims"]
     columns += county_columns
-    data = pd.read_csv(path, usecols=["tract_geoid", *columns], dtype={"tract_geoid": str})
+    source = path if payload is None else BytesIO(payload)
+    data = pd.read_csv(source, usecols=["tract_geoid", *columns], dtype={"tract_geoid": str})
     if len(data) != N_TRACTS or data["tract_geoid"].isna().any() or data["tract_geoid"].duplicated().any():
         raise ValueError(f"Expected {N_TRACTS} distinct tracts: {path}")
     values = data[columns].to_numpy(dtype=float)

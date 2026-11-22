@@ -60,9 +60,12 @@ region/basin, population demographics, or survey instrument. Three plug-in tiers
 1. **Own numbers, no rerun.** Overwrite `tp_decay_params` in the YAML and drop
    replacement `.npz` model files into `models/baseline/` (and `models/baseline_fast/`).
    For the psychology Beta shapes, edit `modules/actions/tp.py`
-   (`BETA_PARAMS_*_DEFAULT`) and regenerate `config/households_for_abm_sfha.csv` via
-   `scripts/utilities/generate_household_psych.py` — editing the YAML alone does
-   nothing (§1).
+   (`BETA_PARAMS_*_DEFAULT`) in your custom model, then run
+   `python scripts/utilities/generate_household_psych.py --csv INPUT.csv --output NEW.csv`.
+   Use a separate configuration whose `files.households` points to the new CSV.
+   Keep the shipped inventory unchanged for benchmark reproduction. Adding
+   `--yaml CUSTOM.yaml` uses your configuration when validating or assigning initial
+   insurance status; it does not override the Python Beta shapes (§1).
 2. **Own survey, reuse Phase 2/3.** Build `data.xlsx` (sheets `owner_variable` /
    `renter_variable` with columns FI, EH, BP, RL, TP_mean, CP_mean, SP_mean,
    SC_mean, PA_mean, Source) and `cal_data.xlsx` (`owner_cal` / `renter_cal`), then

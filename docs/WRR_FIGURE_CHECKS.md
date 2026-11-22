@@ -14,20 +14,30 @@ metadata. By default it requires every figure. To check a subset, add
 `--figures 6 7 11`. This command does not regenerate figures. Matching pixels
 do not establish the provenance of the candidate image.
 
+Use the direct PNG routes below for new runs. They do not write PDF files.
+The optional historical PDF replay reads existing archive components only;
+it is not a prerequisite for the direct renderers.
+
 ## Render from the bundled data
 
-Figures 5, 8, and 11 can be redrawn from their published aggregate series. Install
-`requirements-benchmark.txt` in Python 3.14.0. Exact pixel reproduction was
+Figures 5–8 and 11 can be redrawn from their published aggregate series.
+Install `requirements-benchmark.txt` and `requirements-vector-figures.txt`
+in Python 3.14.0 (the second file supplies the in-memory drawing dependency for Figures 6 and 7).
+Exact pixel reproduction was
 tested on Windows with Times New Roman; another font or renderer can change
 the output pixels.
 
 ```sh
-python scripts/utilities/render_wrr_figures.py --figure-dir ../wrr-rendered
-python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-rendered --figures 5 8 11
+python scripts/utilities/render_wrr_figures.py --figure-dir ../wrr-rendered --figures 5 6 7 8 11
+python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-rendered --figures 5 6 7 8 11
 ```
 
 The two commands reproduce the plotting stage from the saved group-level
-series, not the ensemble aggregation that produced the series.
+series. To render Figures 5–7 or 11 from refreshed finance results, pass
+`--series-dir` with the output directory of the
+[finance rebuild](REPRODUCIBILITY.md#recompute-finance-figure-data-from-all-50-paired-draws).
+Select only the figures whose required series are in that directory; the
+renderer does not fill missing files from the bundled data.
 
 Figure 9 uses a separate Windows x64 Conda environment because the accepted
 render depends on Matplotlib 3.10.0 and FreeType 2.12.1. The lock pins the
@@ -40,11 +50,131 @@ conda run -n wrr-figure9 python scripts/utilities/render_wrr_figures.py --figure
 python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-rendered --figures 9
 ```
 
-## Replay from the archived PDF components
+The same optional `--series-dir` works with Figure 9 in its pinned environment.
+
+### Main Figure 6 directly from the loss and finance series
+
+With the same pinned Python and Times New Roman setup as the batch command,
+run `render_wrr_figures.py --figure-dir ../wrr-rendered --figures 6`. The
+renderer draws (a–b) from `Figure6_cumulative_loss.csv` and (c–f) from
+`Figure6_annual_finance.csv`. It checks the entire 3,550 × 4,373 PNG against
+the submitted pixels before writing it. The only output is `Figure_06.png`;
+the command needs no archived components. To use the table data rebuilt from
+the ensemble, pass their folder with `--series-dir`.
+
+### Main Figure 7 directly from the exceedance series
+
+Install both `requirements-benchmark.txt` and `requirements-vector-figures.txt`
+in Python 3.14.0. With the installed Windows Times New Roman fonts, run:
+
+```sh
+python scripts/utilities/render_wrr_aep_png.py --figure-dir ../wrr-rendered
+```
+
+This redraws all four paths from the bundled `Figure7_aep.csv`, calculates
+the endpoint labels and protection margins from the loss values, and checks
+every decoded pixel against the submitted image before writing
+`Figure_07.png`. Add `--series-dir ../wrr-recomputed-finance` to use the
+[series rebuilt from the ensemble](REPRODUCIBILITY.md#recompute-finance-figure-data-from-all-50-paired-draws).
+The command uses local regular and bold Times New Roman; `--font-dir`
+overrides the default Windows Fonts folder. No archived PDF is needed and no
+PDF is written. The PNG file encoding may differ even when its pixels match.
+
+### Supporting Figures S4–S6
+
+Use the same pinned Windows x64 environment and Times New Roman as Figure 9.
+The repository includes the three accepted plot tables. Drawing from them
+does not require the study archives:
+
+```sh
+conda run -n wrr-figure9 python scripts/utilities/render_wrr_supporting_figures.py --figure-dir ../wrr-rendered
+```
+
+The renderer verifies the exact final PNG bytes before writing any of the three
+images and refuses to overwrite existing files. To replay a subset, use
+`--figures 4 6` for Figures S4 and S6, for example. To render from the
+[recomputed sensitivity series](REPRODUCIBILITY.md#recompute-the-threshold-sensitivity-series-figures-s4-and-s5),
+specify the verified CSV files explicitly:
+
+```sh
+conda run -n wrr-figure9 python scripts/utilities/render_wrr_supporting_figures.py --figure-dir ../wrr-rendered-from-rebuild --s4-series ../wrr-s4-recomputed/Figure_R1_data.csv --s5-series ../wrr-s5-recomputed/Figure_R2_fixed_initial_data.csv --s6-series ../wrr-s6-recomputed/Figure_R3_fixed_initial_plot_data.csv
+```
+
+The rebuilt-data route needs the archived sensitivity cases. Drawing from the
+bundled tables reproduces the plotting stage without rerunning those cases.
+
+### Supporting Figures S1–S3 from the study archive
+
+Use the original pre-labeling PNGs in `Sources/review_v2_20260909/sm_fonts/before/`
+of the study figure archive. They are not included in a clone. The command
+matches each input's SHA-256 before applying the last label and legend edits.
+Use Python 3.14.0, Pillow 12.0.0 (pinned in `requirements-benchmark.txt`), and
+the installed Windows Arial regular and bold fonts.
+
+```sh
+python scripts/utilities/render_wrr_supporting_raster.py --components ../wrr-raster-components --figure-dir ../wrr-rendered
+```
+
+The command redraws only the approved label regions and checks that all three
+PNGs match the final standalone supporting exports exactly. It preserves the
+prior bootstrap curves and flood maps. It does not recompute the calibration
+intervals or simulate flood depths, and it does not recreate Word's embedded
+JPEG for S3. Use `--figures 2 3` to redraw only S2 and S3.
+
+### Supporting Figure S7 from the study archive
+
+Use the pre-crop population map in the study figure archive,
+`SM/FigS4_population_change.png` (historical numbering). With the same
+Python and Pillow versions as above, run:
+
+```sh
+python scripts/utilities/render_wrr_supporting_raster.py --figures 7 --components ../wrr-s7-map-component --figure-dir ../wrr-rendered
+```
+
+The command crops the map and moves the flood-prone legend entry, reproducing
+the final `FigS07_population_change.png` exactly. It uses the lettering already
+in the archived raster and requires no fonts. The archive input is not bundled.
+The [spatial data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps)
+separately rebuilds all six population-change fields from the model outputs;
+this raster replay does not regenerate the GIS map layout from those fields.
+
+### Main Figure 10 from the study archive
+
+Use the full-page export in `Sources/maps/centered_key_exports/Fig10_spatial_fi.png`,
+not the similarly named cropped export. With Python 3.14.0 and Pillow 12.0.0:
+
+```sh
+python scripts/utilities/render_wrr_supporting_raster.py --main-map 10 --components ../wrr-fig10-map-component --figure-dir ../wrr-rendered
+```
+
+The renderer checks the archived source, trims the full page, and adds the
+94-pixel border to reproduce the accepted `Figure_10.png` exactly. The
+[main figure checker](#checking-reproduced-wrr-figures) also accepts that PNG
+by its decoded pixels. This replay starts from the archived GIS map export;
+the [map data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps)
+verifies the underlying insurance data separately.
+
+## Verify the archived Figure 4 PNG
+
+The hydrologic validation figure uses inundation maps and hydrographs from
+outside the household simulation. If you have the final standalone PNG
+`Fig04_flood_inudation.png` from the study archive, place a copy named
+`Figure_04.png` in the verification directory and run:
+
+```sh
+python scripts/utilities/verify_wrr_figures.py --figure-dir ../wrr-rendered --figures 4
+```
+
+This verifies the supplied export, not the hydrologic model or its source
+data. No slide application is needed for this check.
+
+## Optional archive route (PNG output)
 
 Place the following unchanged study-archive files in one local directory.
 Their SHA-256 hashes are pinned in `scripts/utilities/render_wrr_vector_figures.py`;
-earlier exports with the same filename are rejected.
+earlier exports with the same filename are rejected. This route reads the archived
+components and writes PNGs only. The archive route for Figures 6 and 7 is optional;
+the direct CSV-to-PNG command above does not need these inputs.
 
 | Source file | Final output |
 | --- | --- |
@@ -70,29 +200,31 @@ finance series from simulation CSVs.
 
 | Final figure | Source and reproduction boundary |
 | --- | --- |
-| 1 | Study-area map with tract SFHA shares and white-outlined county labels. The displayed layout layers resolved locally, and the 27 tract classes agreed with the model area fractions. The live ArcGIS re-export did not match the final pixels. |
-| 2 | Coupled framework; final diagrams.net drawing. |
-| 3 | Adoption-probability diagram; editable PowerPoint artwork and mathematical insets. |
-| 4 | Flood-model diagnostics. The final-label PowerPoint PDF was replayed to the exact accepted pixels using the vector renderer. |
+| 1 | Study-area map with tract SFHA shares and white-outlined county labels. The [overlay rebuild](REPRODUCIBILITY.md#recompute-the-sfha-area-shares) exactly reproduces the 27 coverage values from the archived geospatial inputs. The ArcGIS PNG re-export did not match the final pixels; differences were concentrated in the right-hand frame, which uses the World Topographic Map basemap. |
+| 2–3 | Framework and adoption-probability illustrations. The checker accepts the submitted PNGs; these illustrations are not outputs of a simulation run. |
+| 4 | Flood-model diagnostics. [Verify the final archived PNG](#verify-the-archived-figure-4-png) separately from the household simulation. |
 | 5 | County NFIP diagnostic. The bundled renderer uses the corrected Morris/Passaic labels and the final aggregate series; the regenerated PNG matches the final pixels. |
-| 6 | SQ1 six-panel loss and finance figure. The vector renderer recomposes the two PDF components from the study archive to the exact final pixels. |
-| 7 | SQ2 two-panel aggregate exceedance probability figure, with the revised protection-margin labels. The vector renderer reproduces the exact final pixels from the original finance PDF. |
+| 6 | SQ1 six-panel loss and finance figure. The [CSV-to-PNG renderer](#main-figure-6-directly-from-the-loss-and-finance-series) rebuilds all six panels at the exact submitted pixels. The study-archive replay remains an alternative. |
+| 7 | SQ2 two-panel aggregate exceedance probability figure. The [data-driven PNG renderer](#main-figure-7-directly-from-the-exceedance-series) rebuilds the curves and protection-margin labels at the exact submitted pixels. The finance PDF replay remains an alternative. |
 | 8 | Adoption trajectories. The included renderer uses the final aggregate series and the last legend and annotation edits; its regenerated PNG matches the final pixels. |
 | 9 | Threat-perception trajectories. The final aggregate series and 17-point legend reproduce the exact PNG with the separate pinned environment. |
-| 10 | Spatial flood-insurance comparison. The displayed ArcGIS layout layers resolved locally and the visual dimensions matched after restoring the original trim and border. The re-export still differs in a small region near the legend. |
+| 10 | Spatial flood-insurance comparison. The [map data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps) reproduces the complete source CSV, including all 162 bivariate cell assignments. Cropping the pinned archived full-page export reproduces the final PNG exactly. A new native ArcGIS export has not been verified to match. |
 | 11 | Income-normalized AEP, with the revised income-relative protection-margin labels. Redrawing it from the bundled aggregate series matches the final PNG pixels. |
 
 The [simulation benchmark](REPRODUCIBILITY.md) and this image check are
 separate. A clone contains the simulation inputs, figure reference checksums,
-and the series needed to redraw Figures 5, 8, 9, and 11. Replaying Figures 4, 6,
-and 7 requires the separate archived PDFs above. The complete native GIS and
-office export workflows are not included.
+and the sources needed to redraw Figures 5–9 and 11. Figures 1, 4 and 10
+require separately archived materials for the checks described above. The
+native GIS and hydrologic modeling projects are not included.
 
-For the annualized losses in Table S7 and response Table R3, use the respective
-full-precision aggregate medians and divide by 13 years and the **initial**
-number of households in that tenure group (41,517 owners; 10,624 renters).
-For the annual decision-rule comparison in Table S9 and response Table R6,
-pair the ten runs by seed, divide cumulative differences by the same initial
-group counts, convert to thousands of dollars, and summarize the paired
-differences using the median and IQR. Using current-year counts instead does
-not reproduce those tables.
+The same spatial builder reconstructs the six percentage-change fields
+plotted in Supporting Figure S7. The original GIS inputs contain ancillary
+columns that are not used in that figure.
+
+The [annualized loss table builder](REPRODUCIBILITY.md#recompute-the-annualized-loss-tables-table-s7-and-response-table-r3)
+derives Table S7 and response Table R3 from the last points of the Figure 6
+cumulative profiles, retaining the distinct units and precision of each table.
+The [paired sensitivity table builder](REPRODUCIBILITY.md#recompute-the-paired-sensitivity-tables-tables-s8-and-s9)
+reconstructs Tables S8–S9 and response Tables R5–R6 from the initial-cohort
+denominators and the ten matched draws. Using current-year counts instead
+does not reproduce those tables.

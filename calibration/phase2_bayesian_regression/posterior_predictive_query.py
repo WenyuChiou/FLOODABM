@@ -8,7 +8,6 @@ Usage:
     python posterior_predictive_query.py --scenarios   # pre-defined scenario comparison
 """
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
 
 import argparse
 import numpy as np
@@ -44,6 +43,9 @@ def predict_mu_distribution(post, tp, cp, sp):
 
 def plot_single_query(tp, cp, sp, model_name=None, out_path=None):
     """Plot posterior predictive for one (TP,CP,SP) across all or one model."""
+    if out_path is None:
+        out_path = Path(__file__).parent / f'query_TP{tp:.2f}_CP{cp:.2f}_SP{sp:.2f}.png'
+    out_path = Path(out_path).with_suffix('.png')
     models = {model_name: ALL_MODELS[model_name]} if model_name else ALL_MODELS
     n = len(models)
     fig, axes = plt.subplots(1, n, figsize=(5*n, 4.5))
@@ -75,15 +77,12 @@ def plot_single_query(tp, cp, sp, model_name=None, out_path=None):
                  fontsize=12, fontweight='bold')
     plt.tight_layout()
     
-    if out_path is None:
-        out_path = Path(__file__).parent / f'query_TP{tp:.2f}_CP{cp:.2f}_SP{sp:.2f}.pdf'
-    fig.savefig(out_path, dpi=300)
-    fig.savefig(str(out_path).replace('.pdf', '.png'), dpi=300)
+    fig.savefig(out_path, format='png', dpi=300)
     plt.close(fig)
     print(f'Saved: {out_path}')
     return out_path
 
-def plot_scenarios():
+def plot_scenarios(out_dir=None):
     """Pre-defined scenario comparison for reviewer."""
     scenarios = [
         (0.2, 0.5, 0.5, 'Low TP (post-calm)'),
@@ -128,9 +127,8 @@ def plot_scenarios():
                  '(Blue line = posterior mean, Red dashed = 0.5 threshold)',
                  fontsize=14, fontweight='bold')
     plt.tight_layout()
-    out = Path(__file__).parent / 'scenario_comparison_5x5.pdf'
-    fig.savefig(out, dpi=300)
-    fig.savefig(str(out).replace('.pdf', '.png'), dpi=300)
+    out = (Path(out_dir) if out_dir is not None else Path(__file__).parent) / 'scenario_comparison_5x5.png'
+    fig.savefig(out, format='png', dpi=300)
     plt.close(fig)
     print(f'Saved: {out}')
 
@@ -146,19 +144,26 @@ def plot_scenarios():
             mu = predict_mu_distribution(post, tp, cp, sp)
             row_str += f'{mu.mean():.2f} ({(mu>0.5).mean()*100:.0f}%)     '
         print(row_str)
+    return out
 
 if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description='Posterior Predictive Query')
     parser.add_argument('--tp', type=float, help='TP value (0-1)')
     parser.add_argument('--cp', type=float, help='CP value (0-1)')
     parser.add_argument('--sp', type=float, help='SP value (0-1)')
     parser.add_argument('--model', type=str, default=None, help='Specific model name')
     parser.add_argument('--scenarios', action='store_true', help='Run pre-defined scenarios')
+    parser.add_argument('--out-dir', type=Path, default=Path(__file__).parent,
+                        help='Output folder for PNG plots')
     args = parser.parse_args()
     
     if args.scenarios:
-        plot_scenarios()
+        args.out_dir.mkdir(parents=True, exist_ok=True)
+        plot_scenarios(args.out_dir)
     elif args.tp is not None and args.cp is not None and args.sp is not None:
-        plot_single_query(args.tp, args.cp, args.sp, args.model)
+        args.out_dir.mkdir(parents=True, exist_ok=True)
+        name = f'query_TP{args.tp:.2f}_CP{args.cp:.2f}_SP{args.sp:.2f}.png'
+        plot_single_query(args.tp, args.cp, args.sp, args.model, args.out_dir / name)
     else:
         parser.print_help()

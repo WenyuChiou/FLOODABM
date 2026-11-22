@@ -256,26 +256,41 @@ The verified CSVs are plotting data; no PNG or new simulation is produced.
 
 ## Recompute the flood-sequence sensitivity series (Figure S6)
 
-The model can replay any of the eleven saved event orders with
-`--wrr-flood-order`. The option moves both depth inputs and their sampling
-seed with each source event; household decisions still advance by simulation
-year. The default model run is unchanged. For example, this PowerShell
-command runs the first draw of the first shuffled adaptation case:
+From a fresh clone, with `requirements-benchmark.txt` installed, start with
+the first draw of the first shuffled order for both scenarios:
 
-```powershell
-$env:FLOODABM_POSTERIOR_IDX = '0'
-python main.py --scenario baseline --model-dir baseline --decision-seed 90001 --output-mode summary --no-plots --wrr-flood-order permuted_01 --out-root ../wrr-s6-permuted01-draw01
+```sh
+python scripts/utilities/run_wrr_flood_sequence.py --suite-root ../wrr-s6 --orders permuted_01 --draws 1
 ```
 
-Use a fresh scenario output path and include `--no-plots`, since the general
-model plots assume observed event years. Run each scenario separately. The
-observed order is `observed`; the
-shuffled options are `permuted_01` through `permuted_10`. The matching
-no-adaptation case uses `--scenario worst`. Match the decision seed and
-posterior index for each of the first ten draws as in the main benchmark.
-This command runs one case; it does not rebuild the whole figure.
+Omit the case selectors for all 220 simulations (11 orders, 10 draws, and
+two scenarios). This is a longer serial batch. Add `--reuse` to verify and
+skip successfully completed cases. A case without a success marker or with
+a missing or mismatched annual file stops the run; inspect its `run.log`
+and use a new suite directory if needed.
 
-For the separate all-cases archive verification and aggregation:
+Run the next command only after the previous command succeeds. For the last
+command, first create the `wrr-figure9` environment as shown in
+[the figure guide](WRR_FIGURE_CHECKS.md).
+
+```sh
+python scripts/utilities/run_wrr_flood_sequence.py --suite-root ../wrr-s6 --reuse
+python scripts/utilities/rebuild_wrr_sequence_series.py --suite-root ../wrr-s6 --out-dir ../wrr-s6-csv
+conda run -n wrr-figure9 python scripts/utilities/render_wrr_supporting_figures.py --figure-dir ../wrr-s6-png --figures 6 --s6-series ../wrr-s6-csv/Figure_R3_fixed_initial_plot_data.csv
+```
+
+The runner uses the same ten paired decision seeds and posterior indices as
+the first ten draws of the main benchmark. It moves both depth inputs and
+their sampling seed with each source event; decisions still advance by
+simulation year. Each of the 220 finance checksums covers all 13 years and is
+derived from the matching revised archive. The model step produces no plots.
+The builder checks all 2,860 annual finance files before computing the 5,720
+trajectory rows and checking the 104 plotting rows against the bundled
+revised series. Only adaptation runs enter the plot: the observed series
+uses the median and IQR across draws; the shuffled series uses the median and
+range of the ten order-specific medians.
+
+### Optional: verify the original archive
 
 Use the audited flood-order study archive and its companion `r3` reference
 directory. The suite must contain `raw/` and `processed/run_registry.csv`; the
@@ -287,13 +302,8 @@ These archives are not shipped in the repo.
 python scripts/utilities/rebuild_wrr_sequence_series.py --suite-root ../wrr-sequence-archive --reference-dir ../wrr-r3-references --out-dir ../wrr-s6-recomputed
 ```
 
-The builder verifies 2,860 annual finance files before rebuilding cumulative
-losses per initial household. It checks both scenarios' trajectory tables.
-Only adaptation runs enter the final plot data: observed losses use the
-median and IQR across ten draws, and shuffled losses use the median and range
-of the ten sequence medians. This rebuild verifies the 104 plotted rows and
-their 5,720 source trajectory rows; it does not rerender the manuscript image
-or rerun the sensitivity simulations.
+This optional mode verifies the original file bytes and checks both rebuilt
+tables against the pinned archived CSVs.
 
 ## Recompute the paired sensitivity tables (Tables S8 and S9)
 

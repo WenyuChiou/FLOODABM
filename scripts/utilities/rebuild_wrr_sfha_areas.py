@@ -9,13 +9,14 @@ from io import BytesIO, StringIO
 from pathlib import Path
 
 if __package__:
-    from .wrr_public_sources import fema_geometry, read_limited, verify_digest
+    from .wrr_public_sources import NJDEP_NFHL_SHA256 as SFHA_SHA256
+    from .wrr_public_sources import fema_geometry, njdep_nfhl_payload, read_limited, verify_digest
 else:
-    from wrr_public_sources import fema_geometry, read_limited, verify_digest
+    from wrr_public_sources import NJDEP_NFHL_SHA256 as SFHA_SHA256
+    from wrr_public_sources import fema_geometry, njdep_nfhl_payload, read_limited, verify_digest
 
 
 TRACTS_SHA256 = "07ac664f8c171459e8625fd12a0b065c3f7aad6ecf4ad907c2f5d2d9e808d3b1"
-SFHA_SHA256 = "9bb2422c77a91ac9c7abf5e3358b2753aaafc2e1cb7ebda4f2a372de6664dfc0"
 MODEL_CSV = "sfha_area_share_by_tract.csv"
 MAP_CSV = "sfha_tract_area_coverage.csv"
 MODEL_SHA256 = "09603907a1ab7aa66b128d939df73dadfbb77b49c93203ae2e546c3ab7dbb818"
@@ -62,9 +63,19 @@ def encode_map_table(table) -> bytes:
         return buffer.getvalue().encode("utf-8")
 
 
-def verified_tables(tracts_path: Path, sfha_path: Path) -> dict[str, bytes]:
+def verified_flood_source(sfha_path: Path | None, source_dir: Path | None) -> BytesIO:
+    """Read the archive or fetch and verify the exact public NFHL snapshot."""
+    if sfha_path is not None:
+        return verified_source(sfha_path, SFHA_SHA256)
+    return BytesIO(njdep_nfhl_payload(source_dir))
+
+
+def verified_tables(
+    tracts_path: Path, sfha_path: Path | None, source_dir: Path | None = None,
+) -> dict[str, bytes]:
+    """Rebuild both revised tables using the archived tract geometries."""
     tracts_source = verified_source(tracts_path, TRACTS_SHA256)
-    sfha_source = verified_source(sfha_path, SFHA_SHA256)
+    sfha_source = verified_flood_source(sfha_path, source_dir)
     import geopandas as gpd
 
     # GDAL must parse the verified snapshots, not reopen paths or GeoPackage sidecars.
@@ -84,11 +95,11 @@ def verified_tables(tracts_path: Path, sfha_path: Path) -> dict[str, bytes]:
     return outputs
 
 
-def verified_public_map_table(sfha_path: Path, source_dir: Path | None) -> bytes:
-    """Recompute only Figure 1 with pinned FEMA tracts and archived SFHA zones."""
+def verified_public_map_table(sfha_path: Path | None, source_dir: Path | None) -> bytes:
+    """Recompute only Figure 1 with pinned FEMA tracts and verified NFHL zones."""
     import geopandas as gpd
 
-    sfha_source = verified_source(sfha_path, SFHA_SHA256)
+    sfha_source = verified_flood_source(sfha_path, source_dir)
     sfha = gpd.read_file(sfha_source, columns=[], engine="pyogrio")
     if len(sfha) != 1428:
         raise ValueError("Unexpected number of features in the archived SFHA overlay")
@@ -109,19 +120,21 @@ def main() -> None:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--tracts", type=Path, help="Archived study_tracts_svi.gpkg; rebuild both tables")
     mode.add_argument("--public-tracts", action="store_true", help="Use public FEMA tracts; Figure 1 only")
-    parser.add_argument("--public-source-dir", type=Path, help="Offline FEMA GeoJSON cache for --public-tracts")
-    parser.add_argument("--sfha", type=Path, required=True, help="Archived nj_nfhl_sfha_study_tracts.geojson")
+    flood = parser.add_mutually_exclusive_group(required=True)
+    flood.add_argument("--sfha", type=Path, help="Archived nj_nfhl_sfha_study_tracts.geojson")
+    flood.add_argument("--public-nfhl", action="store_true", help="Use the pinned NJDEP public NFHL query")
+    parser.add_argument("--public-source-dir", type=Path, help="Offline GeoJSON cache for public inputs")
     parser.add_argument("--output-dir", type=Path, required=True, help="New directory for the verified CSV output")
     args = parser.parse_args()
-    if args.public_source_dir is not None and not args.public_tracts:
-        parser.error("--public-source-dir requires --public-tracts")
+    if args.public_source_dir is not None and not (args.public_tracts or args.public_nfhl):
+        parser.error("--public-source-dir requires --public-tracts or --public-nfhl")
     try:
         if args.output_dir.exists() or args.output_dir.is_symlink():
             raise FileExistsError(f"Refusing to overwrite {args.output_dir}")
         if args.public_tracts:
             tables = {MAP_CSV: verified_public_map_table(args.sfha, args.public_source_dir)}
         else:
-            tables = verified_tables(args.tracts, args.sfha)
+            tables = verified_tables(args.tracts, args.sfha, args.public_source_dir)
         args.output_dir.mkdir(parents=True, exist_ok=False)
         for name, content in tables.items():
             path = args.output_dir / name

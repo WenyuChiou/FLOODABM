@@ -2,6 +2,7 @@ import hashlib
 from io import BytesIO
 import json
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 from urllib.request import Request
 
 import pytest
@@ -111,7 +112,10 @@ def test_existing_destination_is_not_overwritten(tmp_path, monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("matches_reference", [True, False])
-def test_public_route_writes_only_the_exact_map_table(tmp_path, monkeypatch, matches_reference):
+@pytest.mark.parametrize("public_nfhl", [True, False])
+def test_public_route_writes_only_the_exact_map_table(
+    tmp_path, monkeypatch, matches_reference, public_nfhl,
+):
     gpd = pytest.importorskip("geopandas")
     from shapely.geometry import box
 
@@ -144,9 +148,14 @@ def test_public_route_writes_only_the_exact_map_table(tmp_path, monkeypatch, mat
 
     monkeypatch.setattr(gpd, "read_file", read_file)
     monkeypatch.setattr(rebuild, "fema_geometry", fema_geometry)
+    if public_nfhl:
+        monkeypatch.setattr(rebuild, "njdep_nfhl_payload", lambda _: b"archived flood data")
+        flood_args = ["--public-nfhl"]
+    else:
+        flood_args = ["--sfha", str(nfhl)]
     output = tmp_path / "areas"
     monkeypatch.setattr(
-        "sys.argv", ["rebuild", "--public-tracts", "--sfha", str(nfhl), "--output-dir", str(output)]
+        "sys.argv", ["rebuild", "--public-tracts", *flood_args, "--output-dir", str(output)]
     )
     if matches_reference:
         rebuild.main()
@@ -220,3 +229,58 @@ def test_public_download_rejects_redirect_before_requesting_another_location(url
     handler = sources.RejectPublicSourceRedirect()
     with pytest.raises(ValueError, match="Unexpected public source redirect"):
         handler.redirect_request(Request("https://source.example/data"), None, 302, "Found", {}, url)
+
+
+def test_njdep_public_query_replays_the_original_envelope_and_zone_filter(monkeypatch):
+    snapshot = b"mock pinned August 2026 response"
+
+    def checked_request(cache, name, uri, limit):
+        assert cache is None
+        assert name == "nj_nfhl_sfha_study_tracts.geojson"
+        assert limit == 16_000_000
+        parsed = urlsplit(uri)
+        assert parsed.scheme == "https"
+        assert parsed.netloc == "mapsdep.nj.gov"
+        assert parsed.path == "/arcgis/rest/services/Features/Hydrography/MapServer/43/query"
+        query = {key: values[0] for key, values in parse_qs(parsed.query).items()}
+        assert json.loads(query.pop("geometry")) == {
+            "xmin": -8283243.078172955, "ymin": 4988017.55332962,
+            "xmax": -8259463.001313929, "ymax": 5012955.030759927,
+            "spatialReference": {"wkid": 3857},
+        }
+        assert query == {
+            "geometryType": "esriGeometryEnvelope", "inSR": "3857",
+            "spatialRel": "esriSpatialRelIntersects",
+            "where": "FLD_ZONE IN ('A','AE','AH','AO','AR','A99','V','VE')",
+            "outFields": "OBJECTID,FLD_ZONE,ZONE_SUBTY", "returnGeometry": "true",
+            "outSR": "4326", "resultRecordCount": "2000", "f": "geojson",
+        }
+        return snapshot
+
+    monkeypatch.setattr(sources, "NJDEP_NFHL_SHA256", hashlib.sha256(snapshot).hexdigest())
+    monkeypatch.setattr(sources, "public_input", checked_request)
+    assert sources.njdep_nfhl_payload(None) == snapshot
+
+
+def test_changed_njdep_cache_cannot_publish_a_figure1_table(tmp_path, monkeypatch, capsys):
+    pytest.importorskip("geopandas")
+    cache = tmp_path / sources.NJDEP_NFHL_FILE
+    cache.write_bytes(b"changed public flood data")
+    output = tmp_path / "areas"
+
+    def no_query(*_):
+        pytest.fail("A changed NFHL cache must fail before any tract query")
+
+    monkeypatch.setattr(rebuild, "fema_geometry", no_query)
+    monkeypatch.setattr(sources, "build_opener", no_query)
+    monkeypatch.setattr(
+        "sys.argv", [
+            "rebuild", "--public-tracts", "--public-nfhl",
+            "--public-source-dir", str(tmp_path), "--output-dir", str(output),
+        ],
+    )
+    with pytest.raises(SystemExit) as error:
+        rebuild.main()
+    assert error.value.code == 1
+    assert "NJDEP NFHL bytes differ from the pinned revision" in capsys.readouterr().err
+    assert not output.exists()

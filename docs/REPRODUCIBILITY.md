@@ -119,23 +119,28 @@ It checks both output hashes before writing:
 
 The shares differ slightly between the two projections, but all 27 tracts
 are in the same Figure 1 classes. Use the model CSV for initialization
-replay, not the map CSV. A current NFHL download is not a substitute for
-the pinned snapshot. This command reproduces the values behind Figure 1,
+replay, not the map CSV. The overlay reproduces the values behind Figure 1,
 not its basemap or final layout.
 
-To rebuild **only Figure 1's coverage table** without the archived tract
-GeoPackage, use the verified public FEMA tract geometries:
+To rebuild **only Figure 1's coverage table** with no study-archive inputs,
+use the same Python environment and download both verified public layers:
 
 ```sh
-python scripts/utilities/rebuild_wrr_sfha_areas.py --public-tracts --sfha /path/to/nj_nfhl_sfha_study_tracts.geojson --output-dir ../wrr-figure1-areas
+python scripts/utilities/rebuild_wrr_sfha_areas.py --public-tracts --public-nfhl --output-dir ../wrr-figure1-areas
 ```
 
-This route still requires the pinned archived NFHL extract. The command
-checks the 27 tract IDs and geometry before rebuilding
-`sfha_tract_area_coverage.csv`, and verifies the revised CSV hash before
-writing it. For offline use, pass `--public-source-dir` with the verified
-`fema_tracts.geojson` cache. Use both archived inputs for the model table:
-the public geometry does not produce its exact full-precision CSV.
+This repeats the August 17, 2026 extraction from the
+[NJDEP-hosted FEMA NFHL layer](https://mapsdep.nj.gov/arcgis/rest/services/Features/Hydrography/MapServer/43).
+The command accepts the result only if it matches the archived bytes. If the
+service changes, replace `--public-nfhl` with `--sfha` and the unchanged
+archived extract. For offline use, point `--public-source-dir` to a verified
+cache containing `fema_tracts.geojson` and `nj_nfhl_sfha_study_tracts.geojson`.
+
+The public-tract route verifies all 27 geometries and writes only the
+hash-checked `sfha_tract_area_coverage.csv`. To regenerate the
+full-precision model CSV, use `--tracts` with the archived tract GeoPackage.
+Either verified NFHL source works with that mode; the public tract geometry
+does not reproduce the exact model CSV.
 
 ## Rebuild the initial states
 

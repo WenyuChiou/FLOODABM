@@ -20,6 +20,9 @@ FEMA_QUERY = (
     "FEMA_HurricaneWind_Tract/FeatureServer/0/query"
 )
 FEMA_GEOMETRY_SHA = "3c432a1d16673f7a9e8dfd7ccafb627b82c84d28dbdfffa6cb8a3d629222dc71"
+NJDEP_NFHL_QUERY = "https://mapsdep.nj.gov/arcgis/rest/services/Features/Hydrography/MapServer/43/query"
+NJDEP_NFHL_FILE = "nj_nfhl_sfha_study_tracts.geojson"
+NJDEP_NFHL_SHA256 = "9bb2422c77a91ac9c7abf5e3358b2753aaafc2e1cb7ebda4f2a372de6664dfc0"
 
 
 class RejectPublicSourceRedirect(HTTPRedirectHandler):
@@ -63,6 +66,35 @@ def public_input(cache: Path | None, name: str, url: str, limit: int) -> bytes:
     if len(data) > limit:
         raise ValueError(f"{name}: response exceeds the expected input size")
     return data
+
+
+def njdep_nfhl_payload(cache: Path | None) -> bytes:
+    """Replay the original August 2026 query and require the archived bytes."""
+    # Preserve the original Web Mercator envelope, spatial relation and zone filter.
+    # Do not derive this envelope from the slightly different public tract geometry.
+    geometry = {
+        "xmin": -8283243.078172955,
+        "ymin": 4988017.55332962,
+        "xmax": -8259463.001313929,
+        "ymax": 5012955.030759927,
+        "spatialReference": {"wkid": 3857},
+    }
+    params = {
+        "geometry": json.dumps(geometry), "geometryType": "esriGeometryEnvelope",
+        "inSR": "3857", "spatialRel": "esriSpatialRelIntersects",
+        "where": "FLD_ZONE IN ('A','AE','AH','AO','AR','A99','V','VE')",
+        "outFields": "OBJECTID,FLD_ZONE,ZONE_SUBTY", "returnGeometry": "true",
+        "outSR": "4326", "resultRecordCount": 2000, "f": "geojson",
+    }
+    result = public_input(
+        cache, NJDEP_NFHL_FILE, NJDEP_NFHL_QUERY + "?" + urlencode(params), 16_000_000
+    )
+    if hashlib.sha256(result).hexdigest() != NJDEP_NFHL_SHA256:
+        raise ValueError(
+            "NJDEP NFHL bytes differ from the pinned revision. "
+            "Use the unchanged archived file with --sfha."
+        )
+    return result
 
 
 def fema_geometry(cache: Path | None, tracts: tuple[str, ...]) -> GeoDataFrame:

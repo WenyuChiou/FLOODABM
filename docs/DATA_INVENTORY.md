@@ -20,10 +20,13 @@ how to rerun the benchmark and check its numerical outputs.
 | `config/models/models_config.yaml` | Registry of the shipped baseline model. |
 | `data/supplementary/wrr_mc50_finance_reference.csv` | Seed schedule and archived finance checksums for the revised 50-draw ensemble. |
 | `data/supplementary/wrr_main_figures_reference.json` | Dimensions and decoded pixel checksums for the final revised main figures. |
+| `data/supplementary/Table_S_MC_variance.csv` | Current Text S7 table: 455 yearly entries of medians and quartiles for the revised ensemble. |
 | `data/figures/Figure8_adaptation_trajectories.csv` | Final group-level median and interquartile ranges plotted in Figure 8; no household records. |
 | `data/figures/Figure11_income_aep.csv` | Final pooled and sorted income-normalized AEP series plotted in Figure 11; no household records. |
 | `data/figures/Figure5_nfip_validation_corrected_county_labels.csv` | Final simulated summary and observed standardized payouts by county and year, with corrected labels. |
 | `data/figures/Figure5_metrics_corrected_county_labels.csv` | Correlations and year counts in Figure 5. |
+| `data/figures/Figure6_cumulative_loss.csv` | Final cumulative loss series for Figure 6a–b, normalized by fixed initial tenure counts. |
+| `data/figures/Figure6_annual_finance.csv` | Final finance series for Figure 6c–f, archived under the former filename `Figure7_annual_finance.csv` before the panels were renumbered. |
 | `data/figures/Figure9_tp_by_prone.csv` | Final annual group-level threat perception medians and interquartile ranges. |
 | `models/baseline/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | One full posterior per action and tenure; shared by the ensemble and posterior predictive query. |
 | `models/baseline_fast/{owner_BP,owner_EH,owner_FI,renter_FI,renter_RL}.npz` | Smaller posterior-mean caches used by the default single-run simulation. These are not duplicates of the full posteriors. |
@@ -43,7 +46,7 @@ how to rerun the benchmark and check its numerical outputs.
 | `modules/actions/calibrators/best_calibrators.json` | Old calibrator export; the model loader does not search this directory. |
 | `modules/actions/calibrators/best_calibrators.yaml` | Old calibrator export with no remaining reader. |
 | `calibration/data/data.xlsx` and `calibration/data/cal_data.xlsx` | Optional historical refitting inputs removed in the preceding cleanup. Fitted simulation models do not require these workbooks. |
-| `data/supplementary/mc_initpsy_seeds.csv` and `data/supplementary/Table_S_MC_variance.csv` | Superseded ensemble seed list and variance summary removed in the preceding cleanup. |
+| `data/supplementary/mc_initpsy_seeds.csv` and the former 341-row `Table_S_MC_variance.csv` | Earlier ensemble seed list and variance summary. The revised draw schedule and 455-row Text S7 table replace them. |
 | Root `core/` and `utils/config_loader.py` | Unused old settings, data, path, and CLI loaders. The calibration-specific `core/` package is separate and retained. |
 | `modules/actions/MODELS_VERSION_GUIDE.md` | Documented unshipped model variants and workstation-specific paths. Use the reproduction guide for the shipped model. |
 | `main_mc.py`, `scripts/utilities/run_montecarlo.py`, `scripts/utilities/run_mc_extend.py` | Obsolete ensemble drivers. The revised benchmark uses the fixed draw schedule in `scripts/utilities/run_mc100_local.py`. |

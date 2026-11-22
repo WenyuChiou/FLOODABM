@@ -34,4 +34,28 @@ in the manifest, pass it to `--households`, and omit `--replay`.
 See the [input inventory](DATA_INVENTORY.md) for the roles of the retained and
 retired data files.
 
-Earlier Monte Carlo seed and variance tables, and the survey workbooks for refitting, are not part of the revised distribution. Prior tracked copies remain in Git history. Re-estimating coefficients or threat-perception decay requires separately authorized calibration data and is not part of this benchmark.
+## Annual ensemble medians and interquartile ranges
+
+Supporting Information Text S7 points to
+[`data/supplementary/Table_S_MC_variance.csv`](../data/supplementary/Table_S_MC_variance.csv).
+It contains 455 entries across Figures 5, 6, 8, and 9, using the revised
+50-draw ensemble. Reassemble and verify it from the five bundled aggregate
+sources:
+
+```sh
+python scripts/utilities/build_wrr_mc_variance_table.py --check
+python scripts/utilities/build_wrr_mc_variance_table.py --output ../Table_S_MC_variance.csv
+```
+
+Each row identifies the unit and how the series was calculated. Figure 6a–b reports cumulative
+loss through each year divided by the initial tenure count. Figure 6c–f
+uses current-year counts for per-household dollar amounts and tenure GUL
+for the OOP and payout shares. The combined premium-plus-OOP quartiles
+use within-draw totals; the stacked bars use separate medians. Figure 8
+rates and Figure 6 shares are fractions, not percentages. The table does
+not assign annual IQRs to the pooled exceedance curves (Figures 7 and 11),
+the median-only tract map (Figure 10), or to the observed data in Figure 5.
+
+The earlier seed list and variance table remain in Git history. Survey
+workbooks for refitting are not shipped; re-estimating the fitted models
+requires separately authorized calibration data.

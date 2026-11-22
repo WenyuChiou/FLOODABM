@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from scipy.special import expit
 from pathlib import Path
 
-MODELS_DIR = Path(__file__).parent / "models"
+MODELS_DIR = Path(__file__).resolve().parents[2] / "models" / "baseline"
 ALL_MODELS = {
     'owner_FI':  'Owner: Flood Insurance',
     'owner_EH':  'Owner: Elevation/Hardening',
@@ -28,14 +28,14 @@ ALL_MODELS = {
 }
 
 def load_posterior(model_name):
-    npz = np.load(MODELS_DIR / f"{model_name}.npz", allow_pickle=True)
-    return {
-        'b0':  npz['posterior_beta_0'],
-        'btp': npz['posterior_beta_tp'],
-        'bcp': npz['posterior_beta_cp'],
-        'bsp': npz['posterior_beta_sp'],
-        'phi': npz['posterior_phi'],
-    }
+    with np.load(MODELS_DIR / f"{model_name}.npz", allow_pickle=False) as npz:
+        return {
+            'b0':  npz['posterior_beta_0'],
+            'btp': npz['posterior_beta_tp'],
+            'bcp': npz['posterior_beta_cp'],
+            'bsp': npz['posterior_beta_sp'],
+            'phi': npz['posterior_phi'],
+        }
 
 def predict_mu_distribution(post, tp, cp, sp):
     """Returns 4800 posterior draws of mu."""

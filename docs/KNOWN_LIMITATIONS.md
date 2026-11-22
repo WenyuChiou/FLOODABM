@@ -40,21 +40,20 @@ do not expect edits to the keys above to change a run.
 There are two runners, and they are **not** behaviorally identical:
 
 - `main.py` — single deterministic/stochastic run.
-- `main_mc.py` — the Monte Carlo driver that **produces every paper figure**
-  (via `generate_paper_figures.py`), using its own fixed internal settings
-  (documented below) that match the published-results configuration.
+- `main_mc.py` — the older Monte Carlo driver. It cannot run with the revised
+  SFHA setup. The revised ensemble uses `scripts/utilities/run_mc100_local.py`
+  to run `main.py`; its outputs are checked separately from the final figures.
 
 Differences a reuser must know:
 
-| Setting | `main.py` | `main_mc.py` (figures) |
+| Setting | `main.py` | Legacy `main_mc.py` |
 |---|---|---|
 | `years_step` | read from YAML | **hardcoded to 1.0** (YAML value ignored) |
 | `flood.ratio_threshold_owner` / `_renter` | read (per-tenure TP-shock trigger) | **not used**; the MC path gates on a single `tp_config.shock_min_ratio` key that is **absent from the shipped YAML**, falling back to `flood.ratio_threshold` |
 | `reset_clock_on_flood` | hardcoded `True` | hardcoded `False` |
 
-Consequence: tuning some YAML keys changes a `main.py` run but **not** the
-figure-producing MC runs. If your goal is to alter the published-style results,
-verify the knob is honored in `main_mc.py`, not just `main.py`.
+Do not use the legacy entry point to test a change to the revised benchmark.
+See the [reproduction guide](REPRODUCIBILITY.md) for the current runner.
 
 ---
 

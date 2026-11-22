@@ -249,12 +249,27 @@ def test_rebuild_matches_shipped_sfha_source_and_output_hashes(tmp_path: Path) -
     config = ROOT / "config"
     expected = json.loads((config / "sfha_assignment_manifest.json").read_text(encoding="utf-8"))
     actual = build_sfha_area_initialization(
-        config / "households_for_abm.csv",
+        config / "households_for_abm_sfha.csv",
         config / "sfha_area_share_by_tract.csv",
         tmp_path / "rebuild",
+        replay=True,
     )
-    for key in ("source_households", "source_area_shares", "outputs", "hash_format"):
+    for key in ("household_input_mode", "source_households", "source_area_shares", "outputs", "hash_format"):
         assert actual[key] == expected[key]
+
+
+def test_replay_recalculates_instead_of_copying_derived_columns(tmp_path: Path) -> None:
+    config = ROOT / "config"
+    expected = json.loads((config / "sfha_assignment_manifest.json").read_text(encoding="utf-8"))
+    changed = pd.read_csv(config / "households_for_abm_sfha.csv", dtype=str, keep_default_na=False)
+    for column in ("sfha_share", "inside_SFHA", "has_FI"):
+        changed[column] = "overwritten"
+    source = tmp_path / "changed.csv"
+    changed.to_csv(source, index=False)
+    actual = build_sfha_area_initialization(
+        source, config / "sfha_area_share_by_tract.csv", tmp_path / "replayed", replay=True,
+    )
+    assert actual["outputs"] == expected["outputs"]
 
 
 def test_relocated_households_use_one_area_share_for_both_tenures() -> None:

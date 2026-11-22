@@ -10,8 +10,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OLD = ROOT / "config" / "households_for_abm.csv"
-NEW = ROOT / "config" / "households_for_abm_sfha.csv"
+HOUSEHOLDS = ROOT / "config" / "households_for_abm_sfha.csv"
 SHARES = ROOT / "config" / "sfha_shares.csv"
 MANIFEST = ROOT / "config" / "sfha_assignment_manifest.json"
 CONFIG = ROOT / "config" / "abm_params.yaml"
@@ -28,19 +27,15 @@ def stable_uniform(base_seed: int, agent_key: str) -> float:
 
 
 def main() -> None:
-    old = pd.read_csv(OLD, dtype={"tract_geoid": str})
-    new = pd.read_csv(NEW, dtype={"tract_geoid": str})
+    households = pd.read_csv(HOUSEHOLDS, dtype={"tract_geoid": str})
     shares = pd.read_csv(SHARES, dtype={"tract_geoid": str})
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8")) or {}
 
-    if len(old) != len(new) or set(old["i"]) != set(new["i"]):
-        raise AssertionError("SFHA initialization changed household rows or IDs")
-    left = old.sort_values("i").reset_index(drop=True)
-    right = new.sort_values("i").reset_index(drop=True)
-    for column in [name for name in left.columns if name != "has_FI"]:
-        if not left[column].astype(str).equals(right[column].astype(str)):
-            raise AssertionError(f"SFHA initialization changed protected column: {column}")
+    key = ["tract_geoid", "group", "i"]
+    if len(households) != 52_141 or households[key].isna().any().any() or households.duplicated(key).any():
+        raise AssertionError("Expected 52,141 unique tract, tenure, and agent-ID combinations")
+    right = households.sort_values("i").reset_index(drop=True)
     for column in ("inside_SFHA", "has_FI"):
         if column not in right or not right[column].isin([0, 1]).all():
             raise AssertionError(f"{column} must contain only 0/1 values")
@@ -74,12 +69,14 @@ def main() -> None:
         raise AssertionError("inside_SFHA is not the recorded Bernoulli assignment")
 
     source_area = ROOT / "config" / "sfha_area_share_by_tract.csv"
-    for label, path in (("source_households", OLD), ("source_area_shares", source_area)):
+    if manifest["household_input_mode"] != "replay":
+        raise AssertionError("The published manifest must replay the canonical household snapshot")
+    for label, path in (("source_households", HOUSEHOLDS), ("source_area_shares", source_area)):
         if manifest[label]["path"] != path.relative_to(ROOT).as_posix():
             raise AssertionError(f"Unexpected manifest source: {label}")
         if manifest[label]["sha256"] != sha256(path):
             raise AssertionError(f"Manifest source hash differs: {path.name}")
-    expected = {NEW.name, SHARES.name, "sfha_assignment_summary.csv", "initial_fi_summary.csv"}
+    expected = {HOUSEHOLDS.name, SHARES.name, "sfha_assignment_summary.csv", "initial_fi_summary.csv"}
     if set(manifest["outputs"]) != expected:
         raise AssertionError("Incomplete manifest outputs")
     for name in expected:

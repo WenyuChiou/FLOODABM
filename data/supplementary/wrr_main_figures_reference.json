@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "reference": "Final revised WRR main figure exports",
+  "figures": {
+    "Figure_01.png": {
+      "width": 6671,
+      "height": 4355,
+      "rgba_sha256": "70ba2ef0d725713e419a03ecb675430e417d4d7a8092b548c6061ce3cb0e0ad3"
+    },
+    "Figure_02.png": {
+      "width": 4129,
+      "height": 2992,
+      "rgba_sha256": "e181bc3fbf701c5f2bc133dd4d4d6aaff043d71f0930416de712cef16a194efa"
+    },
+    "Figure_03.png": {
+      "width": 8000,
+      "height": 4500,
+      "rgba_sha256": "3ba8fe5779d0b113c26668ad52765b99c4bbee7ca231c50dc8e9bf842a0cbbb1"
+    },
+    "Figure_04.png": {
+      "width": 5760,
+      "height": 3240,
+      "rgba_sha256": "d3ba255a9cef82462b1183a00c9daacb18bcfc9a7e8a81b5b3df386466f8ec99"
+    },
+    "Figure_05.png": {
+      "width": 3251,
+      "height": 1629,
+      "rgba_sha256": "9e0e2c799597d412f23d17797ddd6051b23e56edc7f62d2364bf9b5ccdec50e6"
+    },
+    "Figure_06.png": {
+      "width": 3550,
+      "height": 4373,
+      "rgba_sha256": "281cec7f93b664221de26f83c91e3cda3f752d827bd4da721b18bc7c185214ea"
+    },
+    "Figure_07.png": {
+      "width": 7100,
+      "height": 2747,
+      "rgba_sha256": "f053a394ac484e4ac6bd75324494e35335abe579ce7e807e103a1686c476e594"
+    },
+    "Figure_08.png": {
+      "width": 8269,
+      "height": 5870,
+      "rgba_sha256": "0d41d35dd197338e28ca563cfd92699dac6cce6f4e5bc8f248cbb9ed2175f5cb"
+    },
+    "Figure_09.png": {
+      "width": 8266,
+      "height": 3467,
+      "rgba_sha256": "659b91657716d0f7cfa7adcd08bcf9177926a6e0eed0409063ebdd51d1457bd4"
+    },
+    "Figure_10.png": {
+      "width": 9626,
+      "height": 4583,
+      "rgba_sha256": "befab31d294cc1109b7af83c049a49e2f9a593236609fa424ff87851f2bc75dd"
+    },
+    "Figure_11.png": {
+      "width": 5858,
+      "height": 3814,
+      "rgba_sha256": "7b09325e37fbbb4c3b008b1b36f03f2422b688fdce709378af0d8066518c9f79"
+    }
+  }
+}

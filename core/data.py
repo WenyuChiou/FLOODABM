@@ -7,7 +7,7 @@ Centralized data loading functions for households, depths, and psychology data.
 This module provides consistent data loading across all entry points.
 
 Data Files:
-    - households_for_abm.csv: Household exposure database
+    - households_for_abm_sfha.csv: Published household exposure and initialization data
     - depths: Flood depth data (JSON or CSV)
     - tract psychology: Initial TP/CP/SP by census tract
 """

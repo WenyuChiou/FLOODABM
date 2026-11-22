@@ -7,6 +7,8 @@ cache/
 
 # Published supplementary data (cited in the Supporting Information)
 !data/supplementary/
+!data/figures/
+data/figures/*
 
 # Keep folder markers
 !outputs/.gitkeep
@@ -49,10 +51,11 @@ Thumbs.db
 
 # Large data files
 *.csv
-!config/households_for_abm.csv
 !config/sfha_area_share_by_tract.csv
 !config/initial_fi_summary.csv
 !data/supplementary/*.csv
+!data/figures/Figure8_adaptation_trajectories.csv
+!data/figures/Figure11_income_aep.csv
 *.parquet
 *.pkl
 *.h5
@@ -67,13 +70,14 @@ calibration/data/*.xls*
 calibration/phase1_tenure_distributions/*.png
 calibration/phase1_tenure_distributions/*.csv
 calibration/phase1_tenure_distributions/*.docx
-# phase2 outputs (regenerable via bayesian_engine); keep models/*.npz
+# phase2 outputs (regenerable via bayesian_engine); the shared posteriors are in models/baseline/
+calibration/phase2_bayesian_regression/models/*.npz
 calibration/phase2_bayesian_regression/*.png
 calibration/phase2_bayesian_regression/*.xlsx
 calibration/phase2_bayesian_regression/owner_group/**/*.xlsx
 calibration/phase2_bayesian_regression/renter_group/**/*.xlsx
 # phase3 outputs (regenerable via run_calibration.py + core/visualizer.py)
-# keep: tp_decay_params_for_abm.json (ABM needs it)
+# keep: tp_decay_params_for_abm.json (optional calibration reports read it)
 calibration/phase3_tp_decay/outputs/*.png
 calibration/phase3_tp_decay/outputs/*.xlsx
 calibration/phase3_tp_decay/outputs/*.csv

@@ -99,6 +99,10 @@ calibration/
 
 **Models are saved to:** `../models/baseline/` and `../models/baseline_fast/`
 
+The posterior predictive query reads the same five full posterior files from
+`../models/baseline/` as the simulation. It does not require a second model copy
+under `calibration/phase2_bayesian_regression/`.
+
 ### Phase 3: TP Decay Calibration
 **Script:** `phase3_tp_decay/run_calibration.py`
 

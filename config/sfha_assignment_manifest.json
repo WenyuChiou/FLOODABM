@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "design": "tract SFHA area share applied equally to homeowners and renters",
   "sfha_assignment_method": "inside_SFHA = 1 when the stable uniform draw for tract|group|agent-ID is below the tract SFHA area share",
   "sfha_assignment_seed": 20260817,
@@ -10,8 +10,14 @@
     "renter|inside_SFHA=0": 0.02,
     "renter|inside_SFHA=1": 0.08
   },
+  "household_input_mode": "replay",
   "source_households": {
+    "path": "config/households_for_abm_sfha.csv",
+    "sha256": "64d4e4cf3a31da503cdbad2ae78d146fa758c1138c0490292f608e42d5513271"
+  },
+  "historical_unassigned_households": {
     "path": "config/households_for_abm.csv",
+    "git_commit": "4ca700d020389cffcb4eb063263afc79af7aaff8",
     "sha256": "918fa264d04605ca979203d5794e079a1d505422adaad32588e54cc3012f8e54"
   },
   "source_area_shares": {

@@ -256,6 +256,27 @@ The verified CSVs are plotting data; no PNG or new simulation is produced.
 
 ## Recompute the flood-sequence sensitivity series (Figure S6)
 
+The model can replay any of the eleven saved event orders with
+`--wrr-flood-order`. The option moves both depth inputs and their sampling
+seed with each source event; household decisions still advance by simulation
+year. The default model run is unchanged. For example, this PowerShell
+command runs the first draw of the first shuffled adaptation case:
+
+```powershell
+$env:FLOODABM_POSTERIOR_IDX = '0'
+python main.py --scenario baseline --model-dir baseline --decision-seed 90001 --output-mode summary --no-plots --wrr-flood-order permuted_01 --out-root ../wrr-s6-permuted01-draw01
+```
+
+Use a fresh scenario output path and include `--no-plots`, since the general
+model plots assume observed event years. Run each scenario separately. The
+observed order is `observed`; the
+shuffled options are `permuted_01` through `permuted_10`. The matching
+no-adaptation case uses `--scenario worst`. Match the decision seed and
+posterior index for each of the first ten draws as in the main benchmark.
+This command runs one case; it does not rebuild the whole figure.
+
+For the separate all-cases archive verification and aggregation:
+
 Use the audited flood-order study archive and its companion `r3` reference
 directory. The suite must contain `raw/` and `processed/run_registry.csv`; the
 reference directory must contain `raw_finance_hashes.json`,

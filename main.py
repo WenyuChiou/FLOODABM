@@ -125,6 +125,7 @@ from modules.actions.decision import (
     load_predictors, _init_fi_flags_from_yaml,
 )
 from modules.finance import run_finance_for_year
+from modules.wrr_flood_sequence import EVENT_ORDERS, depth_sampling_seed, relabel_depth_inputs
 from utils.sa_output_manager import SAOutputManager
 
 
@@ -356,6 +357,10 @@ def run_single_scenario(
     ap.add_argument("--compare-severe-years", type=str, default="",
                     help="Comma-separated severe years to shade, e.g. '2011,2014,2021'.")
     ap.add_argument("--no-plots", action="store_true", help="Skip all plotting (override YAML output.enable_plots).")
+    ap.add_argument(
+        "--wrr-flood-order", choices=tuple(EVENT_ORDERS),
+        help="Replay one saved revised WRR event order with --no-plots and a fresh output path.",
+    )
     ap.add_argument("--deterministic", action="store_true", help="Use fixed RNG each year (no SEED+year offset) for reproducibility.")
     ap.add_argument(
         "--decision-seed",
@@ -379,6 +384,11 @@ def run_single_scenario(
         help="Override draw_bounds.FI_renter without changing homeowner FI bounds.",
     )
     args = ap.parse_args(argv)
+    if args.wrr_flood_order is not None:
+        if not args.no_plots:
+            ap.error("--wrr-flood-order requires --no-plots; plotting uses the observed event years")
+        if not args.out_root:
+            ap.error("--wrr-flood-order requires an explicit --out-root")
     
     # Override scenario if specified (for batch run)
     if scenario_override:
@@ -407,6 +417,8 @@ def run_single_scenario(
 
     yaml_scen = str(CFG.get("scenario", "baseline")).strip().lower()
     SCEN = (args.scenario or yaml_scen or "baseline").lower()
+    if args.wrr_flood_order is not None and SCEN not in {"baseline", "worst"}:
+        ap.error("--wrr-flood-order requires a baseline or worst scenario")
     NO_ACTION = (SCEN == "worst")
 
     # =========================================================================
@@ -416,7 +428,19 @@ def run_single_scenario(
     env_out = os.environ.get("FLOODABM_OUTPUT_ROOT", None)
     OUT_ROOT = Path(args.out_root or env_out or (ROOT / "outputs")).resolve()
     # Always include model name in output path for consistent structure
-    OUTPUT_DIR = (OUT_ROOT / args.model_dir / SCEN).resolve()
+    model_output = OUT_ROOT / args.model_dir
+    OUTPUT_DIR = model_output / SCEN
+    if args.wrr_flood_order is None:
+        OUTPUT_DIR = OUTPUT_DIR.resolve()
+    else:
+        if (
+            model_output.parent != OUT_ROOT
+            or model_output.is_symlink()
+            or model_output.resolve() != model_output
+        ):
+            ap.error("--wrr-flood-order requires a model directory inside the explicit output root")
+        # Do not resolve a possibly dangling scenario link into a new destination.
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
     VIS_DIR = OUTPUT_DIR / "visualization"
     STATES_DIR = OUTPUT_DIR / "states"
     FIN_DIR = OUTPUT_DIR / "finance"
@@ -535,6 +559,12 @@ def run_single_scenario(
     # Load flood depth data (long format: tract × year × depth_m)
     DEPTHS_LONG = load_depths_legacy(PATH_DEPTHS)
     DEPTH_DISTRIBUTIONS = load_depth_distributions(PATH_DEPTH_DISTRIBUTIONS)
+    source_by_target = {}
+    if args.wrr_flood_order is not None:
+        DEPTHS_LONG, DEPTH_DISTRIBUTIONS, source_by_target = relabel_depth_inputs(
+            args.wrr_flood_order, DEPTHS_LONG, DEPTH_DISTRIBUTIONS
+        )
+        print(f"[info] WRR flood order {args.wrr_flood_order}, source years: {list(source_by_target.values())}")
     validate_depth_distribution_alignment(DEPTHS_LONG, DEPTH_DISTRIBUTIONS)
     print(f"[info] Using depth distributions: {len(DEPTH_DISTRIBUTIONS)} tract-years")
     YEARS = years_from_cfg(CFG, DEPTHS_LONG["year"].unique(), PATH_EVENTS)
@@ -667,7 +697,7 @@ def run_single_scenario(
             STATE_V,
             y,
             DEPTH_DISTRIBUTIONS,
-            np.random.RandomState(SEED + 100_000 + int(y)),
+            np.random.RandomState(depth_sampling_seed(SEED, int(y), source_by_target)),
         )
 
         # -----------------------------------------------------------------------
@@ -875,7 +905,12 @@ def main(argv: list[str] | None = None) -> None:
     ap_check.add_argument("--list-models", action="store_true")
     ap_check.add_argument("--run-all", action="store_true")
     ap_check.add_argument("--model-dir", type=str, default=None)
+    ap_check.add_argument("--wrr-flood-order", choices=tuple(EVENT_ORDERS))
     known_args, remaining_argv = ap_check.parse_known_args(argv)
+    if known_args.wrr_flood_order is not None and (
+        known_args.compare_flood_or or known_args.compare_all_models or known_args.run_all
+    ):
+        ap_check.error("--wrr-flood-order runs one scenario at a time; comparison and batch flags are not supported")
     
     # Handle --list-models: show available models and exit
     if known_args.list_models:

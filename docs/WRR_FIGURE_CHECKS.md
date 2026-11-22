@@ -137,6 +137,8 @@ in the archived raster and requires no fonts. The archive input is not bundled.
 The [spatial data builder](REPRODUCIBILITY.md#recompute-the-data-for-the-spatial-maps)
 separately rebuilds all six population-change fields from the model outputs;
 this raster replay does not regenerate the GIS map layout from those fields.
+Use the [editable ArcGIS route below](#supporting-figure-s7-from-the-editable-arcgis-project)
+if you have the project and its linked layers.
 
 ### Main Figure 10 from the study archive
 
@@ -174,6 +176,25 @@ the rebuilt CSV. It positions the legend marker in memory without saving
 any modification to the project, then exports, crops, and verifies the PNG.
 The only retained output is `Figure_10.png`; no PDF is involved. The editable
 project, linked layers, and ArcGIS Pro are external to the clone.
+
+### Supporting Figure S7 from the editable ArcGIS project
+
+Use `Sources/maps/FigureS4/FigureS4_ready.aprx` from the study archive
+(the filename uses historical numbering). Keep its linked local layers
+together and use the same benchmark Python and ArcGIS Pro environments.
+First rebuild `FigureS7_population_change.csv` with the spatial data builder,
+then run:
+
+```sh
+python scripts/utilities/export_wrr_spatial_fi_png.py --figure S7 --project /path/to/FigureS4_ready.aprx --series ../wrr-spatial-data/FigureS7_population_change.csv --arcgis-python /path/to/ArcGIS/python.exe --figure-dir ../wrr-rendered
+```
+
+The exporter checks the field used by each of the six visible map panels and
+matches all 162 tract population changes to the rebuilt values at nine decimal
+places. It exports the final legend already stored in the project, crops the
+page, and writes `FigS07_population_change.png` only if its bytes match the
+revised figure. The project is not saved. This route needs the external editable
+project and linked layers, but does not need the archived raster.
 
 ## Verify the archived Figure 4 PNG
 
@@ -234,7 +255,7 @@ finance series from simulation CSVs.
 
 The [simulation benchmark](REPRODUCIBILITY.md) and this image check are
 separate. A clone contains the simulation inputs, figure reference checksums,
-and the sources needed to redraw Figures 5–9 and 11. Figures 1, 4 and 10
+and the sources needed to redraw Figures 5–9 and 11. Figures 1, 4, 10 and S7
 require separately archived materials for the checks described above. The
 native GIS and hydrologic modeling projects are not included in the clone.
 

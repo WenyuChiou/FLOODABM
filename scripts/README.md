@@ -24,7 +24,7 @@ One-time data generation, export, and analysis scripts. Run as needed.
 | `render_wrr_aep_png.py` | Redraw Figure 7 as one PNG directly from exceedance data and verify every pixel |
 | `render_wrr_supporting_figures.py` | Reproduce and verify the final S4–S6 PNGs from bundled or explicitly selected rebuilt plot tables |
 | `render_wrr_supporting_raster.py` | Reproduce Figure 10 and final S1–S3 and S7 PNGs from pinned archive layers; S1–S3 use installed Windows Arial fonts |
-| `export_wrr_spatial_fi_png.py` | Verify all 162 Figure 10 class assignments from rebuilt data and reproduce the exact PNG using the editable ArcGIS archive |
+| `export_wrr_spatial_fi_png.py` | Verify the 162 Figure 10 classes or S7 population changes and export the exact revised PNG from the corresponding editable ArcGIS archive |
 | `render_wrr_vector_figures.py` | Optional archive replay: read the pinned study components and produce PNGs for Figures 4, 6, or 7 |
 | `verify_wrr_figures.py` | Compare decoded PNG pixels to the submitted figure reference |
 | `generate_household_psych.py` | Generate psychometric parameters for a custom inventory with `--csv INPUT.csv --output NEW.csv`; preserves the input and the shipped inventory |

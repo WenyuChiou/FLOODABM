@@ -72,6 +72,23 @@ def finish_spatial_fi_map(source: bytes) -> bytes:
     return encode_png(ImageOps.expand(artwork, border=94, fill="white"), optimize=True)
 
 
+def render_native_population_map(source: Path, target: Path) -> None:
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(f"Refusing to overwrite {target}")
+    with Image.open(source, formats=["PNG"]) as original:
+        if original.size != (10200, 6600):
+            raise ValueError("Unexpected full-page size for the native S7 project")
+        # Keep the final legend and the six panels from the native page.
+        artwork = original.crop((1197, 843, 8984, 5238)).convert("RGB")
+    png = encode_png(ImageOps.expand(artwork, border=78, fill="white"))
+    if hashlib.sha256(png).hexdigest() != REFERENCES[7][2]:
+        raise ValueError("Native Figure S7 PNG differs from the revised submission")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("xb") as stream:
+        stream.write(png)
+    print(f"PASS {target}: exact accepted PNG bytes")
+
+
 def render_main_map(source_dir: Path, output_dir: Path) -> None:
     target = output_dir / "Figure_10.png"
     if target.exists() or target.is_symlink():

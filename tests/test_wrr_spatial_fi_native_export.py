@@ -3,6 +3,35 @@ import sys
 import pytest
 
 from scripts.utilities import export_wrr_spatial_fi_png as renderer
+from scripts.utilities import render_wrr_supporting_raster as raster
+
+
+def test_population_rows_cover_six_panels_and_require_nine_decimal_values():
+    columns = [column for _, _, column in renderer.POPULATION_PANELS.values()]
+    geoids = [f"34013{i:06d}" for i in range(27)]
+    vals = [f"{i - 2.125:.9f}" for i in range(6)]
+    header = ",".join(["tract_geoid", *columns]) + "\n"
+    records = [",".join([geoid, *vals]) + "\n" for geoid in geoids]
+    source = (header + "".join(records)).encode()
+    panels = renderer.expected_population(source)
+    assert len(panels) == 6
+    assert panels["homeowner", 2021] == dict.fromkeys(geoids, "-2.125000000")
+    assert panels["renter", 2023] == dict.fromkeys(geoids, "2.875000000")
+    with pytest.raises(ValueError, match="one row per"):
+        renderer.expected_population(source + records[0].encode())
+    with pytest.raises(ValueError, match="nine decimals"):
+        renderer.expected_population(source.replace(b"-2.125000000", b"-2.125", 1))
+    with pytest.raises(ValueError, match="27 tracts"):
+        renderer.expected_population(source.removesuffix(records[-1].encode()))
+
+
+def test_native_population_crop_rejects_the_wrong_page_size(tmp_path):
+    page = tmp_path / "different_page.png"
+    raster.Image.new("RGB", (1, 1), "white").save(page)
+    target = tmp_path / "final" / renderer.S7_OUTPUT
+    with pytest.raises(ValueError, match="full-page size"):
+        raster.render_native_population_map(page, target)
+    assert not target.parent.exists()
 
 
 def test_rebuilt_classes_cover_all_six_panels_and_match_native_rows():
@@ -50,12 +79,14 @@ def test_wrong_project_is_rejected_before_launching_arcgis(tmp_path, monkeypatch
 
 
 @pytest.mark.parametrize("concurrent_write", [False, True])
-def test_native_worker_writes_its_page_exclusively(tmp_path, monkeypatch, concurrent_write):
-    target = tmp_path / renderer.LAYOUT_INPUT
+@pytest.mark.parametrize("figure,filename", [("10", renderer.LAYOUT_INPUT), ("S7", renderer.S7_LAYOUT_INPUT)])
+def test_native_worker_writes_its_page_exclusively(tmp_path, monkeypatch, concurrent_write, figure, filename):
+    target = tmp_path / filename
     monkeypatch.setattr(sys, "argv", ["export", "--export-full-page", "--project", "project.aprx",
-                                      "--series", "series.csv", "--page-png", str(target)])
+                                      "--series", "series.csv", "--page-png", str(target), "--figure", figure])
 
-    def export(_project, _series, scratch):
+    def export(_project, _series, scratch, requested):
+        assert requested == figure
         assert scratch.parent != target.parent
         scratch.write_bytes(b"ArcGIS output")
         if concurrent_write:

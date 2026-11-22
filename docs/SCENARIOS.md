@@ -51,7 +51,7 @@ To run your own hazard scenario:
    ```bash
    python main.py --scenario baseline --no-plots --output-mode full
    ```
-   Outputs land under `outputs/baseline/` (`decisions/`, `finance/`,
+   With the default model, outputs land under `outputs/baseline/baseline/` (`decisions/`, `finance/`,
    `vulnerability/`, `states/`).
 
 That is the entire hazard-scenario mechanism. The same Bayesian behavioral model

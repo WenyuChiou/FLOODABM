@@ -54,11 +54,13 @@ FLOODABM/
 
 ## Installation
 
+Use a clean Python 3.14.0 environment for the revised WRR benchmark.
+
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements-benchmark.txt
 ```
 
-Requires Python 3.10+.
+The separate `requirements.txt` serves the older optional plotting and data-preparation tools. It is not the installation file for the revised benchmark.
 
 ## Data Requirements
 
@@ -76,11 +78,9 @@ No survey workbook or external data download is needed to rerun the model with t
 
 ## Quick Start
 
-Install, then run the baseline experiment. Use `--no-plots` to write all data outputs without the optional plotting step — this is the recommended way to run the model and the entry point for adding new scenarios (e.g. climate projections):
+After installing the benchmark dependencies, run either scenario. Use `--no-plots` to write the simulation data without generating figures:
 
 ```bash
-pip install -r requirements.txt
-
 # Baseline scenario: households adapt via flood insurance, elevation, buyout, relocation
 python main.py --scenario baseline --no-plots --output-mode full
 
@@ -88,10 +88,9 @@ python main.py --scenario baseline --no-plots --output-mode full
 python main.py --scenario worst --no-plots --output-mode full
 ```
 
-A baseline run takes ~2 minutes and writes results under `outputs/baseline/`:
-`decisions/` (household actions and adoption shares by tract), `finance/` (premiums, payouts, OOP, per-tract financial summaries), `vulnerability/` (flood damage ratios), and `states/` (year-end household state). The `worst` scenario writes to `outputs/worst/`.
+With the default model (`baseline`), the adaptation run writes to `outputs/baseline/baseline/` and the no-adaptation run writes to `outputs/baseline/worst/`. Each contains `decisions/`, `finance/`, `vulnerability/`, and `states/`. The directory pattern is `outputs/<model>/<scenario>/`.
 
-> Plotting is optional. The single-run plots use the dependencies in `requirements.txt`. The [revised manuscript and supporting figure guide](docs/WRR_FIGURE_CHECKS.md) lists the separate environments for matching the accepted figures. To run the benchmark without inline plots, use `--no-plots` and analyze the output CSVs.
+> To recreate the paper figures separately as PNGs, follow the [revised manuscript and supporting figure guide](docs/WRR_FIGURE_CHECKS.md).
 
 ### CLI Arguments
 

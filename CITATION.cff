@@ -20,8 +20,9 @@ authors:
     affiliation: "Disaster Prevention Research Institute, Kyoto University"
 license: MIT
 repository-code: "https://github.com/WenyuChiou/FLOODABM"
-version: v1.0.0
-date-released: "2026-06-08"
+url: "https://github.com/WenyuChiou/FLOODABM/releases/tag/v1.1.0"
+version: v1.1.0
+date-released: "2026-11-22"
 keywords:
   - agent-based model
   - flood risk

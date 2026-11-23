@@ -1,10 +1,10 @@
 # FLOODABM
 
-A coupled agent-based and catastrophe flood modeling framework (ABM-CAT) for simulating household flood adaptation in the Passaic River Basin, New Jersey (2011–2023).
+FLOODABM couples an agent-based model of household decisions with a catastrophe flood model. It simulates how homeowners and renters respond to floods in New Jersey’s Passaic River Basin (2011–2023).
 
-[**Download FLOODABM v1.1.0 — WRR revised**](https://github.com/WenyuChiou/FLOODABM/releases/tag/v1.1.0) and follow the [reproduction guide](docs/REPRODUCIBILITY.md). This is the version for reproducing the revised *Water Resources Research* (WRR) manuscript. Version 1.0.0 is the original-submission archive.
+[Download FLOODABM](https://github.com/WenyuChiou/FLOODABM/releases/latest) · [Quick start](#quick-start) · [Citation](#citing)
 
-[How the annual simulation links flood losses and household decisions](#simulation-flow)
+![FLOODABM framework diagram showing how flood losses inform household decisions and how adaptation changes insurance, vulnerability, and exposure.](docs/floodabm-framework.png)
 
 ## Overview
 
@@ -37,7 +37,7 @@ FLOODABM/
 │   └── vulnerability/           # Flood damage functions
 │
 ├── models/
-│   ├── baseline/                # Fitted posterior draws for the revised ensemble
+│   ├── baseline/                # Fitted posterior draws for the ensemble
 │   └── baseline_fast/           # Posterior-mean caches for single runs
 │
 ├── calibration/                 # Calibration provenance and fitted model query
@@ -54,13 +54,13 @@ FLOODABM/
 
 ## Installation
 
-Use a clean Python 3.14.0 environment for the revised WRR benchmark.
+Use a clean Python 3.14.0 environment to run the model.
 
 ```bash
 python -m pip install -r requirements-benchmark.txt
 ```
 
-The separate `requirements.txt` serves the older optional plotting and data-preparation tools. It is not the installation file for the revised benchmark.
+The separate `requirements.txt` is for optional legacy plotting and data preparation.
 
 ## Data Requirements
 
@@ -74,7 +74,7 @@ All input data required to run the simulation are included in the `config/` dire
 - `overall_md_mean_by_tract_2011_2023.json` -- mean flood depths per tract-year from the CAT model
 - `depth_distribution_by_tract_year.csv` -- grid-cell depth distributions used to sample household depths
 
-No survey workbook or external data download is needed to rerun the model with the published calibration. The benchmark uses the fitted models and the tract-area initialization in this repository. See [Reproducing the revised benchmark](docs/REPRODUCIBILITY.md) for the exact run and output checks, and how those differ from refitting the model or regenerating the paper's graphics.
+The repository includes the fitted models and the tract-area initialization. See the [simulation guide](docs/REPRODUCIBILITY.md) for the run commands and output checks.
 
 ## Quick Start
 
@@ -90,7 +90,7 @@ python main.py --scenario worst --no-plots --output-mode full
 
 With the default model (`baseline`), the adaptation run writes to `outputs/baseline/baseline/` and the no-adaptation run writes to `outputs/baseline/worst/`. Each contains `decisions/`, `finance/`, `vulnerability/`, and `states/`. The directory pattern is `outputs/<model>/<scenario>/`.
 
-> To recreate the paper figures separately as PNGs, follow the [revised manuscript and supporting figure guide](docs/WRR_FIGURE_CHECKS.md).
+> To generate PNGs separately, see the [figure guide](docs/WRR_FIGURE_CHECKS.md).
 
 ### CLI Arguments
 
@@ -110,10 +110,10 @@ With the default model (`baseline`), the adaptation run writes to `outputs/basel
 python scripts/utilities/run_mc100_local.py --out-root ../FLOODABM_mc50 --scenarios baseline worst
 ```
 
-For the revised paper, see [Figures S4–S5 threshold sensitivity](docs/REPRODUCIBILITY.md#recompute-the-threshold-sensitivity-series-figures-s4-and-s5),
+For sensitivity analyses, see [Figures S4–S5 threshold sensitivity](docs/REPRODUCIBILITY.md#recompute-the-threshold-sensitivity-series-figures-s4-and-s5),
 [Figure S6 flood-sequence sensitivity](docs/REPRODUCIBILITY.md#recompute-the-flood-sequence-sensitivity-series-figure-s6),
 and [Tables S8–S9 paired sensitivities](docs/REPRODUCIBILITY.md#recompute-the-paired-sensitivity-tables-tables-s8-and-s9).
-These reproduce the published summaries from the archived cases. For a new
+These instructions use the archived cases. For a new
 experiment, use the [scenario options](docs/SCENARIOS.md#4-other-scenario-levers-cli-flags-and-parameters).
 
 ## Documentation
@@ -142,11 +142,11 @@ All parameters are defined in `config/abm_params.yaml`, organized into:
 - **Flood hazard** -- depth thresholds, event masking
 
 The formal ensemble uses `scripts/utilities/run_mc100_local.py` to run both
-scenarios with the fixed revised design. See the [reproduction guide](docs/REPRODUCIBILITY.md).
+scenarios with fixed settings. See the [simulation guide](docs/REPRODUCIBILITY.md).
 
 ## Simulation Flow
 
-1. Load the revised configuration and initial household inventory.
+1. Load the model configuration and initial household inventory.
 2. For each year from 2011 through 2023, sample flood depths for each
    household from its tract's depth distribution. Calculate ground-up loss
    and financial outcomes under the insurance status in effect that year.
@@ -169,7 +169,7 @@ By default, results are saved under `outputs/<model>/<scenario>/`:
 | `vulnerability/` | Flood damage ratio metrics |
 | `visualization/` | Figures (when plotting is enabled) |
 
-## Reproduce and check the revised figures
+## Generate figures
 
 From a fresh clone, generate Figures 5–8 and 11 directly as PNGs from the
 bundled results. The exact-render environment uses Python 3.14.0 and local
@@ -197,13 +197,13 @@ A single baseline run covers 2011–2023. The formal ensemble uses 50 draws per 
 
 ## Citing
 
-If you use the revised benchmark, cite the paper and the software version you ran:
+If you use FLOODABM, cite the paper and the software version you ran:
 
 > Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). Household flood adaptation and financial outcomes: A coupled human-flood modeling analysis of homeowners and renters. *Water Resources Research* (under review).
 
-> Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). *FLOODABM: WRR revised* (v1.1.0) [Software]. GitHub. https://github.com/WenyuChiou/FLOODABM/releases/tag/v1.1.0
+> Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). *FLOODABM: A coupled agent-based and catastrophe flood modeling framework for household flood adaptation* (v1.1.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.24451590
 
-The [Zenodo DOI for v1.0.0](https://doi.org/10.5281/zenodo.20587986) identifies the original submission and does not reproduce the revised benchmark.
+Version 1.0.0 remains available as the [original-submission archive](https://doi.org/10.5281/zenodo.20587986).
 
 ## License
 

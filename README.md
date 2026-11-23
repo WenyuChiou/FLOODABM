@@ -1,8 +1,8 @@
 # FLOODABM
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20587985.svg)](https://doi.org/10.5281/zenodo.20587985)
-
 A coupled agent-based and catastrophe flood modeling framework (ABM-CAT) for simulating household flood adaptation in the Passaic River Basin, New Jersey (2011–2023).
+
+[**Download FLOODABM v1.1.0 — WRR revised**](https://github.com/WenyuChiou/FLOODABM/releases/tag/v1.1.0) and follow the [reproduction guide](docs/REPRODUCIBILITY.md). This is the version for reproducing the revised *Water Resources Research* (WRR) manuscript. Version 1.0.0 is the original-submission archive.
 
 [How the annual simulation links flood losses and household decisions](#simulation-flow)
 
@@ -197,11 +197,13 @@ A single baseline run covers 2011–2023. The formal ensemble uses 50 draws per 
 
 ## Citing
 
-If you use this code, please cite both the paper and the archived software:
+If you use the revised benchmark, cite the paper and the software version you ran:
 
 > Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). Household flood adaptation and financial outcomes: A coupled human-flood modeling analysis of homeowners and renters. *Water Resources Research* (under review).
 
-> Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). *FLOODABM* (v1.0.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.20587986
+> Chiou, W., Yang, Y. C. E., Tanaka, T., Jamrussri, S., & Feng, S. (2026). *FLOODABM: WRR revised* (v1.1.0) [Software]. GitHub. https://github.com/WenyuChiou/FLOODABM/releases/tag/v1.1.0
+
+The [Zenodo DOI for v1.0.0](https://doi.org/10.5281/zenodo.20587986) identifies the original submission and does not reproduce the revised benchmark.
 
 ## License
 

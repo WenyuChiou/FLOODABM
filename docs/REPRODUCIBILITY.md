@@ -2,9 +2,9 @@
 
 These steps reproduce the simulation that used tract-area SFHA shares, not the earlier NSI-by-tenure run. The shipped inputs are synthetic household inventories, processed tract flood depths and area shares, fitted Bayesian models, and the fixed configuration. The inputs describe 52,141 households in 27 tracts; 6,485 start in the SFHA and 2,861 start with flood insurance. No survey workbook is needed.
 
-## Run and verify from a fresh clone
+## Run and verify from a release download or clone
 
-Use a clean Python 3.14.0 environment and run the following from the repository root. The output directory must be new and outside the clone. This example runs the first draw for both scenarios across all 13 years (2011–2023).
+Download and extract **Source code (zip)** from [v1.1.0 — WRR revised](https://github.com/WenyuChiou/FLOODABM/releases/tag/v1.1.0), or clone the repository and check out `v1.1.0`. Use a clean Python 3.14.0 environment and run the following from the source folder that contains `main.py`. The output directory must be new and outside that folder. This example runs the first draw for both scenarios across all 13 years (2011–2023).
 
 ```sh
 python -m pip install -r requirements-benchmark.txt

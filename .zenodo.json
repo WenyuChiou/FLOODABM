@@ -1,6 +1,7 @@
 {
   "title": "FLOODABM: A coupled agent-based and catastrophe flood modeling framework for household flood adaptation",
-  "description": "Coupled agent-based (ABM) and catastrophe (CAT) flood modeling framework that simulates how homeowners and renters adapt to repeated flooding (flood insurance, elevation, buyout, relocation) in the Passaic River Basin, New Jersey, 2011-2023. Software accompanying the Water Resources Research manuscript.",
+  "description": "Coupled agent-based (ABM) and catastrophe (CAT) flood modeling framework that simulates how homeowners and renters adapt to repeated flooding (flood insurance, elevation, buyout, relocation) in the Passaic River Basin, New Jersey, 2011-2023. This version accompanies the reviewer-revised Water Resources Research manuscript.",
+  "version": "v1.1.0",
   "upload_type": "software",
   "license": "MIT",
   "creators": [
